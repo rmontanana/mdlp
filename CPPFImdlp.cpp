@@ -1,6 +1,7 @@
 #include <numeric>
 #include <algorithm>
 #include <set>
+#include <cmath>
 #include "CPPFImdlp.h"
 #include "Metrics.h"
 
