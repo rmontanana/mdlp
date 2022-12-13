@@ -152,7 +152,7 @@ namespace mdlp {
         indices_t idx(X_.size());
         iota(idx.begin(), idx.end(), 0);
         for (size_t i = 0; i < X_.size(); i++)
-            sort(idx.begin(), idx.end(), [&X_](size_t i1, size_t i2)
+            stable_sort(idx.begin(), idx.end(), [&X_](size_t i1, size_t i2)
                 { return X_[i1] < X_[i2]; });
         return idx;
     }
