@@ -6,7 +6,7 @@
 #include "Metrics.h"
 
 namespace mdlp {
-    CPPFImdlp::CPPFImdlp(bool proposal):proposal(proposal), indices(indices_t()), X(samples_t()), y(labels_t()), metrics(Metrics(y, indices))
+    CPPFImdlp::CPPFImdlp(int proposal):proposal(proposal), indices(indices_t()), X(samples_t()), y(labels_t()), metrics(Metrics(y, indices))
     {
     }
     CPPFImdlp::~CPPFImdlp()
@@ -25,10 +25,17 @@ namespace mdlp {
         }
         indices = sortIndices(X_);
         metrics.setData(y, indices);
-        if (proposal)
-            computeCutPointsProposal();
-        else
-            computeCutPoints(0, X.size());
+        switch (proposal) {
+            case 0:
+                computeCutPoints(0, X.size());
+                break;
+            case 1:
+                computeCutPointsProposal();
+                break;
+            case 2:
+                computeCutPointsAlternative(0, X.size());
+                break;
+        }
         return *this;
     }
     void CPPFImdlp::computeCutPoints(size_t start, size_t end)
@@ -50,7 +57,7 @@ namespace mdlp {
         computeCutPoints(start, cut);
         computeCutPoints(cut, end);
     }
-    void CPPFImdlp::computeCutPointsOriginal(size_t start, size_t end)
+    void CPPFImdlp::computeCutPointsAlternative(size_t start, size_t end)
     {
         precision_t cut;
         if (end - start < 2)
@@ -61,8 +68,8 @@ namespace mdlp {
         if (mdlp(start, cut, end)) {
             cutPoints.push_back((X[indices[cut]] + X[indices[cut - 1]]) / 2);
         }
-        computeCutPointsOriginal(start, cut);
-        computeCutPointsOriginal(cut, end);
+        computeCutPointsAlternative(start, cut);
+        computeCutPointsAlternative(cut, end);
     }
     void CPPFImdlp::computeCutPointsProposal()
     {
@@ -102,7 +109,7 @@ namespace mdlp {
         long int candidate = -1, elements = end - start;
         precision_t entropy_left, entropy_right, minEntropy = numeric_limits<precision_t>::max();
         for (auto idx = start + 1; idx < end; idx++) {
-            // Cutpoints are always on boudndaries
+            // Cutpoints are always on boundaries
             if (y[indices[idx]] == y[indices[idx - 1]])
                 continue;
             entropy_left = precision_t(idx - start) / elements * metrics.entropy(start, idx);
