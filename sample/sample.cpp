@@ -5,6 +5,7 @@
 #include "../CPPFImdlp.h"
 
 using namespace std;
+using namespace mdlp;
 
 int main(int argc, char** argv)
 {
@@ -33,8 +34,8 @@ int main(int argc, char** argv)
     cout << "Class name: " << file.getClassName() << endl;
     cout << "Class type: " << file.getClassType() << endl;
     cout << "Data: " << endl;
-    vector<vector<float>>& X = file.getX();
-    vector<int>& y = file.getY();
+    vector<samples_t>& X = file.getX();
+    labels_t& y = file.getY();
     for (int i = 0; i < 50; i++) {
         for (auto feature : X) {
             cout << fixed << setprecision(1) << feature[i] << " ";

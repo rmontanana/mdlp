@@ -15,12 +15,12 @@ namespace mdlp {
             //(5.0, 1) (5.1, 1) (5.1, 2) (5.1, 2) (5.2, 1) (5.3, 1) (5.6, 2) (5.7, 1) (5.9, 2) (6.0, 2)
             X = {5.7, 5.3, 5.2, 5.1, 5.0, 5.6, 5.1, 6.0, 5.1, 5.9};
             y = {1, 1, 1, 1, 1, 2, 2, 2, 2, 2};
-            proposal = false;
+            algorithm = false;
             fit(X, y);
         }
 
-        void setProposal(bool value) {
-            proposal = value;
+        void setalgorithm(bool value) {
+            algorithm = value;
         }
 
         // void initIndices()
@@ -80,7 +80,7 @@ namespace mdlp {
     }
 
     TEST_F(TestFImdlp, TestDataset) {
-        proposal = false;
+        algorithm = false;
         fit(X, y);
         computeCutPointsOriginal(0, 10);
         cutPoints_t expected = {5.6499996185302734};
@@ -95,14 +95,14 @@ namespace mdlp {
 
     TEST_F(TestFImdlp, ComputeCutPointsOriginal) {
         cutPoints_t expected = {5.65};
-        proposal = false;
+        algorithm = false;
         computeCutPointsOriginal(0, 10);
         checkCutPoints(expected);
     }
 
     TEST_F(TestFImdlp, ComputeCutPointsOriginalGCase) {
         cutPoints_t expected;
-        proposal = false;
+        algorithm = false;
         expected = {2};
         samples_t X_ = {0, 1, 2, 2};
         labels_t y_ = {1, 1, 1, 2};
@@ -110,19 +110,19 @@ namespace mdlp {
         checkCutPoints(expected);
     }
 
-    TEST_F(TestFImdlp, ComputeCutPointsProposal) {
-        proposal = true;
+    TEST_F(TestFImdlp, ComputeCutPointsalgorithm) {
+        algorithm = true;
         cutPoints_t expected;
         expected = {};
         fit(X, y);
-        computeCutPointsProposal();
+        computeCutPointsalgorithm();
         checkCutPoints(expected);
     }
 
-    TEST_F(TestFImdlp, ComputeCutPointsProposalGCase) {
+    TEST_F(TestFImdlp, ComputeCutPointsalgorithmGCase) {
         cutPoints_t expected;
         expected = {1.5};
-        proposal = true;
+        algorithm = true;
         samples_t X_ = {0, 1, 2, 2};
         labels_t y_ = {1, 1, 1, 2};
         fit(X_, y_);
@@ -131,7 +131,7 @@ namespace mdlp {
 
     TEST_F(TestFImdlp, GetCutPoints) {
         samples_t computed, expected = {5.65};
-        proposal = false;
+        algorithm = false;
         computeCutPointsOriginal(0, 10);
         computed = getCutPoints();
         for (auto item: cutPoints)
