@@ -1,4 +1,5 @@
 # mdlp
+
 Discretization algorithm based on the paper by Fayyad &amp; Irani [Multi-Interval Discretization of Continuous-Valued Attributes for Classification Learning](https://www.ijcai.org/Proceedings/93-2/Papers/022.pdf)
 
 The implementation tries to mitigate the problem of different label values with the same value of the variable:
@@ -19,4 +20,13 @@ cd build
 cmake ..
 make
 ./sample iris
+```
+
+## Test
+
+To run the tests, execute the following commands:
+
+```bash
+cd tests
+./test
 ```
