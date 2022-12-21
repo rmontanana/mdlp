@@ -34,3 +34,4 @@
 **/lcoverage
 .idea
 cmake-*
+**/CMakeFiles

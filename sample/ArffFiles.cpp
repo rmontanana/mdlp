@@ -1,5 +1,4 @@
 #include "ArffFiles.h"
-
 #include <fstream>
 #include <sstream>
 #include <map>
