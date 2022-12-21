@@ -1,8 +1,8 @@
-#include "ArffFiles.h"
 #include <iostream>
 #include <vector>
 #include <iomanip>
 #include "../CPPFImdlp.h"
+#include "../tests/ArffFiles.h"
 
 using namespace std;
 using namespace mdlp;

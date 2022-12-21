@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include "../Metrics.h"
 #include "../CPPFImdlp.h"
+#include "ArffFiles.h"
 #include <iostream>
 
 namespace mdlp {
@@ -10,10 +11,8 @@ namespace mdlp {
         TestFImdlp(): CPPFImdlp() {}
         void SetUp()
         {
-            //    5.0, 5.1, 5.1, 5.1, 5.2, 5.3, 5.6, 5.7, 5.9, 6.0]
-            //(5.0, 1) (5.1, 1) (5.1, 2) (5.1, 2) (5.2, 1) (5.3, 1) (5.6, 2) (5.7, 1) (5.9, 2) (6.0, 2)
-            X = { 5.7, 5.3, 5.2, 5.1, 5.0, 5.6, 5.1, 6.0, 5.1, 5.9 };
-            y = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
+            X = { 4.7, 4.7, 4.7, 4.7, 4.8, 4.8, 4.8, 4.8, 4.9, 4.95, 5.7, 5.3, 5.2, 5.1, 5.0, 5.6, 5.1, 6.0, 5.1, 5.9 };
+            y = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
             algorithm = false;
             fit(X, y);
         }
@@ -55,6 +54,11 @@ namespace mdlp {
         y = labels_t();
         EXPECT_THROW(fit(X, y), std::invalid_argument);
     }
+    TEST_F(TestFImdlp, FitErrorIncorrectAlgorithm)
+    {
+        algorithm = 2;
+        EXPECT_THROW(fit(X, y), std::invalid_argument);
+    }
     TEST_F(TestFImdlp, FitErrorDifferentSize)
     {
         X = { 1, 2, 3 };
@@ -64,54 +68,109 @@ namespace mdlp {
     TEST_F(TestFImdlp, SortIndices)
     {
         X = { 5.7, 5.3, 5.2, 5.1, 5.0, 5.6, 5.1, 6.0, 5.1, 5.9 };
+        y = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
         indices = { 4, 3, 6, 8, 2, 1, 5, 0, 9, 7 };
         checkSortedVector();
         X = { 5.77, 5.88, 5.99 };
+        y = { 1, 2, 1 };
         indices = { 0, 1, 2 };
         checkSortedVector();
         X = { 5.33, 5.22, 5.11 };
+        y = { 1, 2, 1 };
         indices = { 2, 1, 0 };
         checkSortedVector();
+        X = { 5.33, 5.22, 5.33 };
+        y = { 2, 2, 1 };
+        indices = { 1, 2, 0 };
     }
-
-    TEST_F(TestFImdlp, TestDataset)
+    TEST_F(TestFImdlp, TestArtificialDatasetAlternative)
     {
-        algorithm = 0;
+        algorithm = 1;
         fit(X, y);
-        computeCutPoints(0, 10);
-        cutPoints_t expected = { 5.6499996185302734 };
+        computeCutPoints(0, 20);
+        cutPoints_t expected = { 5.0500001907348633 };
         vector<precision_t> computed = getCutPoints();
         computed = getCutPoints();
         int expectedSize = expected.size();
         EXPECT_EQ(computed.size(), expected.size());
-        for (auto i = 0; i < expectedSize; i++) {
+        for (auto i = 0; i < computed.size(); i++) {
             EXPECT_NEAR(computed[i], expected[i], precision);
         }
     }
-    TEST_F(TestFImdlp, ComputeCutPoints)
+    TEST_F(TestFImdlp, TestArtificialDataset)
     {
-        cutPoints_t expected = { 5.65 };
-        algorithm = false;
-        computeCutPoints(0, 10);
-        checkCutPoints(expected);
+        algorithm = 0;
+        fit(X, y);
+        computeCutPoints(0, 20);
+        cutPoints_t expected = { 5.0500001907348633 };
+        vector<precision_t> computed = getCutPoints();
+        computed = getCutPoints();
+        int expectedSize = expected.size();
+        EXPECT_EQ(computed.size(), expected.size());
+        for (auto i = 0; i < computed.size(); i++) {
+            EXPECT_NEAR(computed[i], expected[i], precision);
+        }
+    }
+    TEST_F(TestFImdlp, TestIris)
+    {
+        ArffFiles file;
+        string path = "../datasets/";
+
+        file.load(path + "iris.arff", true);
+        int items = file.getSize();
+        vector<samples_t>& X = file.getX();
+        vector<cutPoints_t> expected = {
+            { 5.4499998092651367, 6.25 },
+            { 2.8499999046325684, 3, 3.0499999523162842, 3.3499999046325684 },
+            { 2.4500000476837158, 4.75, 5.0500001907348633 },
+            { 0.80000001192092896, 1.4500000476837158, 1.75 }
+        };
+        labels_t& y = file.getY();
+        auto attributes = file.getAttributes();
+        algorithm = 0;
+        for (auto feature = 0; feature < attributes.size(); feature++) {
+            fit(X[feature], y);
+            vector<precision_t> computed = getCutPoints();
+            EXPECT_EQ(computed.size(), expected[feature].size());
+            for (auto i = 0; i < computed.size(); i++) {
+                EXPECT_NEAR(computed[i], expected[feature][i], precision);
+            }
+        }
+    }
+    TEST_F(TestFImdlp, TestIrisAlternative)
+    {
+        ArffFiles file;
+        string path = "../datasets/";
+
+        file.load(path + "iris.arff", true);
+        int items = file.getSize();
+        vector<samples_t>& X = file.getX();
+        vector<cutPoints_t> expected = {
+            { 5.4499998092651367, 5.75 },
+            { 2.8499999046325684, 3.3499999046325684 },
+            { 2.4500000476837158, 4.75 },
+            { 0.80000001192092896, 1.75 }
+        };
+        labels_t& y = file.getY();
+        auto attributes = file.getAttributes();
+        algorithm = 1;
+        for (auto feature = 0; feature < attributes.size(); feature++) {
+            fit(X[feature], y);
+            vector<precision_t> computed = getCutPoints();
+            EXPECT_EQ(computed.size(), expected[feature].size());
+            for (auto i = 0; i < computed.size(); i++) {
+                EXPECT_NEAR(computed[i], expected[feature][i], precision);
+            }
+        }
     }
     TEST_F(TestFImdlp, ComputeCutPointsGCase)
     {
         cutPoints_t expected;
-        algorithm = false;
-        expected = { 2 };
+        algorithm = 0;
+        expected = { 1.5 };
         samples_t X_ = { 0, 1, 2, 2 };
         labels_t y_ = { 1, 1, 1, 2 };
         fit(X_, y_);
-        checkCutPoints(expected);
-    }
-    TEST_F(TestFImdlp, ComputeCutPointsalAlternative)
-    {
-        algorithm = true;
-        cutPoints_t expected;
-        expected = {};
-        fit(X, y);
-        computeCutPointsAlternative(0, 10);
         checkCutPoints(expected);
     }
     TEST_F(TestFImdlp, ComputeCutPointsAlternativeGCase)
@@ -123,15 +182,5 @@ namespace mdlp {
         labels_t y_ = { 1, 1, 1, 2 };
         fit(X_, y_);
         checkCutPoints(expected);
-    }
-    TEST_F(TestFImdlp, GetCutPoints)
-    {
-        samples_t computed, expected = { 5.65 };
-        algorithm = false;
-        computeCutPoints(0, 10);
-        computed = getCutPoints();
-        for (auto item : cutPoints)
-            cout << setprecision(6) << item << endl;
-        checkVectors(expected, computed);
     }
 }
