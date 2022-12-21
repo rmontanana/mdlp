@@ -7,3 +7,16 @@ The implementation tries to mitigate the problem of different label values with 
 - Once found a valid candidate for the split, it checks if the previous value is the same as actual one, and tries to get previous one, or next if the former is not possible.
 
 The algorithm returns the cut points for the variable.
+
+## Sample
+
+To run the sample, just execute the following commands:
+
+```bash
+cd sample
+mkdir build
+cd build
+cmake ..
+make
+./sample iris
+```
