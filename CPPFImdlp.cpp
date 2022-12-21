@@ -4,15 +4,12 @@
 #include <cmath>
 #include "CPPFImdlp.h"
 #include "Metrics.h"
-// OJO QUITAR ESTO
-#include <iostream>
 namespace mdlp {
     CPPFImdlp::CPPFImdlp(int algorithm):algorithm(algorithm), indices(indices_t()), X(samples_t()), y(labels_t()), metrics(Metrics(y, indices))
     {
     }
     CPPFImdlp::~CPPFImdlp()
         = default;
-
     CPPFImdlp& CPPFImdlp::fit(samples_t& X_, labels_t& y_)
     {
         X = X_;
@@ -24,22 +21,21 @@ namespace mdlp {
         if (X.size() == 0 || y.size() == 0) {
             throw invalid_argument("X and y must have at least one element");
         }
-        indices = sortIndices2(X_, y_);
+        indices = sortIndices(X_, y_);
         metrics.setData(y, indices);
         switch (algorithm) {
             case 0:
                 computeCutPoints(0, X.size());
                 break;
             case 1:
-                computeCutPointsProposal(0, X.size());
-                break;
-            case 2:
                 computeCutPointsAlternative(0, X.size());
                 break;
+            default:
+                throw invalid_argument("algorithm must be 0 or 1");
         }
         return *this;
     }
-    precision_t CPPFImdlp::value_cut_point(size_t start, size_t idx)
+    precision_t CPPFImdlp::halfWayValueCutPoint(size_t start, size_t idx)
     {
         size_t idxPrev = idx - 1;
         precision_t previous = X[indices[idxPrev]], actual = X[indices[idx]];
@@ -49,7 +45,7 @@ namespace mdlp {
         }
         return (previous + actual) / 2;
     }
-    tuple<precision_t, size_t> CPPFImdlp::value_proposal_cut_point(size_t start, size_t cut, size_t end)
+    tuple<precision_t, size_t> CPPFImdlp::completeValueCutPoint(size_t start, size_t cut, size_t end)
     {
         size_t idxPrev = cut - 1;
         precision_t previous, next, actual;
@@ -66,62 +62,22 @@ namespace mdlp {
         cut--;
         return make_tuple((previous + actual) / 2, cut);
     }
-    // void CPPFImdlp::computeCutPoints(size_t start, size_t end)
-    // {
-    //     size_t cut;
-    //     if (end - start < 2)
-    //         return;
-    //     cut = getCandidate(start, end);
-    //     if (cut == numeric_limits<size_t>::max() || !mdlp(start, cut, end)) {
-    //         // cut == max means that there is no candidate in the interval
-    //         // No boundary found, so we add both ends of the interval as cutpoints
-    //         // because they were selected by the algorithm before
-    //         if (start != 0)
-    //             cutPoints.push_back((X[indices[start]] + X[indices[start - 1]]) / 2);
-    //         if (end != X.size())
-    //             cutPoints.push_back((X[indices[end]] + X[indices[end - 1]]) / 2);
-    //         //cout << "!!!Alg: " << algorithm << " Cut: " << cut << " Start: " << start << " End: " << end << endl;
-    //         return;
-    //     }
-    //     // cout << "*Alg: " << algorithm << " Cut: " << cut << " Start: " << start << " End: " << end << endl;
-    //     computeCutPoints(start, cut);
-    //     computeCutPoints(cut, end);
-    // }
-    // void CPPFImdlp::computeCutPointsAlternative(size_t start, size_t end)
-    // {
-    //     size_t cut;
-    //     if (end - start < 2)
-    //         return;
-    //     cut = getCandidate(start, end);
-    //     if (cut == numeric_limits<size_t>::max() || !mdlp(start, cut, end)) {
-    //         // cut == max means that there is no candidate in the interval
-    //         // No boundary found, so we add both ends of the interval as cutpoints
-    //         // because they were selected by the algorithm before
-    //         if (start != 0)
-    //             cutPoints.push_back(value_cut_point(0, start));
-    //         if (end != X.size())
-    //             cutPoints.push_back(value_cut_point(start, end));
-    //         //cout << "!!!Alg: " << algorithm << " Cut: " << cut << " Start: " << start << " End: " << end << endl;
-    //         return;
-    //     }
-    //     // cout << "*Alg: " << algorithm << " Cut: " << cut << " Start: " << start << " End: " << end << endl;
-    //     computeCutPointsAlternative(start, cut);
-    //     computeCutPointsAlternative(cut, end);
-    // }
     void CPPFImdlp::computeCutPoints(size_t start, size_t end)
     {
         size_t cut;
+        tuple<precision_t, size_t> result;
         if (end - start < 2)
             return;
         cut = getCandidate(start, end);
         if (cut == numeric_limits<size_t>::max())
             return;
         if (mdlp(start, cut, end)) {
-            cutPoints.push_back(value_cut_point(start, cut));
-            //cout << "+Alg: " << algorithm << " Cut: " << cut << " Start: " << start << " End: " << end << endl;
+            result = completeValueCutPoint(start, cut, end);
+            cut = get<1>(result);
+            cutPoints.push_back(get<0>(result));
+            computeCutPoints(start, cut);
+            computeCutPoints(cut, end);
         }
-        computeCutPoints(start, cut);
-        computeCutPoints(cut, end);
     }
     void CPPFImdlp::computeCutPointsAlternative(size_t start, size_t end)
     {
@@ -132,66 +88,10 @@ namespace mdlp {
         if (cut == numeric_limits<size_t>::max())
             return;
         if (mdlp(start, cut, end)) {
-            cutPoints.push_back(value_cut_point(start, cut));
-            //cout << "+Alg: " << algorithm << " Cut: " << cut << " Start: " << start << " End: " << end << endl;
+            cutPoints.push_back(halfWayValueCutPoint(start, cut));
             computeCutPointsAlternative(start, cut);
             computeCutPointsAlternative(cut, end);
         }
-    }
-    // void CPPFImdlp::computeCutPointsAlternative(size_t start, size_t end)
-    // {
-    //     size_t cut;
-    //     if (end - start < 2)
-    //         return;
-    //     cut = getCandidateWeka(start, end);
-    //     if (cut == numeric_limits<size_t>::max())
-    //         return;
-    //     if (mdlp(start, cut, end)) {
-    //         cutPoints.push_back(value_cut_point(start, cut));
-    //         //cout << "+Alg: " << algorithm << " Cut: " << cut << " Start: " << start << " End: " << end << endl;
-    //     }
-    //     computeCutPointsAlternative(start, cut);
-    //     computeCutPointsAlternative(cut, end);
-    // }
-    void CPPFImdlp::computeCutPointsProposal(size_t start, size_t end)
-    {
-        size_t cut;
-        tuple<precision_t, size_t> result;
-        if (end - start < 2)
-            return;
-        cut = getCandidate(start, end);
-        if (cut == numeric_limits<size_t>::max())
-            return;
-        if (mdlp(start, cut, end)) {
-            //cout << "+Alg: " << algorithm << " Cut: " << cut << " Start: " << start << " End: " << end << endl;
-            result = value_proposal_cut_point(start, cut, end);
-            cut = get<1>(result);
-            cutPoints.push_back(get<0>(result));
-            //cout << "*Alg: " << algorithm << " Cut: " << cut << " Start: " << start << " End: " << end << endl;
-            computeCutPointsProposal(start, cut);
-            computeCutPointsProposal(cut, end);
-        }
-
-    }
-    size_t CPPFImdlp::getCandidateWeka(size_t start, size_t end)
-    {
-        /* Definition 1: A binary discretization for A is determined by selecting the cut point TA for which
-        E(A, TA; S) is minimal amogst all the candidate cut points. */
-        size_t candidate = numeric_limits<size_t>::max(), elements = end - start;
-        precision_t entropy_left, entropy_right, minEntropy;
-        minEntropy = metrics.entropy(start, end);
-        for (auto idx = start + 1; idx < end; idx++) {
-            // Cutpoints are always on boundaries (definition 2)
-            if (X[indices[idx - 1]] < X[indices[idx]]) {
-                entropy_left = precision_t(idx - start) / elements * metrics.entropy(start, idx);
-                entropy_right = precision_t(end - idx) / elements * metrics.entropy(idx, end);
-                if (entropy_left + entropy_right < minEntropy) {
-                    minEntropy = entropy_left + entropy_right;
-                    candidate = idx;
-                }
-            }
-        }
-        return candidate;
     }
     size_t CPPFImdlp::getCandidate(size_t start, size_t end)
     {
@@ -229,10 +129,24 @@ namespace mdlp {
         ent1 = metrics.entropy(start, cut);
         ent2 = metrics.entropy(cut, end);
         ig = metrics.informationGain(start, cut, end);
-        delta = log(pow(3, precision_t(k)) - 2) -
+        delta = log2(pow(3, precision_t(k)) - 2) -
             (precision_t(k) * ent - precision_t(k1) * ent1 - precision_t(k2) * ent2);
-        precision_t term = 1 / N * (log(N - 1) + delta);
+        precision_t term = 1 / N * (log2(N - 1) + delta);
         return ig > term;
+    }
+    // Argsort from https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
+    indices_t CPPFImdlp::sortIndices(samples_t& X_, labels_t& y_)
+    {
+        indices_t idx(X_.size());
+        iota(idx.begin(), idx.end(), 0);
+        for (size_t i = 0; i < X_.size(); i++)
+            stable_sort(idx.begin(), idx.end(), [&X_, &y_](size_t i1, size_t i2)
+                {
+                    if (X_[i1] == X_[i2]) return y_[i1] < y_[i2];
+                    else
+                        return X_[i1] < X_[i2];
+                });
+        return idx;
     }
     cutPoints_t CPPFImdlp::getCutPoints()
     {
@@ -245,28 +159,5 @@ namespace mdlp {
         output.assign(s.begin(), s.end());
         sort(output.begin(), output.end());
         return output;
-    }
-    // Argsort from https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
-    indices_t CPPFImdlp::sortIndices(samples_t& X_)
-    {
-        indices_t idx(X_.size());
-        iota(idx.begin(), idx.end(), 0);
-        for (size_t i = 0; i < X_.size(); i++)
-            stable_sort(idx.begin(), idx.end(), [&X_](size_t i1, size_t i2)
-                { return X_[i1] < X_[i2]; });
-        return idx;
-    }
-    indices_t CPPFImdlp::sortIndices2(samples_t& X_, labels_t& y_)
-    {
-        indices_t idx(X_.size());
-        iota(idx.begin(), idx.end(), 0);
-        for (size_t i = 0; i < X_.size(); i++)
-            stable_sort(idx.begin(), idx.end(), [&X_, &y_](size_t i1, size_t i2)
-                {
-                    if (X_[i1] == X_[i2]) return y_[i1] < y_[i2];
-                    else
-                        return X_[i1] < X_[i2];
-                });
-        return idx;
     }
 }

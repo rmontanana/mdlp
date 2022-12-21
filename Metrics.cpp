@@ -39,7 +39,7 @@ namespace mdlp {
         for (auto count : counts) {
             if (count > 0) {
                 p = (precision_t)count / nElements;
-                ventropy -= p * log(p);
+                ventropy -= p * log2(p);
             }
         }
         entropyCache[make_tuple(start, end)] = ventropy;
