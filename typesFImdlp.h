@@ -2,6 +2,7 @@
 #define TYPES_H
 #include <vector>
 #include <map>
+#include <stdexcept>
 
 using namespace std;
 namespace mdlp {
