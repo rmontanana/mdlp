@@ -48,9 +48,9 @@ namespace mdlp {
     tuple<precision_t, size_t> CPPFImdlp::completeValueCutPoint(size_t start, size_t cut, size_t end)
     {
         size_t idxPrev = cut - 1;
-        precision_t previous, next, actual;
+        precision_t previous, actual;
         previous = X[indices[idxPrev]];
-        next = actual = X[indices[cut]];
+        actual = X[indices[cut]];
         // definition 2 of the paper => X[t-1] < X[t]
         while (idxPrev-- > start && actual == previous) {
             previous = X[indices[idxPrev]];
