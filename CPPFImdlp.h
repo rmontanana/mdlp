@@ -16,8 +16,10 @@ namespace mdlp {
         cutPoints_t cutPoints;
 
         static indices_t sortIndices(samples_t&, labels_t&);
+        static indices_t sortIndices1(samples_t&);
         void computeCutPoints(size_t, size_t);
         void computeCutPointsAlternative(size_t, size_t);
+        void computeCutPointsClassic(size_t, size_t);
         bool mdlp(size_t, size_t, size_t);
         size_t getCandidate(size_t, size_t);
         precision_t halfWayValueCutPoint(size_t, size_t);
