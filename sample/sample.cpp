@@ -16,10 +16,12 @@ int main(int argc, char** argv)
         {"mfeat-factors", true},
         {"iris", true},
         {"letter", true},
-        {"kdd_JapaneseVowels", false}
+        {"glass", true},
+        {"kdd_JapaneseVowels", false},
+        {"test", true}
     };
     if (argc != 2 || datasets.find(argv[1]) == datasets.end()) {
-        cout << "Usage: " << argv[0] << " {mfeat-factors, iris, letter, kdd_JapaneseVowels}" << endl;
+        cout << "Usage: " << argv[0] << " {mfeat-factors, glass, iris, letter, kdd_JapaneseVowels, test}" << endl;
         return 1;
     }
 
