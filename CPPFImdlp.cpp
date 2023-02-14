@@ -4,6 +4,7 @@
 #include <cmath>
 #include "CPPFImdlp.h"
 #include "Metrics.h"
+#include <iostream>
 namespace mdlp {
     CPPFImdlp::CPPFImdlp(int algorithm):algorithm(algorithm), indices(indices_t()), X(samples_t()), y(labels_t()), metrics(Metrics(y, indices))
     {
@@ -23,6 +24,23 @@ namespace mdlp {
         }
         indices = sortIndices(X_, y_);
         metrics.setData(y, indices);
+
+
+        for (auto i=0; i< X.size(); i++) {
+            if (i% 10 ==0) {
+                cout << " #  Idx --X-- y"<<endl;
+                cout << "--- --- ----- -"<<endl;
+            }
+            auto index = indices[i];
+            cout.width(3);
+            cout << i << " ";
+            cout.width(3);
+            cout << index << " ";
+            cout.width(5);
+            cout << X[index];
+            cout.width(1);
+            cout << " " << y[index] << endl;
+        }
         switch (algorithm) {
             case 0:
                 computeCutPoints(0, X.size());
@@ -61,7 +79,7 @@ namespace mdlp {
             previous = X[indices[idxPrev]];
         }
         // get the last equal value of X in the interval
-        while (actual == X[indices[cut++]] && cut < end);
+        while (actual == X[indices[++cut]] && cut < end);
         if (previous == actual && cut < end)
             actual = X[indices[cut]];
         cut--;
