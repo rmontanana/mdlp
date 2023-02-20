@@ -2,12 +2,11 @@
 #define ARFFFILES_H
 #include <string>
 #include <vector>
-#include <tuple>
 using namespace std;
 class ArffFiles {
 private:
     vector<string> lines;
-    vector<tuple<string, string>> attributes;
+    vector<pair<string, string>> attributes;
     string className, classType;
     vector<vector<float>> X;
     vector<int> y;
@@ -22,7 +21,7 @@ public:
     string trim(const string&);
     vector<vector<float>>& getX();
     vector<int>& getY();
-    vector<tuple<string, string>> getAttributes();
+    vector<pair<string, string>> getAttributes();
     vector<int> factorize(const vector<string>& labels_t);
 };
 #endif
