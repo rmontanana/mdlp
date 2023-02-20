@@ -158,7 +158,7 @@ namespace mdlp {
         fit(X_, y_);
         checkCutPoints(expected);
     }
-    TEST_F(TestFImdlp, CompleteValueCutPoint)
+    TEST_F(TestFImdlp, ValueCutPoint)
     {
         // Case titles as stated in the doc
         samples_t X1a{ 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0 };
