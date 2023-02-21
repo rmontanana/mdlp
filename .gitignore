@@ -35,4 +35,3 @@
 .idea
 cmake-*
 **/CMakeFiles
-sonar-project.properties
