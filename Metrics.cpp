@@ -29,8 +29,8 @@ namespace mdlp {
         labels_t counts(numClasses + 1, 0);
         if (end - start < 2)
             return 0;
-        if (entropyCache.find(make_tuple(start, end)) != entropyCache.end()) {
-            return entropyCache[make_tuple(start, end)];
+        if (entropyCache.find({ start, end }) != entropyCache.end()) {
+            return entropyCache[{start, end}];
         }
         for (auto i = &indices[start]; i != &indices[end]; ++i) {
             counts[y[*i]]++;
@@ -42,7 +42,7 @@ namespace mdlp {
                 ventropy -= p * log2(p);
             }
         }
-        entropyCache[make_tuple(start, end)] = ventropy;
+        entropyCache[{start, end}] = ventropy;
         return ventropy;
     }
     precision_t Metrics::informationGain(size_t start, size_t cut, size_t end)

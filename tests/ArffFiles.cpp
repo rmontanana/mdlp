@@ -17,7 +17,7 @@ unsigned long int ArffFiles::getSize()
 {
     return lines.size();
 }
-vector<tuple<string, string>> ArffFiles::getAttributes()
+vector<pair<string, string>> ArffFiles::getAttributes()
 {
     return attributes;
 }
@@ -50,7 +50,7 @@ void ArffFiles::load(string fileName, bool classLast)
             if (line.find("@attribute") != string::npos || line.find("@ATTRIBUTE") != string::npos) {
                 stringstream ss(line);
                 ss >> keyword >> attribute >> type;
-                attributes.push_back(make_tuple(attribute, type));
+                attributes.push_back({ attribute, type });
                 continue;
             }
             if (line[0] == '@') {

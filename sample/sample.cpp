@@ -7,19 +7,21 @@
 using namespace std;
 using namespace mdlp;
 
+
 int main(int argc, char** argv)
 {
     ArffFiles file;
-    vector<string> lines;
     string path = "../../tests/datasets/";
-    map<string, bool > datasets = {
-        {"mfeat-factors", true},
-        {"iris", true},
-        {"letter", true},
-        {"kdd_JapaneseVowels", false}
+    map<string, bool> datasets = {
+            {"mfeat-factors",      true},
+            {"iris",               true},
+            {"letter",             true},
+            {"glass",              true},
+            {"kdd_JapaneseVowels", false},
+            {"test",               true}
     };
     if (argc != 2 || datasets.find(argv[1]) == datasets.end()) {
-        cout << "Usage: " << argv[0] << " {mfeat-factors, iris, letter, kdd_JapaneseVowels}" << endl;
+        cout << "Usage: " << argv[0] << " {mfeat-factors, glass, iris, letter, kdd_JapaneseVowels, test}" << endl;
         return 1;
     }
 
@@ -42,9 +44,11 @@ int main(int argc, char** argv)
         }
         cout << y[i] << endl;
     }
-    mdlp::CPPFImdlp test = mdlp::CPPFImdlp(0);
+    mdlp::CPPFImdlp test = mdlp::CPPFImdlp();
     for (auto i = 0; i < attributes.size(); i++) {
+        auto min_max = minmax_element(X[i].begin(), X[i].end());
         cout << "Cut points for " << get<0>(attributes[i]) << endl;
+        cout << "Min: " << *min_max.first << " Max: " << *min_max.second << endl;
         cout << "--------------------------" << setprecision(3) << endl;
         test.fit(X[i], y);
         for (auto item : test.getCutPoints()) {

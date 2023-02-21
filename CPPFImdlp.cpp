@@ -4,12 +4,15 @@
 #include <cmath>
 #include "CPPFImdlp.h"
 #include "Metrics.h"
+
 namespace mdlp {
-    CPPFImdlp::CPPFImdlp(int algorithm):algorithm(algorithm), indices(indices_t()), X(samples_t()), y(labels_t()), metrics(Metrics(y, indices))
+
+    CPPFImdlp::CPPFImdlp(): indices(indices_t()), X(samples_t()), y(labels_t()),
+        metrics(Metrics(y, indices))
     {
     }
-    CPPFImdlp::~CPPFImdlp()
-        = default;
+    CPPFImdlp::~CPPFImdlp() = default;
+
     CPPFImdlp& CPPFImdlp::fit(samples_t& X_, labels_t& y_)
     {
         X = X_;
@@ -18,113 +21,82 @@ namespace mdlp {
         if (X.size() != y.size()) {
             throw invalid_argument("X and y must have the same size");
         }
-        if (X.size() == 0 || y.size() == 0) {
+        if (X.empty() || y.empty()) {
             throw invalid_argument("X and y must have at least one element");
         }
         indices = sortIndices(X_, y_);
         metrics.setData(y, indices);
-        switch (algorithm) {
-            case 0:
-                computeCutPoints(0, X.size());
-                break;
-            case 1:
-                computeCutPointsAlternative(0, X.size());
-                break;
-            case 2:
-                indices = sortIndices1(X_);
-                metrics.setData(y, indices);
-                computeCutPointsClassic(0, X.size());
-                break;
-            default:
-                throw invalid_argument("algorithm must be 0, 1 or 2");
-        }
+        computeCutPoints(0, X.size());
         return *this;
     }
-    precision_t CPPFImdlp::halfWayValueCutPoint(size_t start, size_t idx)
+
+    pair<precision_t, size_t> CPPFImdlp::valueCutPoint(size_t start, size_t cut, size_t end)
     {
-        size_t idxPrev = idx - 1;
-        precision_t previous = X[indices[idxPrev]], actual = X[indices[idx]];
-        // definition 2 of the paper => X[t-1] < X[t]
-        while (idxPrev-- > start && actual == previous) {
-            previous = X[indices[idxPrev]];
-        }
-        return (previous + actual) / 2;
-    }
-    tuple<precision_t, size_t> CPPFImdlp::completeValueCutPoint(size_t start, size_t cut, size_t end)
-    {
-        size_t idxPrev = cut - 1;
-        precision_t previous, actual;
+        size_t n, m, idxPrev = cut - 1 >= start ? cut - 1 : cut;
+        size_t idxNext = cut + 1 < end ? cut + 1 : cut;
+        bool backWall; // true if duplicates reach begining of the interval
+        precision_t previous, actual, next;
+        if (cut - 1 < start || cut + 1 >= end)
+            throw logic_error("Invalid cutpoint index");
         previous = X[indices[idxPrev]];
         actual = X[indices[cut]];
+        next = X[indices[idxNext]];
         // definition 2 of the paper => X[t-1] < X[t]
-        while (idxPrev-- > start && actual == previous) {
-            previous = X[indices[idxPrev]];
+        // get the first equal value of X in the interval
+        while (idxPrev > start && actual == previous) {
+            previous = X[indices[--idxPrev]];
         }
+        backWall = idxPrev == start && actual == previous;
         // get the last equal value of X in the interval
-        while (actual == X[indices[cut++]] && cut < end);
-        if (previous == actual && cut < end)
-            actual = X[indices[cut]];
-        cut--;
-        return make_tuple((previous + actual) / 2, cut);
+        while (idxNext < end - 1 && actual == next) {
+            next = X[indices[++idxNext]];
+        }
+        // # of duplicates before cutpoint
+        n = cut - 1 - idxPrev;
+        // # of duplicates after cutpoint
+        m = idxNext - cut - 1;
+        // Decide which values to use
+        cut = cut + (backWall ? m + 1 : -n);
+        actual = X[indices[cut]];
+        return { (actual + previous) / 2, cut };
     }
+
     void CPPFImdlp::computeCutPoints(size_t start, size_t end)
     {
         size_t cut;
-        tuple<precision_t, size_t> result;
-        if (end - start < 2)
+        pair<precision_t, size_t> result;
+        if (end - start < 3)
             return;
         cut = getCandidate(start, end);
         if (cut == numeric_limits<size_t>::max())
             return;
         if (mdlp(start, cut, end)) {
-            result = completeValueCutPoint(start, cut, end);
-            cut = get<1>(result);
-            cutPoints.push_back(get<0>(result));
+            result = valueCutPoint(start, cut, end);
+            cut = result.second;
+            cutPoints.push_back(result.first);
             computeCutPoints(start, cut);
             computeCutPoints(cut, end);
         }
     }
-    void CPPFImdlp::computeCutPointsAlternative(size_t start, size_t end)
-    {
-        size_t cut;
-        if (end - start < 2)
-            return;
-        cut = getCandidate(start, end);
-        if (cut == numeric_limits<size_t>::max())
-            return;
-        if (mdlp(start, cut, end)) {
-            cutPoints.push_back(halfWayValueCutPoint(start, cut));
-            computeCutPointsAlternative(start, cut);
-            computeCutPointsAlternative(cut, end);
-        }
-    }
-    void CPPFImdlp::computeCutPointsClassic(size_t start, size_t end)
-    {
-        size_t cut;
-        cut = getCandidate(start, end);
-        if (cut == numeric_limits<size_t>::max() || !mdlp(start, cut, end)) {
-            // cut.value == -1 means that there is no candidate in the interval
-            // No boundary found, so we add both ends of the interval as cutpoints
-            // because they were selected by the algorithm before
-            if (start == end)
-                return;
-            if (start != 0)
-                cutPoints.push_back((X[indices[start]] + X[indices[start - 1]]) / 2);
-            if (end != X.size())
-                cutPoints.push_back((X[indices[end]] + X[indices[end - 1]]) / 2);
-            return;
-        }
-        computeCutPoints(start, cut);
-        computeCutPoints(cut, end);
-    }
+
     size_t CPPFImdlp::getCandidate(size_t start, size_t end)
     {
         /* Definition 1: A binary discretization for A is determined by selecting the cut point TA for which
-        E(A, TA; S) is minimal amogst all the candidate cut points. */
+        E(A, TA; S) is minimal amongst all the candidate cut points. */
         size_t candidate = numeric_limits<size_t>::max(), elements = end - start;
+        bool sameValues = true;
         precision_t entropy_left, entropy_right, minEntropy;
+        // Check if all the values of the variable in the interval are the same
+        for (size_t idx = start + 1; idx < end; idx++) {
+            if (X[indices[idx]] != X[indices[start]]) {
+                sameValues = false;
+                break;
+            }
+        }
+        if (sameValues)
+            return candidate;
         minEntropy = metrics.entropy(start, end);
-        for (auto idx = start + 1; idx < end; idx++) {
+        for (size_t idx = start + 1; idx < end; idx++) {
             // Cutpoints are always on boundaries (definition 2)
             if (y[indices[idx]] == y[indices[idx - 1]])
                 continue;
@@ -137,6 +109,7 @@ namespace mdlp {
         }
         return candidate;
     }
+
     bool CPPFImdlp::mdlp(size_t start, size_t cut, size_t end)
     {
         int k, k1, k2;
@@ -158,32 +131,22 @@ namespace mdlp {
         precision_t term = 1 / N * (log2(N - 1) + delta);
         return ig > term;
     }
+
     // Argsort from https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
     indices_t CPPFImdlp::sortIndices(samples_t& X_, labels_t& y_)
     {
         indices_t idx(X_.size());
         iota(idx.begin(), idx.end(), 0);
         for (size_t i = 0; i < X_.size(); i++)
-            stable_sort(idx.begin(), idx.end(), [&X_, &y_](size_t i1, size_t i2)
-                {
-                    if (X_[i1] == X_[i2]) return y_[i1] < y_[i2];
-                    else
-                        return X_[i1] < X_[i2];
+            stable_sort(idx.begin(), idx.end(), [&X_, &y_](size_t i1, size_t i2) {
+            if (X_[i1] == X_[i2])
+                return y_[i1] < y_[i2];
+            else
+                return X_[i1] < X_[i2];
                 });
         return idx;
     }
-    // Argsort from https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
-    indices_t CPPFImdlp::sortIndices1(samples_t& X_)
-    {
-        indices_t idx(X_.size());
-        iota(idx.begin(), idx.end(), 0);
-        for (size_t i = 0; i < X_.size(); i++)
-            stable_sort(idx.begin(), idx.end(), [&X_](size_t i1, size_t i2)
-                {
-                    return X_[i1] < X_[i2];
-                });
-        return idx;
-    }
+
     cutPoints_t CPPFImdlp::getCutPoints()
     {
         // Remove duplicates and sort
