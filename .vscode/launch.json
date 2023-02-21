@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceRoot}/sample/build/sample",
             "args": [
-                "test"
+                "mfeat-factors"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}/sample/build/",

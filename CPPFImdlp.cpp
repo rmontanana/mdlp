@@ -32,10 +32,12 @@ namespace mdlp {
 
     pair<precision_t, size_t> CPPFImdlp::valueCutPoint(size_t start, size_t cut, size_t end)
     {
-        size_t n, m, idxPrev = cut - 1 <= start ? cut - 1 : cut;
+        size_t n, m, idxPrev = cut - 1 >= start ? cut - 1 : cut;
         size_t idxNext = cut + 1 < end ? cut + 1 : cut;
         bool backWall; // true if duplicates reach begining of the interval
         precision_t previous, actual, next;
+        if (cut - 1 < start || cut + 1 >= end)
+            throw logic_error("Invalid cutpoint index");
         previous = X[indices[idxPrev]];
         actual = X[indices[cut]];
         next = X[indices[idxNext]];
