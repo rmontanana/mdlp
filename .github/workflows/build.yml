@@ -41,7 +41,7 @@ jobs:
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }} # Put the name of your token here
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Put the name of your token here
         run: |
           # Set the property "sonar.cfamily.compile-commands" to the compilation database file
           sonar-scanner --define sonar.host.url="${{ env.SONAR_HOST_URL }}" --define sonar.cfamily.compile-commands=build/compile_commands.json
