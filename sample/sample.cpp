@@ -18,7 +18,6 @@ int main(int argc, char** argv)
             {"letter",             true},
             {"glass",              true},
             {"kdd_JapaneseVowels", false},
-            {"mfeat-factors",      true},
             {"test",               true}
     };
     if (argc != 2 || datasets.find(argv[1]) == datasets.end()) {
