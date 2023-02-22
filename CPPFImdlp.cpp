@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <set>
 #include <cmath>
+#include <limits>
 #include "CPPFImdlp.h"
 #include "Metrics.h"
 
