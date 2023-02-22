@@ -37,8 +37,6 @@ namespace mdlp {
         size_t idxNext = cut + 1 < end ? cut + 1 : cut;
         bool backWall; // true if duplicates reach begining of the interval
         precision_t previous, actual, next;
-        if (cut - 1 < start || cut + 1 >= end)
-            throw logic_error("Invalid cutpoint index");
         previous = X[indices[idxPrev]];
         actual = X[indices[cut]];
         next = X[indices[idxNext]];
