@@ -23,7 +23,7 @@ namespace mdlp {
         ~CPPFImdlp();
         CPPFImdlp& fit(samples_t&, labels_t&);
         samples_t getCutPoints();
-        inline string version() { return "1.1.0"; };
+        inline string version() { return "1.1.1"; };
     };
 }
 #endif
