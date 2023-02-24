@@ -1,5 +1,6 @@
 {
     "sonarlint.connectedMode.project": {
-        "projectKey": "rmontanana_mdlp_AYZkjILJHyjW-meBaElG"
+        "connectionId": "sonarcloud",
+        "projectKey": "rmontanana_mdlp"
     }
 }
