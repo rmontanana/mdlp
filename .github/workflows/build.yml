@@ -20,10 +20,10 @@ jobs:
         uses: SonarSource/sonarcloud-github-c-cpp@v1
       - name: Tests & build-wrapper
         run: |
+          cd tests
           mkdir build
           cmake -S . -B build -Wno-dev 
           build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build/ --config Release
-          cmake --build build/ --config Release
           cd build
           ctest -C Release --output-on-failure
       - name: Run sonar-scanner
