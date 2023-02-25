@@ -8,6 +8,7 @@ namespace mdlp {
     class TestFImdlp: public CPPFImdlp, public testing::Test {
     public:
         precision_t precision = 0.000001;
+        //precision_t precision = 0.000000000001;
         TestFImdlp(): CPPFImdlp() {}
         void SetUp()
         {
@@ -25,18 +26,16 @@ namespace mdlp {
                 prev = X[testSortedIndices[i]];
             }
         }
-        void checkCutPoints(cutPoints_t& expected)
+        void checkCutPoints(cutPoints_t& computed, cutPoints_t& expected)
         {
-            int expectedSize = expected.size();
-            EXPECT_EQ(cutPoints.size(), expectedSize);
-            for (unsigned long i = 0; i < cutPoints.size(); i++) {
-                EXPECT_NEAR(cutPoints[i], expected[i], precision);
+            EXPECT_EQ(computed.size(), expected.size());
+            for (unsigned long i = 0; i < computed.size(); i++) {
+                EXPECT_NEAR(computed[i], expected[i], precision);
             }
         }
         template<typename T, typename A>
         void checkVectors(std::vector<T, A> const& expected, std::vector<T, A> const& computed)
         {
-            EXPECT_EQ(expected.size(), computed.size());
             ASSERT_EQ(expected.size(), computed.size());
             for (auto i = 0; i < expected.size(); i++) {
                 EXPECT_NEAR(expected[i], computed[i], precision);
@@ -55,6 +54,20 @@ namespace mdlp {
             EXPECT_EQ(result.second, limit);
             return true;
         }
+        void test_dataset(CPPFImdlp& test, string filename, vector<cutPoints_t>& expected, int depths[])
+        {
+            ArffFiles file;
+            file.load("../datasets/" + filename, true);
+            vector<samples_t>& X = file.getX();
+            labels_t& y = file.getY();
+            auto attributes = file.getAttributes();
+            for (auto feature = 0; feature < attributes.size(); feature++) {
+                test.fit(X[feature], y);
+                EXPECT_EQ(test.get_depth(), depths[feature]);
+                auto computed = test.getCutPoints();
+                checkCutPoints(computed, expected[feature]);
+            }
+        }
     };
     TEST_F(TestFImdlp, FitErrorEmptyDataset)
     {
@@ -67,6 +80,15 @@ namespace mdlp {
         X = { 1, 2, 3 };
         y = { 1, 2 };
         EXPECT_THROW(fit(X, y), std::invalid_argument);
+    }
+    TEST_F(TestFImdlp, FitErrorMinLengtMaxDepth)
+    {
+        auto testLength = CPPFImdlp(2, 10);
+        auto testDepth = CPPFImdlp(3, 0);
+        X = { 1, 2, 3 };
+        y = { 1, 2, 3 };
+        EXPECT_THROW(testLength.fit(X, y), invalid_argument);
+        EXPECT_THROW(testDepth.fit(X, y), invalid_argument);
     }
     TEST_F(TestFImdlp, SortIndices)
     {
@@ -114,7 +136,7 @@ namespace mdlp {
     TEST_F(TestFImdlp, TestArtificialDataset)
     {
         fit(X, y);
-        computeCutPoints(0, 20);
+        computeCutPoints(0, 20, 1);
         cutPoints_t expected = { 5.05 };
         vector<precision_t> computed = getCutPoints();
         computed = getCutPoints();
@@ -126,28 +148,15 @@ namespace mdlp {
     }
     TEST_F(TestFImdlp, TestIris)
     {
-        ArffFiles file;
-        string path = "../datasets/";
-
-        file.load(path + "iris.arff", true);
-        int items = file.getSize();
-        vector<samples_t>& X = file.getX();
         vector<cutPoints_t> expected = {
-            { 5.4499998092651367, 5.75 },
+            { 5.45, 5.75 },
             { 2.75, 2.85, 2.95, 3.05, 3.35 },
-            { 2.4500000476837158, 4.75, 5.0500001907348633 },
-            { 0.80000001192092896, 1.75 }
+            { 2.45, 4.75, 5.05 },
+            { 0.8, 1.75 }
         };
-        labels_t& y = file.getY();
-        auto attributes = file.getAttributes();
-        for (auto feature = 0; feature < attributes.size(); feature++) {
-            fit(X[feature], y);
-            vector<precision_t> computed = getCutPoints();
-            EXPECT_EQ(computed.size(), expected[feature].size());
-            for (auto i = 0; i < computed.size(); i++) {
-                EXPECT_NEAR(computed[i], expected[feature][i], precision);
-            }
-        }
+        int depths[] = { 3, 5, 5, 5 };
+        auto test = CPPFImdlp();
+        test_dataset(test, "iris.arff", expected, depths);
     }
     TEST_F(TestFImdlp, ComputeCutPointsGCase)
     {
@@ -156,7 +165,8 @@ namespace mdlp {
         samples_t X_ = { 0, 1, 2, 2, 2 };
         labels_t y_ = { 1, 1, 1, 2, 2 };
         fit(X_, y_);
-        checkCutPoints(expected);
+        auto computed = getCutPoints();
+        checkCutPoints(computed, expected);
     }
     TEST_F(TestFImdlp, ValueCutPoint)
     {
@@ -177,5 +187,44 @@ namespace mdlp {
         test_result(X4b, 4, 7.5 / 2, 7, "4b");
         samples_t X4c = { 3.1, 3.2, 3.7, 3.7, 3.7, 3.7, 3.7, 3.7, 3.7, 3.7 };
         test_result(X4c, 4, 6.9 / 2, 2, "4c");
+    }
+    TEST_F(TestFImdlp, MaxDepth)
+    {
+        // Set max_depth to 2
+        auto test = CPPFImdlp(3, 1);
+        vector<cutPoints_t> expected = {
+            { 5.45 },
+            { 3.35 },
+            { 2.45 },
+            {0.8 }
+        };
+        int depths[] = { 1, 1, 1, 1 };
+        test_dataset(test, "iris.arff", expected, depths);
+    }
+    TEST_F(TestFImdlp, MinLength)
+    {
+        // Set min_length to 75
+        auto test = CPPFImdlp(75, 100);
+        vector<cutPoints_t> expected = {
+            { 5.45, 5.75 },
+            { 2.85, 3.35 },
+            { 2.45, 4.75 },
+            { 0.8, 1.75 }
+        };
+        int depths[] = { 3, 3, 3, 3 };
+        test_dataset(test, "iris.arff", expected, depths);
+    }
+    TEST_F(TestFImdlp, MinLengthMaxDepth)
+    {
+        // Set min_length to 75
+        auto test = CPPFImdlp(75, 2);
+        vector<cutPoints_t> expected = {
+            { 5.45, 5.75 },
+            { 2.85, 3.35 },
+            { 2.45, 4.75 },
+            { 0.8, 1.75 }
+        };
+        int depths[] = { 2, 2, 2, 2 };
+        test_dataset(test, "iris.arff", expected, depths);
     }
 }

@@ -9,4 +9,4 @@ if test $? -ne 0; then
    exit 1
 fi
 cd build
-ctest --output-on-failure
+ctest --output-on-failure|grep -v profiling
