@@ -45,6 +45,7 @@ int main(int argc, char** argv)
         cout << y[i] << endl;
     }
     mdlp::CPPFImdlp test = mdlp::CPPFImdlp();
+    auto total = 0;
     for (auto i = 0; i < attributes.size(); i++) {
         auto min_max = minmax_element(X[i].begin(), X[i].end());
         cout << "Cut points for " << get<0>(attributes[i]) << endl;
@@ -54,6 +55,8 @@ int main(int argc, char** argv)
         for (auto item : test.getCutPoints()) {
             cout << item << endl;
         }
+        total += test.getCutPoints().size();
     }
+    cout << "Total cut points: " << total << endl;
     return 0;
 }
