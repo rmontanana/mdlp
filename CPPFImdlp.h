@@ -7,10 +7,11 @@
 namespace mdlp {
     class CPPFImdlp {
     protected:
-        indices_t indices;
+        size_t min_length;
+        int depth, max_depth;
         samples_t X;
         labels_t y;
-        int depth, max_depth;
+        indices_t indices;
         Metrics metrics;
         cutPoints_t cutPoints;
 
@@ -20,9 +21,8 @@ namespace mdlp {
         size_t getCandidate(size_t, size_t);
         pair<precision_t, size_t> valueCutPoint(size_t, size_t, size_t);
     public:
-        int min_length;
         CPPFImdlp();
-        CPPFImdlp(int, int);
+        CPPFImdlp(size_t, int);
         ~CPPFImdlp();
         CPPFImdlp& fit(samples_t&, labels_t&);
         cutPoints_t getCutPoints();

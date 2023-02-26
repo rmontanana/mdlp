@@ -12,7 +12,7 @@ namespace mdlp {
         metrics(Metrics(y, indices))
     {
     }
-    CPPFImdlp::CPPFImdlp(int min_length_, int max_depth_): depth(0), max_depth(max_depth_), min_length(min_length_), indices(indices_t()), X(samples_t()), y(labels_t()),
+    CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_): depth(0), max_depth(max_depth_), min_length(min_length_), indices(indices_t()), X(samples_t()), y(labels_t()),
         metrics(Metrics(y, indices))
     {
     }

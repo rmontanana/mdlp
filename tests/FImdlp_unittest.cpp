@@ -57,7 +57,7 @@ namespace mdlp {
         void test_dataset(CPPFImdlp& test, string filename, vector<cutPoints_t>& expected, int depths[])
         {
             ArffFiles file;
-            file.load("../datasets/" + filename, true);
+            file.load("../datasets/" + filename + ".arff", true);
             vector<samples_t>& X = file.getX();
             labels_t& y = file.getY();
             auto attributes = file.getAttributes();
@@ -203,10 +203,11 @@ namespace mdlp {
             {0.8 }
         };
         int depths[] = { 1, 1, 1, 1 };
-        test_dataset(test, "iris.arff", expected, depths);
+        test_dataset(test, "iris", expected, depths);
     }
     TEST_F(TestFImdlp, MinLength)
     {
+        auto test = CPPFImdlp(75, 100);
         // Set min_length to 75
         vector<cutPoints_t> expected = {
             { 5.45, 5.75 },
@@ -214,26 +215,8 @@ namespace mdlp {
             { 2.45, 4.75 },
             { 0.8, 1.75 }
         };
-        int depths[] = { 2, 2, 2, 2 };
-        //test_dataset(test, "iris", expected, depths);
-        ArffFiles file;
-        file.load("../datasets/iris.arff", true);
-        vector<samples_t>& X = file.getX();
-        labels_t& y = file.getY();
-        auto attributes = file.getAttributes();
-        for (auto feature = 0; feature < attributes.size(); feature++) {
-            auto test = CPPFImdlp(75, 100);
-            test.fit(X[feature], y);
-            cout << "Feature: " << feature << " Depth: " << test.get_depth() << endl;
-            //EXPECT_EQ(test.get_depth(), depths[feature]);
-            auto computed = test.getCutPoints();
-            for (auto item : test.getCutPoints()) {
-                cout << item << " ";
-            }
-            cout << endl;
-            //checkCutPoints(computed, expected[feature]);
-        }
-        FAIL();
+        int depths[] = { 3, 2, 2, 2 };
+        test_dataset(test, "iris", expected, depths);
     }
     TEST_F(TestFImdlp, MinLengthMaxDepth)
     {
@@ -246,6 +229,6 @@ namespace mdlp {
             { 0.8, 1.75 }
         };
         int depths[] = { 2, 2, 2, 2 };
-        test_dataset(test, "iris.arff", expected, depths);
+        test_dataset(test, "iris", expected, depths);
     }
 }
