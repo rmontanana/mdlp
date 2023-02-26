@@ -11,7 +11,7 @@ namespace mdlp {
         samples_t X;
         labels_t y;
         int depth, max_depth;
-        size_t min_length;
+        int min_length;
         Metrics metrics;
         cutPoints_t cutPoints;
 

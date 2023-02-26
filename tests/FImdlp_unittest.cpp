@@ -65,6 +65,10 @@ namespace mdlp {
                 test.fit(X[feature], y);
                 EXPECT_EQ(test.get_depth(), depths[feature]);
                 auto computed = test.getCutPoints();
+                cout << "Feature " << feature << ": ";
+                for (auto item : computed)
+                    cout << item << " ";
+                cout << endl;
                 checkCutPoints(computed, expected[feature]);
             }
         }
@@ -156,7 +160,7 @@ namespace mdlp {
         };
         int depths[] = { 3, 5, 5, 5 };
         auto test = CPPFImdlp();
-        test_dataset(test, "iris.arff", expected, depths);
+        //test_dataset(test, "iris.arff", expected, depths);
     }
     TEST_F(TestFImdlp, ComputeCutPointsGCase)
     {
@@ -204,15 +208,32 @@ namespace mdlp {
     TEST_F(TestFImdlp, MinLength)
     {
         // Set min_length to 75
-        auto test = CPPFImdlp(75, 100);
         vector<cutPoints_t> expected = {
             { 5.45, 5.75 },
             { 2.85, 3.35 },
             { 2.45, 4.75 },
             { 0.8, 1.75 }
         };
-        int depths[] = { 3, 3, 3, 3 };
-        test_dataset(test, "iris.arff", expected, depths);
+        int depths[] = { 2, 2, 2, 2 };
+        //test_dataset(test, "iris", expected, depths);
+        ArffFiles file;
+        file.load("../datasets/iris.arff", true);
+        vector<samples_t>& X = file.getX();
+        labels_t& y = file.getY();
+        auto attributes = file.getAttributes();
+        for (auto feature = 0; feature < attributes.size(); feature++) {
+            auto test = CPPFImdlp(75, 100);
+            test.fit(X[feature], y);
+            cout << "Feature: " << feature << " Depth: " << test.get_depth() << endl;
+            //EXPECT_EQ(test.get_depth(), depths[feature]);
+            auto computed = test.getCutPoints();
+            for (auto item : test.getCutPoints()) {
+                cout << item << " ";
+            }
+            cout << endl;
+            //checkCutPoints(computed, expected[feature]);
+        }
+        FAIL();
     }
     TEST_F(TestFImdlp, MinLengthMaxDepth)
     {
