@@ -11,7 +11,6 @@ namespace mdlp {
         samples_t X;
         labels_t y;
         int depth, max_depth;
-        int min_length;
         Metrics metrics;
         cutPoints_t cutPoints;
 
@@ -21,6 +20,7 @@ namespace mdlp {
         size_t getCandidate(size_t, size_t);
         pair<precision_t, size_t> valueCutPoint(size_t, size_t, size_t);
     public:
+        int min_length;
         CPPFImdlp();
         CPPFImdlp(int, int);
         ~CPPFImdlp();
