@@ -128,9 +128,6 @@ namespace mdlp {
         precision_t ig, delta;
         precision_t ent, ent1, ent2;
         auto N = precision_t(end - start);
-        if (N < 2) {
-            return false;
-        }
         k = metrics.computeNumClasses(start, end);
         k1 = metrics.computeNumClasses(start, cut);
         k2 = metrics.computeNumClasses(cut, end);

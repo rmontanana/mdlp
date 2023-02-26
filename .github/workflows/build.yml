@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - test
+      - "*"
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
@@ -13,11 +13,14 @@ jobs:
     env:
       BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory # Directory where build-wrapper output will be placed
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3.2.0
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - name: Install sonar-scanner and build-wrapper
         uses: SonarSource/sonarcloud-github-c-cpp@v1
+      - name: Install gcovr
+        run: |
+          sudo apt-get install -y gcovr
       - name: Tests & build-wrapper
         run: |
           mkdir build
@@ -29,6 +32,7 @@ jobs:
           build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build/ --config Release
           cd build
           ctest -C Release --output-on-failure
+          gcovr --root ..  --gcov-filter "CPPFImdlp.cpp" --gcov-filter "Metrics.cpp" --txt --sonarqube=coverage.xml
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

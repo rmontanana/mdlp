@@ -1,12 +1,16 @@
+if [ -d build ] ; then
+	rm -fr build
+fi
 cmake -S . -B build -Wno-dev 
-if test $? -ne 0; then
-   echo "Error in creating build commands."
-   exit 1
-fi
 cmake --build build
-if test $? -ne 0; then
-   echo "Error in build command."
-   exit 1
-fi
 cd build
-ctest --output-on-failure|grep -v profiling
+ctest --output-on-failure
+cd ..
+if [ ! -d lcoverage ] ; then 
+	mkdir lcoverage
+fi
+rm -fr lcoverage/* 2>/dev/null
+#lcov --capture --directory ./ --output-file lcoverage/main_coverage.info
+#lcov --remove lcoverage/main_coverage.info 'v1/*' '/Applications/*' '*/tests/*' --output-file lcoverage/main_coverage.info -q
+#lcov --list lcoverage/main_coverage.info
+gcovr --root ..  --gcov-filter "CPPFImdlp.cpp" --gcov-filter "Metrics.cpp" --txt --sonarqube=coverage.xml   
