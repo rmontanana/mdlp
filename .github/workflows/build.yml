@@ -18,9 +18,10 @@ jobs:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - name: Install sonar-scanner and build-wrapper
         uses: SonarSource/sonarcloud-github-c-cpp@v1
-      - name: Install gcovr
+      - name: Install lcov & gcovr
         run: |
-          sudo apt-get install -y gcovr
+          sudo apt-get -y install lcov
+          sudo apt-get -y install gcovr
       - name: Tests & build-wrapper
         run: |
           mkdir build
@@ -40,4 +41,4 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sonar-scanner --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}" \
-                        --define sonar.coverageReportPaths=coverage.xml
+                        --define sonar.coverageReportPaths=tests/coverage.xml
