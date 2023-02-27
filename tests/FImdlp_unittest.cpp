@@ -8,7 +8,6 @@ namespace mdlp {
     class TestFImdlp: public CPPFImdlp, public testing::Test {
     public:
         precision_t precision = 0.000001;
-        //precision_t precision = 0.000000000001;
         TestFImdlp(): CPPFImdlp() {}
         void SetUp()
         {
@@ -194,7 +193,7 @@ namespace mdlp {
     }
     TEST_F(TestFImdlp, MaxDepth)
     {
-        // Set max_depth to 2
+        // Set max_depth to 1
         auto test = CPPFImdlp(3, 1);
         vector<cutPoints_t> expected = {
             { 5.45 },
