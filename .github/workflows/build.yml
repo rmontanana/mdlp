@@ -32,10 +32,12 @@ jobs:
           build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build/ --config Release
           cd build
           ctest -C Release --output-on-failure
+          cd ..
           gcovr --root ..  --gcov-filter "CPPFImdlp.cpp" --gcov-filter "Metrics.cpp" --txt --sonarqube=coverage.xml
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          sonar-scanner --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}"
+          sonar-scanner --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}" \
+                        --define sonar.coverageReportPaths=coverage.xml
