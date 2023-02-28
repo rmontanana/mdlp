@@ -28,7 +28,8 @@ mkdir build
 cd build
 cmake ..
 make
-./sample iris
+./sample -f iris -m 2
+./sample -h
 ```
 
 ## Test

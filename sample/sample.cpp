@@ -1,12 +1,15 @@
 #include <iostream>
 #include <vector>
 #include <iomanip>
+#include <chrono>
 #include <getopt.h>
 #include "../CPPFImdlp.h"
 #include "../tests/ArffFiles.h"
 
 using namespace std;
 using namespace mdlp;
+
+const string PATH = "../../tests/datasets/";
 
 /* print a description of all supported options */
 void usage(const char* path)
@@ -17,7 +20,7 @@ void usage(const char* path)
 
     cout << "usage: " << basename << "[OPTION]" << endl;
     cout << "  -h, --help\t\t Print this help and exit." << endl;
-    cout << "  -f, --file[=FILENAME]\t {mfeat-factors, glass, iris, letter, kdd_JapaneseVowels, liver-disorders, test}." << endl;
+    cout << "  -f, --file[=FILENAME]\t {all, glass, iris, kdd_JapaneseVowels, letter, liver-disorders, mfeat-factors, test}." << endl;
     cout << "  -m, --max_depth=INT\t max_depth pased to discretizer. Default = MAX_INT" << endl;
     cout << "  -n, --min_length=INT\t interval min_length pased to discretizer. Default = 3" << endl;
 }
@@ -68,9 +71,8 @@ tuple<string, int, int> parse_arguments(int argc, char** argv)
 void process_file(string file_name, bool class_last, int max_depth, int min_length)
 {
     ArffFiles file;
-    string path = "../../tests/datasets/";
 
-    file.load(path + file_name + ".arff", class_last);
+    file.load(PATH + file_name + ".arff", class_last);
     auto attributes = file.getAttributes();
     int items = file.getSize();
     cout << "Number of lines: " << items << endl;
@@ -83,7 +85,7 @@ void process_file(string file_name, bool class_last, int max_depth, int min_leng
     cout << "Data: " << endl;
     vector<samples_t>& X = file.getX();
     labels_t& y = file.getY();
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < 5; i++) {
         for (auto feature : X) {
             cout << fixed << setprecision(1) << feature[i] << " ";
         }
@@ -106,29 +108,58 @@ void process_file(string file_name, bool class_last, int max_depth, int min_leng
     cout << "Total feature states: " << total + attributes.size() << endl;
 }
 
+void process_all_files(map<string, bool> datasets, int max_depth, int min_length)
+{
+    cout << "Results: " << "Max_depth: " << max_depth << "  Min_length: " << min_length << endl << endl;
+    printf("%-20s %4s %4s\n", "Dataset", "Feat", "Cuts Time(s)");
+    printf("==================== ==== ==== =======\n");
+    for (auto dataset : datasets) {
+        ArffFiles file;
+        file.load(PATH + dataset.first + ".arff", dataset.second);
+        auto attributes = file.getAttributes();
+        vector<samples_t>& X = file.getX();
+        labels_t& y = file.getY();
+        float timing = 0;
+        int cut_points = 0;
+        for (auto i = 0; i < attributes.size(); i++) {
+            mdlp::CPPFImdlp test = mdlp::CPPFImdlp(min_length, max_depth);
+            std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+            test.fit(X[i], y);
+            std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+            timing += std::chrono::duration_cast<std::chrono::seconds>(end - begin).count();
+            cut_points += test.getCutPoints().size();
+        }
+        printf("%-20s %4lu %4d %7.2f\n", dataset.first.c_str(), attributes.size(), cut_points, timing);
+    }
+}
+
 
 int main(int argc, char** argv)
 {
     map<string, bool> datasets = {
-            {"mfeat-factors",      true},
-            {"iris",               true},
-            {"letter",             true},
             {"glass",              true},
+            {"iris",               true},
             {"kdd_JapaneseVowels", false},
+            {"letter",             true},
             {"liver-disorders",    true},
+            {"mfeat-factors",      true},
             {"test",               true}
     };
     string file_name;
     int max_depth, min_length;
     tie(file_name, max_depth, min_length) = parse_arguments(argc, argv);
-    if (datasets.find(file_name) == datasets.end()) {
+    if (datasets.find(file_name) == datasets.end() && file_name != "all") {
         cout << "Invalid file name: " << file_name << endl;
         usage(argv[0]);
         exit(1);
     }
-    process_file(file_name, datasets[file_name], max_depth, min_length);
-    cout << "File name: " << file_name << endl;
-    cout << "Max depth: " << max_depth << endl;
-    cout << "Min length: " << min_length << endl;
+    if (file_name == "all")
+        process_all_files(datasets, max_depth, min_length);
+    else {
+        process_file(file_name, datasets[file_name], max_depth, min_length);
+        cout << "File name: " << file_name << endl;
+        cout << "Max depth: " << max_depth << endl;
+        cout << "Min length: " << min_length << endl;
+    }
     return 0;
 }
