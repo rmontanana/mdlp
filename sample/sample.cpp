@@ -2,6 +2,8 @@
 #include <vector>
 #include <iomanip>
 #include <chrono>
+#include <algorithm>
+#include <cstring>
 #include <getopt.h>
 #include "../CPPFImdlp.h"
 #include "../tests/ArffFiles.h"
