@@ -121,25 +121,25 @@ void process_file(string path, string file_name, bool class_last, int max_depth,
 void process_all_files(map<string, bool> datasets, string path, int max_depth, int min_length)
 {
     cout << "Results: " << "Max_depth: " << max_depth << "  Min_length: " << min_length << endl << endl;
-    printf("%-20s %4s %4s\n", "Dataset", "Feat", "Cuts Time(s)");
-    printf("==================== ==== ==== =======\n");
+    printf("%-20s %4s %4s\n", "Dataset", "Feat", "Cuts Time(ms)");
+    printf("==================== ==== ==== ========\n");
     for (auto dataset : datasets) {
         ArffFiles file;
         file.load(path + dataset.first + ".arff", dataset.second);
         auto attributes = file.getAttributes();
         vector<samples_t>& X = file.getX();
         labels_t& y = file.getY();
-        float timing = 0;
+        size_t timing = 0;
         int cut_points = 0;
         for (auto i = 0; i < attributes.size(); i++) {
             mdlp::CPPFImdlp test = mdlp::CPPFImdlp(min_length, max_depth);
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
             test.fit(X[i], y);
             std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-            timing += std::chrono::duration_cast<std::chrono::seconds>(end - begin).count();
+            timing += std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
             cut_points += test.getCutPoints().size();
         }
-        printf("%-20s %4lu %4d %7.2f\n", dataset.first.c_str(), attributes.size(), cut_points, timing);
+        printf("%-20s %4lu %4d %8zu\n", dataset.first.c_str(), attributes.size(), cut_points, timing);
     }
 }
 

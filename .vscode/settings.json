@@ -2,5 +2,6 @@
     "sonarlint.connectedMode.project": {
         "connectionId": "sonarcloud",
         "projectKey": "rmontanana_mdlp"
-    }
+    },
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }
