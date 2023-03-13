@@ -8,16 +8,11 @@
 #include "Metrics.h"
 namespace mdlp {
 
-    CPPFImdlp::CPPFImdlp():min_length(3), depth(0), max_depth(numeric_limits<int>::max()), proposed_cuts(0),
-        indices(indices_t()), X(samples_t()), y(labels_t()),
-        metrics(Metrics(y, indices)), num_cut_points(numeric_limits<size_t>::max())
+    CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_, float proposed): min_length(min_length_),
+        max_depth(max_depth_), proposed_cuts(proposed)
     {
     }
-    CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_, float proposed): min_length(min_length_), depth(0),
-        max_depth(max_depth_), proposed_cuts(proposed), indices(indices_t()), X(samples_t()), y(labels_t()),
-        metrics(Metrics(y, indices)), num_cut_points(numeric_limits<size_t>::max())
-    {
-    }
+    CPPFImdlp::CPPFImdlp() = default;
     CPPFImdlp::~CPPFImdlp() = default;
 
     size_t CPPFImdlp::compute_max_num_cut_points()

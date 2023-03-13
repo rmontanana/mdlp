@@ -7,15 +7,16 @@
 namespace mdlp {
     class CPPFImdlp {
     protected:
-        size_t min_length;
-        int depth, max_depth;
-        float proposed_cuts;
-        indices_t indices;
-        samples_t X;
-        labels_t y;
-        Metrics metrics;
+        size_t min_length = 3;
+        int depth = 0;
+        int max_depth = numeric_limits<int>::max();
+        float proposed_cuts = 0;
+        indices_t indices = indices_t();
+        samples_t X = samples_t();
+        labels_t y = labels_t();
+        Metrics metrics = Metrics(y, indices);
         cutPoints_t cutPoints;
-        size_t num_cut_points;
+        size_t num_cut_points = numeric_limits<size_t>::max();
 
         static indices_t sortIndices(samples_t&, labels_t&);
         void computeCutPoints(size_t, size_t, int);
