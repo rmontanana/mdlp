@@ -263,4 +263,15 @@ namespace mdlp {
         int depths[] = { 2, 2, 2, 2 };
         test_dataset(test, "iris", expected, depths);
     }
+    TEST_F(TestFImdlp, ProposedCuts)
+    {
+        vector<pair<float, size_t>> proposed_list = { { 0.1, 2}, { 0.5,  10}, {0.07, 1}, {1, 1}, {2, 2} };
+        size_t expected, computed;
+        for (auto proposed_item : proposed_list) {
+            tie(proposed_cuts, expected) = proposed_item;
+            computed = compute_max_num_cut_points();
+            ASSERT_EQ(expected, computed);
+        }
+
+    }
 }

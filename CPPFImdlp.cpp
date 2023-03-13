@@ -25,7 +25,7 @@ namespace mdlp {
             throw invalid_argument("wrong proposed num_cuts value");
         }
         if (proposed_cuts < 1)
-            return static_cast<size_t>(round(X.size() * proposed_cuts));
+            return static_cast<size_t>(round(static_cast<float>(X.size()) * proposed_cuts));
         return static_cast<size_t>(proposed_cuts);
     }
 
