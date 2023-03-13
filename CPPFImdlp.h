@@ -22,7 +22,7 @@ namespace mdlp {
         void computeCutPoints(size_t, size_t, int);
         bool mdlp(size_t, size_t, size_t);
         size_t getCandidate(size_t, size_t);
-        size_t compute_max_num_cut_points();
+        size_t compute_max_num_cut_points() const;
         pair<precision_t, size_t> valueCutPoint(size_t, size_t, size_t);
     public:
         CPPFImdlp();
@@ -30,7 +30,7 @@ namespace mdlp {
         ~CPPFImdlp();
         void fit(samples_t&, labels_t&);
         cutPoints_t getCutPoints();
-        int get_depth();
+        int get_depth() const;
         inline string version() { return "1.1.1"; };
     };
 }

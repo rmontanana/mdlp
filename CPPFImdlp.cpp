@@ -15,7 +15,7 @@ namespace mdlp {
     CPPFImdlp::CPPFImdlp() = default;
     CPPFImdlp::~CPPFImdlp() = default;
 
-    size_t CPPFImdlp::compute_max_num_cut_points()
+    size_t CPPFImdlp::compute_max_num_cut_points() const
     {
         // Set the actual maximum number of cut points as a number or as a percentage of the number of samples
         if (proposed_cuts == 0) {
@@ -25,8 +25,8 @@ namespace mdlp {
             throw invalid_argument("wrong proposed num_cuts value");
         }
         if (proposed_cuts < 1)
-            return (int)round(X.size() * proposed_cuts);
-        return (int)proposed_cuts;
+            return static_cast<size_t>(round(X.size() * proposed_cuts));
+        return static_cast<size_t>(proposed_cuts);
     }
 
     void CPPFImdlp::fit(samples_t& X_, labels_t& y_)
@@ -174,7 +174,7 @@ namespace mdlp {
         sort(cutPoints.begin(), cutPoints.end());
         return cutPoints;
     }
-    int CPPFImdlp::get_depth()
+    int CPPFImdlp::get_depth() const
     {
         return depth;
     }
