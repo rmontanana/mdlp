@@ -3,6 +3,14 @@
 #include "../CPPFImdlp.h"
 #include "ArffFiles.h"
 #include <iostream>
+#define EXPECT_THROW_WITH_MESSAGE(stmt, etype, whatstring) EXPECT_THROW( \
+try { \
+stmt; \
+} catch (const etype& ex) { \
+EXPECT_EQ(whatstring, std::string(ex.what())); \
+throw; \
+} \
+, etype)
 
 namespace mdlp {
     class TestFImdlp: public CPPFImdlp, public testing::Test {
@@ -76,13 +84,13 @@ namespace mdlp {
     {
         X = samples_t();
         y = labels_t();
-        EXPECT_THROW(fit(X, y), std::invalid_argument);
+        EXPECT_THROW_WITH_MESSAGE(fit(X, y), invalid_argument, "X and y must have at least one element");
     }
     TEST_F(TestFImdlp, FitErrorDifferentSize)
     {
         X = { 1, 2, 3 };
         y = { 1, 2 };
-        EXPECT_THROW(fit(X, y), std::invalid_argument);
+        EXPECT_THROW_WITH_MESSAGE(fit(X, y), invalid_argument, "X and y must have the same size");
     }
     TEST_F(TestFImdlp, FitErrorMinLengtMaxDepth)
     {
@@ -90,8 +98,8 @@ namespace mdlp {
         auto testDepth = CPPFImdlp(3, 0, 0);
         X = { 1, 2, 3 };
         y = { 1, 2, 3 };
-        EXPECT_THROW(testLength.fit(X, y), invalid_argument);
-        EXPECT_THROW(testDepth.fit(X, y), invalid_argument);
+        EXPECT_THROW_WITH_MESSAGE(testLength.fit(X, y), invalid_argument, "min_length must be greater than 2");
+        EXPECT_THROW_WITH_MESSAGE(testDepth.fit(X, y), invalid_argument, "max_depth must be greater than 0");
     }
     TEST_F(TestFImdlp, FitErrorMaxCutPoints)
     {
@@ -99,8 +107,8 @@ namespace mdlp {
         auto testmax = CPPFImdlp(3, 0, 200);
         X = { 1, 2, 3 };
         y = { 1, 2, 3 };
-        EXPECT_THROW(testmin.fit(X, y), invalid_argument);
-        EXPECT_THROW(testmax.fit(X, y), invalid_argument);
+        EXPECT_THROW_WITH_MESSAGE(testmin.fit(X, y), invalid_argument, "wrong proposed num_cuts value");
+        EXPECT_THROW_WITH_MESSAGE(testmax.fit(X, y), invalid_argument, "wrong proposed num_cuts value");
     }
     TEST_F(TestFImdlp, SortIndices)
     {
