@@ -36,6 +36,7 @@ namespace mdlp {
     TEST_F(TestMetrics, InformationGain)
     {
         ASSERT_NEAR(1, informationGain(0, 5, 10), precision);
+        ASSERT_NEAR(1, informationGain(0, 5, 10), precision); // For cache
         y = { 1, 1, 1, 1, 1, 1, 1, 1, 2, 1 };
         setData(y, indices);
         ASSERT_NEAR(0.108032, informationGain(0, 5, 10), precision);

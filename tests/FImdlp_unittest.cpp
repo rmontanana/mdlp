@@ -86,12 +86,21 @@ namespace mdlp {
     }
     TEST_F(TestFImdlp, FitErrorMinLengtMaxDepth)
     {
-        auto testLength = CPPFImdlp(2, 10);
-        auto testDepth = CPPFImdlp(3, 0);
+        auto testLength = CPPFImdlp(2, 10, 0);
+        auto testDepth = CPPFImdlp(3, 0, 0);
         X = { 1, 2, 3 };
         y = { 1, 2, 3 };
         EXPECT_THROW(testLength.fit(X, y), invalid_argument);
         EXPECT_THROW(testDepth.fit(X, y), invalid_argument);
+    }
+    TEST_F(TestFImdlp, FitErrorMaxCutPoints)
+    {
+        auto testmin = CPPFImdlp(2, 10, -1);
+        auto testmax = CPPFImdlp(3, 0, 200);
+        X = { 1, 2, 3 };
+        y = { 1, 2, 3 };
+        EXPECT_THROW(testmin.fit(X, y), invalid_argument);
+        EXPECT_THROW(testmax.fit(X, y), invalid_argument);
     }
     TEST_F(TestFImdlp, SortIndices)
     {
@@ -139,10 +148,8 @@ namespace mdlp {
     TEST_F(TestFImdlp, TestArtificialDataset)
     {
         fit(X, y);
-        computeCutPoints(0, 20, 1);
         cutPoints_t expected = { 5.05 };
         vector<precision_t> computed = getCutPoints();
-        computed = getCutPoints();
         int expectedSize = expected.size();
         EXPECT_EQ(computed.size(), expected.size());
         for (unsigned long i = 0; i < computed.size(); i++) {
@@ -194,7 +201,7 @@ namespace mdlp {
     TEST_F(TestFImdlp, MaxDepth)
     {
         // Set max_depth to 1
-        auto test = CPPFImdlp(3, 1);
+        auto test = CPPFImdlp(3, 1, 0);
         vector<cutPoints_t> expected = {
             { 5.45 },
             { 3.35 },
@@ -206,7 +213,7 @@ namespace mdlp {
     }
     TEST_F(TestFImdlp, MinLength)
     {
-        auto test = CPPFImdlp(75, 100);
+        auto test = CPPFImdlp(75, 100, 0);
         // Set min_length to 75
         vector<cutPoints_t> expected = {
             { 5.45, 5.75 },
@@ -220,7 +227,33 @@ namespace mdlp {
     TEST_F(TestFImdlp, MinLengthMaxDepth)
     {
         // Set min_length to 75
-        auto test = CPPFImdlp(75, 2);
+        auto test = CPPFImdlp(75, 2, 0);
+        vector<cutPoints_t> expected = {
+            { 5.45, 5.75 },
+            { 2.85, 3.35 },
+            { 2.45, 4.75 },
+            { 0.8, 1.75 }
+        };
+        int depths[] = { 2, 2, 2, 2 };
+        test_dataset(test, "iris", expected, depths);
+    }
+    TEST_F(TestFImdlp, MaxCutPointsInteger)
+    {
+        // Set min_length to 75
+        auto test = CPPFImdlp(75, 2, 1);
+        vector<cutPoints_t> expected = {
+            { 5.45  },
+            { 3.35  },
+            { 2.45 },
+            { 0.8}
+        };
+        int depths[] = { 1, 1, 1, 1 };
+        test_dataset(test, "iris", expected, depths);
+    }
+    TEST_F(TestFImdlp, MaxCutPointsFloat)
+    {
+        // Set min_length to 75
+        auto test = CPPFImdlp(75, 2, 0.2);
         vector<cutPoints_t> expected = {
             { 5.45, 5.75 },
             { 2.85, 3.35 },

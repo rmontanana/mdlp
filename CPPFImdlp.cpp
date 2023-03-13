@@ -3,25 +3,42 @@
 #include <set>
 #include <cmath>
 #include <limits>
+#include <cmath>
 #include "CPPFImdlp.h"
 #include "Metrics.h"
-
 namespace mdlp {
 
-    CPPFImdlp::CPPFImdlp():depth(0), max_depth(numeric_limits<int>::max()), min_length(3), indices(indices_t()), X(samples_t()), y(labels_t()),
-        metrics(Metrics(y, indices))
+    CPPFImdlp::CPPFImdlp():min_length(3), depth(0), max_depth(numeric_limits<int>::max()), proposed_cuts(0),
+        indices(indices_t()), X(samples_t()), y(labels_t()),
+        metrics(Metrics(y, indices)), num_cut_points(numeric_limits<size_t>::max())
     {
     }
-    CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_): depth(0), max_depth(max_depth_), min_length(min_length_), indices(indices_t()), X(samples_t()), y(labels_t()),
-        metrics(Metrics(y, indices))
+    CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_, float proposed): min_length(min_length_), depth(0),
+        max_depth(max_depth_), proposed_cuts(proposed), indices(indices_t()), X(samples_t()), y(labels_t()),
+        metrics(Metrics(y, indices)), num_cut_points(numeric_limits<size_t>::max())
     {
     }
     CPPFImdlp::~CPPFImdlp() = default;
 
-    CPPFImdlp& CPPFImdlp::fit(samples_t& X_, labels_t& y_)
+    size_t CPPFImdlp::compute_max_num_cut_points()
+    {
+        // Set the actual maximum number of cut points as a number or as a percentage of the number of samples
+        if (proposed_cuts == 0) {
+            return  numeric_limits<size_t>::max();
+        }
+        if (proposed_cuts < 0 || proposed_cuts > X.size()) {
+            throw invalid_argument("wrong proposed num_cuts value");
+        }
+        if (proposed_cuts < 1)
+            return (int)round(X.size() * proposed_cuts);
+        return (int)proposed_cuts;
+    }
+
+    void CPPFImdlp::fit(samples_t& X_, labels_t& y_)
     {
         X = X_;
         y = y_;
+        num_cut_points = compute_max_num_cut_points();
         depth = 0;
         cutPoints.clear();
         if (X.size() != y.size()) {
@@ -39,7 +56,6 @@ namespace mdlp {
         indices = sortIndices(X_, y_);
         metrics.setData(y, indices);
         computeCutPoints(0, X.size(), 1);
-        return *this;
     }
 
     pair<precision_t, size_t> CPPFImdlp::valueCutPoint(size_t start, size_t cut, size_t end)
@@ -75,6 +91,8 @@ namespace mdlp {
     {
         size_t cut;
         pair<precision_t, size_t> result;
+        if (cutPoints.size() == num_cut_points)
+            return;
         // Check if the interval length and the depth are Ok
         if (end - start < min_length || depth_ > max_depth)
             return;
@@ -158,15 +176,8 @@ namespace mdlp {
 
     cutPoints_t CPPFImdlp::getCutPoints()
     {
-        // Remove duplicates and sort
-        cutPoints_t output(cutPoints.size());
-        set<precision_t> s;
-        unsigned size = cutPoints.size();
-        for (unsigned i = 0; i < size; i++)
-            s.insert(cutPoints[i]);
-        output.assign(s.begin(), s.end());
-        sort(output.begin(), output.end());
-        return output;
+        sort(cutPoints.begin(), cutPoints.end());
+        return cutPoints;
     }
     int CPPFImdlp::get_depth()
     {

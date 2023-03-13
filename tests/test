@@ -13,4 +13,5 @@ rm -fr gcovr-report/* 2>/dev/null
 #lcov --capture --directory ./ --output-file lcoverage/main_coverage.info
 #lcov --remove lcoverage/main_coverage.info 'v1/*' '/Applications/*' '*/tests/*' --output-file lcoverage/main_coverage.info -q
 #lcov --list lcoverage/main_coverage.info
-gcovr --root ..  --gcov-filter "CPPFImdlp.cpp" --gcov-filter "Metrics.cpp" --txt --sonarqube=gcovr-report/coverage.xml   
+cd ..
+gcovr  --gcov-filter "CPPFImdlp.cpp" --gcov-filter "Metrics.cpp" --txt --sonarqube=tests/gcovr-report/coverage.xml   

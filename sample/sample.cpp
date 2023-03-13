@@ -25,25 +25,28 @@ void usage(const char* path)
     cout << "  -f, --file[=FILENAME]\t {all, glass, iris, kdd_JapaneseVowels, letter, liver-disorders, mfeat-factors, test}." << endl;
     cout << "  -p, --path[=FILENAME]\t folder where the arff dataset is located, default " << PATH << endl;
     cout << "  -m, --max_depth=INT\t max_depth pased to discretizer. Default = MAX_INT" << endl;
+    cout << "  -c, --max_cutpoints=FLOAT\t percentage of lines expressed in decimal or integer number or cut points. Default = 0 = any" << endl;
     cout << "  -n, --min_length=INT\t interval min_length pased to discretizer. Default = 3" << endl;
 }
 
-tuple<string, string, int, int> parse_arguments(int argc, char** argv)
+tuple<string, string, int, int, float> parse_arguments(int argc, char** argv)
 {
     string file_name;
     string path = PATH;
     int max_depth = numeric_limits<int>::max();
     int min_length = 3;
+    float max_cutpoints = 0;
     static struct option long_options[] = {
             { "help", no_argument, 0, 'h' },
             { "file", required_argument, 0, 'f' },
             { "path", required_argument, 0, 'p' },
             { "max_depth", required_argument, 0, 'm' },
+            { "max_cutpoints", required_argument, 0, 'c' },
             { "min_length", required_argument, 0, 'n' },
             { 0, 0, 0, 0 }
     };
     while (1) {
-        auto c = getopt_long(argc, argv, "hf:p:m:n:", long_options, 0);
+        auto c = getopt_long(argc, argv, "hf:p:m:c:n:", long_options, 0);
         if (c == -1)
             break;
         switch (c) {
@@ -58,6 +61,9 @@ tuple<string, string, int, int> parse_arguments(int argc, char** argv)
                 break;
             case 'n':
                 min_length = atoi(optarg);
+                break;
+            case 'c':
+                max_cutpoints = atof(optarg);
                 break;
             case 'p':
                 path = optarg;
@@ -75,10 +81,10 @@ tuple<string, string, int, int> parse_arguments(int argc, char** argv)
         usage(argv[0]);
         exit(1);
     }
-    return make_tuple(file_name, path, max_depth, min_length);
+    return make_tuple(file_name, path, max_depth, min_length, max_cutpoints);
 }
 
-void process_file(string path, string file_name, bool class_last, int max_depth, int min_length)
+void process_file(string path, string file_name, bool class_last, int max_depth, int min_length, float max_cutpoints)
 {
     ArffFiles file;
 
@@ -101,7 +107,7 @@ void process_file(string path, string file_name, bool class_last, int max_depth,
         }
         cout << y[i] << endl;
     }
-    mdlp::CPPFImdlp test = mdlp::CPPFImdlp(min_length, max_depth);
+    mdlp::CPPFImdlp test = mdlp::CPPFImdlp(min_length, max_depth, max_cutpoints);
     auto total = 0;
     for (auto i = 0; i < attributes.size(); i++) {
         auto min_max = minmax_element(X[i].begin(), X[i].end());
@@ -118,7 +124,7 @@ void process_file(string path, string file_name, bool class_last, int max_depth,
     cout << "Total feature states: " << total + attributes.size() << endl;
 }
 
-void process_all_files(map<string, bool> datasets, string path, int max_depth, int min_length)
+void process_all_files(map<string, bool> datasets, string path, int max_depth, int min_length, float max_cutpoints)
 {
     cout << "Results: " << "Max_depth: " << max_depth << "  Min_length: " << min_length << endl << endl;
     printf("%-20s %4s %4s\n", "Dataset", "Feat", "Cuts Time(ms)");
@@ -132,7 +138,7 @@ void process_all_files(map<string, bool> datasets, string path, int max_depth, i
         size_t timing = 0;
         int cut_points = 0;
         for (auto i = 0; i < attributes.size(); i++) {
-            mdlp::CPPFImdlp test = mdlp::CPPFImdlp(min_length, max_depth);
+            mdlp::CPPFImdlp test = mdlp::CPPFImdlp(min_length, max_depth, max_cutpoints);
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
             test.fit(X[i], y);
             std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
@@ -157,19 +163,29 @@ int main(int argc, char** argv)
     };
     string file_name, path;
     int max_depth, min_length;
-    tie(file_name, path, max_depth, min_length) = parse_arguments(argc, argv);
+    float max_cutpoints;
+    tie(file_name, path, max_depth, min_length, max_cutpoints) = parse_arguments(argc, argv);
     if (datasets.find(file_name) == datasets.end() && file_name != "all") {
         cout << "Invalid file name: " << file_name << endl;
         usage(argv[0]);
         exit(1);
     }
     if (file_name == "all")
-        process_all_files(datasets, path, max_depth, min_length);
+        process_all_files(datasets, path, max_depth, min_length, max_cutpoints);
     else {
-        process_file(path, file_name, datasets[file_name], max_depth, min_length);
+        process_file(path, file_name, datasets[file_name], max_depth, min_length, max_cutpoints);
         cout << "File name: " << file_name << endl;
         cout << "Max depth: " << max_depth << endl;
         cout << "Min length: " << min_length << endl;
+    }
+    mdlp::CPPFImdlp test = mdlp::CPPFImdlp(min_length, max_depth, max_cutpoints);
+    samples_t X = { 4.7, 4.7, 4.7, 4.7, 4.8, 4.8, 4.8, 4.8, 4.9, 4.95, 5.7, 5.3, 5.2, 5.1, 5.0, 5.6, 5.1, 6.0, 5.1, 5.9 };
+    labels_t y = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
+    test.fit(X, y);
+    vector<precision_t> computed = test.getCutPoints();
+    cout << "Computed cut points: " << endl;
+    for (auto item : computed) {
+        cout << item << endl;
     }
     return 0;
 }
