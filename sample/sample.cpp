@@ -174,18 +174,10 @@ int main(int argc, char** argv)
         process_all_files(datasets, path, max_depth, min_length, max_cutpoints);
     else {
         process_file(path, file_name, datasets[file_name], max_depth, min_length, max_cutpoints);
-        cout << "File name: " << file_name << endl;
-        cout << "Max depth: " << max_depth << endl;
-        cout << "Min length: " << min_length << endl;
-    }
-    mdlp::CPPFImdlp test = mdlp::CPPFImdlp(min_length, max_depth, max_cutpoints);
-    samples_t X = { 4.7, 4.7, 4.7, 4.7, 4.8, 4.8, 4.8, 4.8, 4.9, 4.95, 5.7, 5.3, 5.2, 5.1, 5.0, 5.6, 5.1, 6.0, 5.1, 5.9 };
-    labels_t y = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
-    test.fit(X, y);
-    vector<precision_t> computed = test.getCutPoints();
-    cout << "Computed cut points: " << endl;
-    for (auto item : computed) {
-        cout << item << endl;
+        cout << "File name ....: " << file_name << endl;
+        cout << "Max depth ....: " << max_depth << endl;
+        cout << "Min length ...: " << min_length << endl;
+        cout << "Max cutpoints : " << max_cutpoints << endl;
     }
     return 0;
 }
