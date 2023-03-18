@@ -18,10 +18,10 @@ public:
     unsigned long int getSize();
     string getClassName();
     string getClassType();
-    string trim(const string&);
+    static string trim(const string&);
     vector<vector<float>>& getX();
     vector<int>& getY();
     vector<pair<string, string>> getAttributes();
-    vector<int> factorize(const vector<string>& labels_t);
+    static vector<int> factorize(const vector<string>& labels_t);
 };
 #endif

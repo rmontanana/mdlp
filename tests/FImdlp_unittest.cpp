@@ -1,8 +1,9 @@
 #include "gtest/gtest.h"
 #include "../Metrics.h"
 #include "../CPPFImdlp.h"
-#include "ArffFiles.h"
+#include <fstream>
 #include <iostream>
+#include "ArffFiles.h"
 #define EXPECT_THROW_WITH_MESSAGE(stmt, etype, whatstring) EXPECT_THROW( \
 try { \
 stmt; \
@@ -17,11 +18,23 @@ namespace mdlp {
     public:
         precision_t precision = 0.000001;
         TestFImdlp(): CPPFImdlp() {}
+        string data_path;
         void SetUp()
         {
             X = { 4.7, 4.7, 4.7, 4.7, 4.8, 4.8, 4.8, 4.8, 4.9, 4.95, 5.7, 5.3, 5.2, 5.1, 5.0, 5.6, 5.1, 6.0, 5.1, 5.9 };
             y = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
             fit(X, y);
+            data_path = set_data_path();
+        }
+        string set_data_path()
+        {
+            string path = "../datasets/";
+            ifstream file(path+"iris.arff");
+            if (file.is_open()) {
+                file.close();
+                return path;
+            }
+            return "../../tests/datasets/";
         }
         void checkSortedVector()
         {
@@ -37,6 +50,7 @@ namespace mdlp {
         {
             EXPECT_EQ(computed.size(), expected.size());
             for (unsigned long i = 0; i < computed.size(); i++) {
+                cout << "(" << computed[i] << ", " << expected[i] << ") ";
                 EXPECT_NEAR(computed[i], expected[i], precision);
             }
         }
@@ -64,7 +78,7 @@ namespace mdlp {
         void test_dataset(CPPFImdlp& test, string filename, vector<cutPoints_t>& expected, int depths[])
         {
             ArffFiles file;
-            file.load("../datasets/" + filename + ".arff", true);
+            file.load(data_path + filename + ".arff", true);
             vector<samples_t>& X = file.getX();
             labels_t& y = file.getY();
             auto attributes = file.getAttributes();
@@ -73,10 +87,8 @@ namespace mdlp {
                 EXPECT_EQ(test.get_depth(), depths[feature]);
                 auto computed = test.getCutPoints();
                 cout << "Feature " << feature << ": ";
-                for (auto item : computed)
-                    cout << item << " ";
-                cout << endl;
                 checkCutPoints(computed, expected[feature]);
+                cout << endl;
             }
         }
     };
