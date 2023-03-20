@@ -1,6 +1,9 @@
 if [ -d build ] ; then
 	rm -fr build
 fi
+if [ -d gcovr-report ] ; then
+	rm -fr gcovr-report
+fi
 cmake -S . -B build -Wno-dev 
 cmake --build build
 cd build

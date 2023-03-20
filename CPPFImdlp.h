@@ -45,7 +45,7 @@ namespace mdlp {
 
         int get_depth() const;
 
-        inline string version() const { return "1.1.1"; };
+        static inline string version() { return "1.1.1"; };
     };
 }
 #endif
