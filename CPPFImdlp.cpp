@@ -2,22 +2,23 @@
 #include <algorithm>
 #include <set>
 #include <cmath>
-#include <limits>
 #include "CPPFImdlp.h"
 #include "Metrics.h"
 
 namespace mdlp {
 
-    CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_, float proposed) : min_length(min_length_),
-                                                                               max_depth(max_depth_),
-                                                                               proposed_cuts(proposed) {
+    CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_, float proposed): min_length(min_length_),
+        max_depth(max_depth_),
+        proposed_cuts(proposed)
+    {
     }
 
     CPPFImdlp::CPPFImdlp() = default;
 
     CPPFImdlp::~CPPFImdlp() = default;
 
-    size_t CPPFImdlp::compute_max_num_cut_points() const {
+    size_t CPPFImdlp::compute_max_num_cut_points() const
+    {
         // Set the actual maximum number of cut points as a number or as a percentage of the number of samples
         if (proposed_cuts == 0) {
             return numeric_limits<size_t>::max();
@@ -30,7 +31,8 @@ namespace mdlp {
         return static_cast<size_t>(proposed_cuts);
     }
 
-    void CPPFImdlp::fit(samples_t &X_, labels_t &y_) {
+    void CPPFImdlp::fit(samples_t& X_, labels_t& y_)
+    {
         X = X_;
         y = y_;
         num_cut_points = compute_max_num_cut_points();
@@ -53,7 +55,8 @@ namespace mdlp {
         computeCutPoints(0, X.size(), 1);
     }
 
-    pair<precision_t, size_t> CPPFImdlp::valueCutPoint(size_t start, size_t cut, size_t end) {
+    pair<precision_t, size_t> CPPFImdlp::valueCutPoint(size_t start, size_t cut, size_t end)
+    {
         size_t n;
         size_t m;
         size_t idxPrev = cut - 1 >= start ? cut - 1 : cut;
@@ -82,10 +85,11 @@ namespace mdlp {
         // Decide which values to use
         cut = cut + (backWall ? m + 1 : -n);
         actual = X[indices[cut]];
-        return {(actual + previous) / 2, cut};
+        return { (actual + previous) / 2, cut };
     }
 
-    void CPPFImdlp::computeCutPoints(size_t start, size_t end, int depth_) {
+    void CPPFImdlp::computeCutPoints(size_t start, size_t end, int depth_)
+    {
         size_t cut;
         pair<precision_t, size_t> result;
         if (cutPoints.size() == num_cut_points)
@@ -106,7 +110,8 @@ namespace mdlp {
         }
     }
 
-    size_t CPPFImdlp::getCandidate(size_t start, size_t end) {
+    size_t CPPFImdlp::getCandidate(size_t start, size_t end)
+    {
         /* Definition 1: A binary discretization for A is determined by selecting the cut point TA for which
         E(A, TA; S) is minimal amongst all the candidate cut points. */
         size_t candidate = numeric_limits<size_t>::max();
@@ -139,7 +144,8 @@ namespace mdlp {
         return candidate;
     }
 
-    bool CPPFImdlp::mdlp(size_t start, size_t cut, size_t end) {
+    bool CPPFImdlp::mdlp(size_t start, size_t cut, size_t end)
+    {
         int k;
         int k1;
         int k2;
@@ -157,13 +163,14 @@ namespace mdlp {
         ent2 = metrics.entropy(cut, end);
         ig = metrics.informationGain(start, cut, end);
         delta = static_cast<float>(log2(pow(3, precision_t(k)) - 2) -
-                                   (precision_t(k) * ent - precision_t(k1) * ent1 - precision_t(k2) * ent2));
+            (precision_t(k) * ent - precision_t(k1) * ent1 - precision_t(k2) * ent2));
         precision_t term = 1 / N * (log2(N - 1) + delta);
         return ig > term;
     }
 
     // Argsort from https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
-    indices_t CPPFImdlp::sortIndices(samples_t &X_, labels_t &y_) {
+    indices_t CPPFImdlp::sortIndices(samples_t& X_, labels_t& y_)
+    {
         indices_t idx(X_.size());
         iota(idx.begin(), idx.end(), 0);
         stable_sort(idx.begin(), idx.end(), [&X_, &y_](size_t i1, size_t i2) {
@@ -171,16 +178,18 @@ namespace mdlp {
                 return y_[i1] < y_[i2];
             else
                 return X_[i1] < X_[i2];
-        });
+            });
         return idx;
     }
 
-    cutPoints_t CPPFImdlp::getCutPoints() {
+    cutPoints_t CPPFImdlp::getCutPoints()
+    {
         sort(cutPoints.begin(), cutPoints.end());
         return cutPoints;
     }
 
-    int CPPFImdlp::get_depth() const {
+    int CPPFImdlp::get_depth() const
+    {
         return depth;
     }
 }
