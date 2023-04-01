@@ -5,12 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(lldb) Launch",
-            "type": "cppdbg",
+            "name": "lldb samplex",
+            "type": "lldb",
             "request": "launch",
+            "targetArchitecture": "arm64",
             "program": "${workspaceRoot}/sample/build/sample",
             "args": [
-                "mfeat-factors"
+                "-f",
+                "glass"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}/sample/build/",

@@ -3,9 +3,9 @@ on:
   push:
     branches:
       - main
-      - test
+      - "*"
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [ opened, synchronize, reopened ]
 jobs:
   build:
     name: Build
@@ -13,25 +13,29 @@ jobs:
     env:
       BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory # Directory where build-wrapper output will be placed
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3.2.0
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - name: Install sonar-scanner and build-wrapper
         uses: SonarSource/sonarcloud-github-c-cpp@v1
+      - name: Install lcov & gcovr
+        run: |
+          sudo apt-get -y install lcov
+          sudo apt-get -y install gcovr
       - name: Tests & build-wrapper
         run: |
-          mkdir build
-          cmake -S . -B build -Wno-dev 
-          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build/ --config Release
-          cd tests
-          mkdir build
           cmake -S . -B build -Wno-dev 
           build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build/ --config Release
           cd build
-          ctest -C Release --output-on-failure
+          make
+          ctest -C Release --output-on-failure --test-dir tests
+          cd ..
+          # gcovr -f CPPFImdlp.cpp -f Metrics.cpp --merge-mode-functions=separate --txt --sonarqube=coverage.xml
+          gcovr -f CPPFImdlp.cpp -f Metrics.cpp  --txt --sonarqube=coverage.xml
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          sonar-scanner --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}"
+          sonar-scanner --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}" \
+                        --define sonar.coverageReportPaths=coverage.xml

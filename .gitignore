@@ -36,3 +36,4 @@
 cmake-*
 **/CMakeFiles
 .vscode/*
+**/gcovr-report
