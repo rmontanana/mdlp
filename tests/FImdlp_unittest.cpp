@@ -111,6 +111,16 @@ namespace mdlp {
         EXPECT_THROW_WITH_MESSAGE(testDepth.fit(X, y), invalid_argument, "max_depth must be greater than 0");
     }
 
+    TEST_F(TestFImdlp, JoinFit) {
+        samples_t X_ = {1, 2, 2, 3, 4, 2, 3};
+        labels_t y_ = {0, 0, 1, 2, 3, 4, 5};
+        cutPoints_t expected = {1.5f, 2.5f};
+        fit(X_, y_);
+        auto computed = getCutPoints();
+        EXPECT_EQ(computed.size(), expected.size());
+        checkCutPoints(computed, expected);
+    }
+
     TEST_F(TestFImdlp, FitErrorMaxCutPoints) {
         auto testmin = CPPFImdlp(2, 10, -1);
         auto testmax = CPPFImdlp(3, 0, 200);

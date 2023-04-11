@@ -128,8 +128,8 @@ namespace mdlp {
             // Cutpoints are always on boundaries (definition 2)
             if (y[indices[idx]] == y[indices[idx - 1]])
                 continue;
-            entropy_left = precision_t(idx - start) / static_cast<float>(elements) * metrics.entropy(start, idx);
-            entropy_right = precision_t(end - idx) / static_cast<float>(elements) * metrics.entropy(idx, end);
+            entropy_left = precision_t(idx - start) / static_cast<precision_t>(elements) * metrics.entropy(start, idx);
+            entropy_right = precision_t(end - idx) / static_cast<precision_t>(elements) * metrics.entropy(idx, end);
             if (entropy_left + entropy_right < minEntropy) {
                 minEntropy = entropy_left + entropy_right;
                 candidate = idx;
@@ -155,8 +155,8 @@ namespace mdlp {
         ent1 = metrics.entropy(start, cut);
         ent2 = metrics.entropy(cut, end);
         ig = metrics.informationGain(start, cut, end);
-        delta = static_cast<float>(log2(pow(3, precision_t(k)) - 2) -
-                                   (precision_t(k) * ent - precision_t(k1) * ent1 - precision_t(k2) * ent2));
+        delta = static_cast<precision_t>(log2(pow(3, precision_t(k)) - 2) -
+                                         (precision_t(k) * ent - precision_t(k1) * ent1 - precision_t(k2) * ent2));
         precision_t term = 1 / N * (log2(N - 1) + delta);
         return ig > term;
     }

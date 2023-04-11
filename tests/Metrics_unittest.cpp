@@ -30,6 +30,14 @@ namespace mdlp {
         ASSERT_NEAR(0.468996f, entropy(0, 10), precision);
     }
 
+    TEST_F(TestMetrics, EntropyDouble) {
+        y = {0, 0, 1, 2, 3};
+        samples_t expected_entropies = {0.0, 0.0, 0.91829583, 1.5, 1.4575424759098898};
+        for (auto idx = 0; idx < y.size(); ++idx) {
+            ASSERT_NEAR(expected_entropies[idx], entropy(0, idx + 1), precision);
+        }
+    }
+
     TEST_F(TestMetrics, InformationGain) {
         ASSERT_NEAR(1, informationGain(0, 5, 10), precision);
         ASSERT_NEAR(1, informationGain(0, 5, 10), precision); // For cache

@@ -27,7 +27,7 @@ string ArffFiles::getClassType() const {
     return classType;
 }
 
-vector<vector<float>> &ArffFiles::getX() {
+vector<mdlp::samples_t> &ArffFiles::getX() {
     return X;
 }
 
@@ -80,7 +80,7 @@ void ArffFiles::load(const string &fileName, bool classLast) {
 }
 
 void ArffFiles::generateDataset(bool classLast) {
-    X = vector<vector<float>>(attributes.size(), vector<float>(lines.size()));
+    X = vector<mdlp::samples_t>(attributes.size(), mdlp::samples_t(lines.size()));
     auto yy = vector<string>(lines.size(), "");
     int labelIndex = classLast ? static_cast<int>(attributes.size()) : 0;
     for (size_t i = 0; i < lines.size(); i++) {

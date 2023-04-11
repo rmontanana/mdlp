@@ -24,9 +24,8 @@ To run the sample, just execute the following commands:
 
 ```bash
 cd sample
-mkdir build
+cmake -B build
 cd build
-cmake ..
 make
 ./sample -f iris -m 2
 ./sample -h
@@ -34,7 +33,7 @@ make
 
 ## Test
 
-To run the tests, execute the following commands:
+To run the tests and see coverage (llvm & gcovr have to be installed), execute the following commands:
 
 ```bash
 cd tests

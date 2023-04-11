@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "../typesFImdlp.h"
 
 using namespace std;
 
@@ -12,7 +13,7 @@ private:
     vector<pair<string, string>> attributes;
     string className;
     string classType;
-    vector<vector<float>> X;
+    vector<mdlp::samples_t> X;
     vector<int> y;
 
     void generateDataset(bool);
@@ -32,7 +33,7 @@ public:
 
     static string trim(const string &);
 
-    vector<vector<float>> &getX();
+    vector<mdlp::samples_t> &getX();
 
     vector<int> &getY();
 
