@@ -1,9 +1,0 @@
-{
-    "sonarlint.connectedMode.project": {
-        "connectionId": "rmontanana",
-        "projectKey": "rmontanana_mdlp"
-    },
-    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-    "cmake.configureOnOpen": true,
-    "sonarlint.pathToCompileCommands": "${workspaceFolder}/build/compile_commands.json"
-}
