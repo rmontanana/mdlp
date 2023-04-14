@@ -113,14 +113,18 @@ void process_file(const string &path, const string &file_name, bool class_last, 
     size_t total = 0;
     for (auto i = 0; i < attributes.size(); i++) {
         auto min_max = minmax_element(X[i].begin(), X[i].end());
-        cout << "Cut points for " << get<0>(attributes[i]) << endl;
-        cout << "Min: " << *min_max.first << " Max: " << *min_max.second << endl;
-        cout << "--------------------------" << setprecision(3) << endl;
+        cout << "Cut points for feature " << get<0>(attributes[i]) << ": [" << setprecision(3);
         test.fit(X[i], y);
-        for (auto item: test.getCutPoints()) {
-            cout << item << endl;
+        auto cut_points = test.getCutPoints();
+        for (auto item: cut_points) {
+            cout << item;
+            if (item != cut_points.back())
+                cout << ", ";
         }
         total += test.getCutPoints().size();
+        cout << "]" << endl;
+        cout << "Min: " << *min_max.first << " Max: " << *min_max.second << endl;
+        cout << "--------------------------" << endl;
     }
     cout << "Total cut points ...: " << total << endl;
     cout << "Total feature states: " << total + attributes.size() << endl;
