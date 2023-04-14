@@ -269,12 +269,13 @@ namespace mdlp {
         auto test = CPPFImdlp(75, 2, 1);
         vector<cutPoints_t> expected = {
                 {5.45f},
-                {3.35f},
+                {2.85f},
                 {2.45f},
                 {0.8f}
         };
-        vector<int> depths = {1, 1, 1, 1};
+        vector<int> depths = {2, 2, 2, 2};
         test_dataset(test, "iris", expected, depths);
+        
     }
 
     TEST_F(TestFImdlp, MaxCutPointsFloat) {
