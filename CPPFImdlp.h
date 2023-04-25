@@ -21,34 +21,23 @@ namespace mdlp {
         cutPoints_t cutPoints;
         size_t num_cut_points = numeric_limits<size_t>::max();
 
-        static indices_t sortIndices(samples_t &, labels_t &);
+        static indices_t sortIndices(samples_t&, labels_t&);
 
         void computeCutPoints(size_t, size_t, int);
-
         void resizeCutPoints();
-
         bool mdlp(size_t, size_t, size_t);
-
         size_t getCandidate(size_t, size_t);
-
         size_t compute_max_num_cut_points() const;
-
         pair<precision_t, size_t> valueCutPoint(size_t, size_t, size_t);
 
     public:
         CPPFImdlp();
-
         CPPFImdlp(size_t, int, float);
-
         ~CPPFImdlp();
-
-        void fit(samples_t &, labels_t &);
-
+        void fit(samples_t&, labels_t&);
         inline cutPoints_t getCutPoints() const { return cutPoints; };
-
         inline int get_depth() const { return depth; };
-
-        static inline string version() { return "1.1.1"; };
+        static inline string version() { return "1.1.2"; };
     };
 }
 #endif
