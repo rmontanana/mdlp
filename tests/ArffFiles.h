@@ -20,26 +20,16 @@ private:
 
 public:
     ArffFiles();
-
-    void load(const string &, bool = true);
-
+    void load(const string&, bool = true);
     vector<string> getLines() const;
-
     unsigned long int getSize() const;
-
     string getClassName() const;
-
     string getClassType() const;
-
-    static string trim(const string &);
-
-    vector<mdlp::samples_t> &getX();
-
-    vector<int> &getY();
-
+    static string trim(const string&);
+    vector<mdlp::samples_t>& getX();
+    vector<int>& getY();
     vector<pair<string, string>> getAttributes() const;
-
-    static vector<int> factorize(const vector<string> &labels_t);
+    static vector<int> factorize(const vector<string>& labels_t);
 };
 
 #endif
