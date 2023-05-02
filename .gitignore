@@ -35,5 +35,4 @@
 .idea
 cmake-*
 **/CMakeFiles
-.vscode/*
 **/gcovr-report

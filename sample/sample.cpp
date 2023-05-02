@@ -14,25 +14,27 @@ using namespace mdlp;
 const string PATH = "../../tests/datasets/";
 
 /* print a description of all supported options */
-void usage(const char *path) {
+void usage(const char* path)
+{
     /* take only the last portion of the path */
-    const char *basename = strrchr(path, '/');
+    const char* basename = strrchr(path, '/');
     basename = basename ? basename + 1 : path;
 
     cout << "usage: " << basename << "[OPTION]" << endl;
     cout << "  -h, --help\t\t Print this help and exit." << endl;
     cout
-            << "  -f, --file[=FILENAME]\t {all, glass, iris, kdd_JapaneseVowels, letter, liver-disorders, mfeat-factors, test}."
-            << endl;
+        << "  -f, --file[=FILENAME]\t {all, glass, iris, kdd_JapaneseVowels, letter, liver-disorders, mfeat-factors, test}."
+        << endl;
     cout << "  -p, --path[=FILENAME]\t folder where the arff dataset is located, default " << PATH << endl;
     cout << "  -m, --max_depth=INT\t max_depth pased to discretizer. Default = MAX_INT" << endl;
     cout
-            << "  -c, --max_cutpoints=FLOAT\t percentage of lines expressed in decimal or integer number or cut points. Default = 0 -> any"
-            << endl;
+        << "  -c, --max_cutpoints=FLOAT\t percentage of lines expressed in decimal or integer number or cut points. Default = 0 -> any"
+        << endl;
     cout << "  -n, --min_length=INT\t interval min_length pased to discretizer. Default = 3" << endl;
 }
 
-tuple<string, string, int, int, float> parse_arguments(int argc, char **argv) {
+tuple<string, string, int, int, float> parse_arguments(int argc, char** argv)
+{
     string file_name;
     string path = PATH;
     int max_depth = numeric_limits<int>::max();
@@ -86,8 +88,9 @@ tuple<string, string, int, int, float> parse_arguments(int argc, char **argv) {
     return make_tuple(file_name, path, max_depth, min_length, max_cutpoints);
 }
 
-void process_file(const string &path, const string &file_name, bool class_last, int max_depth, int min_length,
-                  float max_cutpoints) {
+void process_file(const string& path, const string& file_name, bool class_last, int max_depth, int min_length,
+    float max_cutpoints)
+{
     ArffFiles file;
 
     file.load(path + file_name + ".arff", class_last);
@@ -95,16 +98,16 @@ void process_file(const string &path, const string &file_name, bool class_last, 
     const auto items = file.getSize();
     cout << "Number of lines: " << items << endl;
     cout << "Attributes: " << endl;
-    for (auto attribute: attributes) {
+    for (auto attribute : attributes) {
         cout << "Name: " << get<0>(attribute) << " Type: " << get<1>(attribute) << endl;
     }
     cout << "Class name: " << file.getClassName() << endl;
     cout << "Class type: " << file.getClassType() << endl;
     cout << "Data: " << endl;
-    vector<samples_t> &X = file.getX();
-    labels_t &y = file.getY();
+    vector<samples_t>& X = file.getX();
+    labels_t& y = file.getY();
     for (int i = 0; i < 5; i++) {
-        for (auto feature: X) {
+        for (auto feature : X) {
             cout << fixed << setprecision(1) << feature[i] << " ";
         }
         cout << y[i] << endl;
@@ -116,7 +119,7 @@ void process_file(const string &path, const string &file_name, bool class_last, 
         cout << "Cut points for feature " << get<0>(attributes[i]) << ": [" << setprecision(3);
         test.fit(X[i], y);
         auto cut_points = test.getCutPoints();
-        for (auto item: cut_points) {
+        for (auto item : cut_points) {
             cout << item;
             if (item != cut_points.back())
                 cout << ", ";
@@ -130,18 +133,19 @@ void process_file(const string &path, const string &file_name, bool class_last, 
     cout << "Total feature states: " << total + attributes.size() << endl;
 }
 
-void process_all_files(const map<string, bool> &datasets, const string &path, int max_depth, int min_length,
-                       float max_cutpoints) {
+void process_all_files(const map<string, bool>& datasets, const string& path, int max_depth, int min_length,
+    float max_cutpoints)
+{
     cout << "Results: " << "Max_depth: " << max_depth << "  Min_length: " << min_length << "  Max_cutpoints: "
-         << max_cutpoints << endl << endl;
+        << max_cutpoints << endl << endl;
     printf("%-20s %4s %4s\n", "Dataset", "Feat", "Cuts Time(ms)");
     printf("==================== ==== ==== ========\n");
-    for (const auto &dataset: datasets) {
+    for (const auto& dataset : datasets) {
         ArffFiles file;
         file.load(path + dataset.first + ".arff", dataset.second);
         auto attributes = file.getAttributes();
-        vector<samples_t> &X = file.getX();
-        labels_t &y = file.getY();
+        vector<samples_t>& X = file.getX();
+        labels_t& y = file.getY();
         size_t timing = 0;
         size_t cut_points = 0;
         for (auto i = 0; i < attributes.size(); i++) {
@@ -157,7 +161,8 @@ void process_all_files(const map<string, bool> &datasets, const string &path, in
 }
 
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv)
+{
     map<string, bool> datasets = {
             {"glass",              true},
             {"iris",               true},
