@@ -23,7 +23,7 @@ void usage(const char* path)
     cout << "usage: " << basename << "[OPTION]" << endl;
     cout << "  -h, --help\t\t Print this help and exit." << endl;
     cout
-        << "  -f, --file[=FILENAME]\t {all, glass, iris, kdd_JapaneseVowels, letter, liver-disorders, mfeat-factors, test}."
+        << "  -f, --file[=FILENAME]\t {all, diabetes, glass, iris, kdd_JapaneseVowels, letter, liver-disorders, mfeat-factors, test}."
         << endl;
     cout << "  -p, --path[=FILENAME]\t folder where the arff dataset is located, default " << PATH << endl;
     cout << "  -m, --max_depth=INT\t max_depth pased to discretizer. Default = MAX_INT" << endl;
@@ -164,6 +164,7 @@ void process_all_files(const map<string, bool>& datasets, const string& path, in
 int main(int argc, char** argv)
 {
     map<string, bool> datasets = {
+            {"diabetes",           true},
             {"glass",              true},
             {"iris",               true},
             {"kdd_JapaneseVowels", false},
