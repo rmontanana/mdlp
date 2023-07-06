@@ -20,6 +20,7 @@ namespace mdlp {
         Metrics metrics = Metrics(y, indices);
         cutPoints_t cutPoints;
         size_t num_cut_points = numeric_limits<size_t>::max();
+        labels_t discretizedData = labels_t();
 
         static indices_t sortIndices(samples_t&, labels_t&);
 
@@ -36,6 +37,7 @@ namespace mdlp {
         ~CPPFImdlp();
         void fit(samples_t&, labels_t&);
         inline cutPoints_t getCutPoints() const { return cutPoints; };
+        labels_t& transform(const samples_t&);
         inline int get_depth() const { return depth; };
         static inline string version() { return "1.1.2"; };
     };
