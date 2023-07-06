@@ -15,11 +15,11 @@ throw; \
 , etype)
 
 namespace mdlp {
-    class TestFImdlp: public CPPFImdlp, public testing::Test {
+    class TestFImdlp : public CPPFImdlp, public testing::Test {
     public:
         precision_t precision = 0.000001f;
 
-        TestFImdlp(): CPPFImdlp() {}
+        TestFImdlp() : CPPFImdlp() {}
 
         string data_path;
 
@@ -328,5 +328,27 @@ namespace mdlp {
             ASSERT_EQ(expected, computed);
         }
 
+    }
+    TEST_F(TestFImdlp, TransformTest)
+    {
+        labels_t expected = {
+            5, 3, 4, 4, 5, 5, 5, 5, 2, 4, 5, 5, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5,
+            5, 4, 5, 3, 5, 5, 5, 4, 4, 5, 5, 5, 4, 4, 5, 4, 3, 5, 5, 0, 4, 5,
+            5, 3, 5, 4, 5, 4, 4, 4, 4, 0, 1, 1, 4, 0, 2, 0, 0, 3, 0, 2, 2, 4,
+            3, 0, 0, 0, 4, 1, 0, 1, 2, 3, 1, 3, 2, 0, 0, 0, 0, 0, 3, 5, 4, 0,
+            3, 0, 0, 3, 0, 0, 0, 3, 2, 2, 0, 1, 4, 0, 3, 2, 3, 3, 0, 2, 0, 5,
+            4, 0, 3, 0, 1, 4, 3, 5, 0, 0, 4, 1, 1, 0, 4, 4, 1, 3, 1, 3, 1, 5,
+            1, 1, 0, 3, 5, 4, 3, 4, 4, 4, 0, 4, 4, 3, 0, 3, 5, 3
+        };
+        ArffFiles file;
+        file.load(data_path + "iris.arff", true);
+        vector<samples_t>& X = file.getX();
+        labels_t& y = file.getY();
+        fit(X[1], y);
+        auto computed = transform(X[1]);
+        EXPECT_EQ(computed.size(), expected.size());
+        for (unsigned long i = 0; i < computed.size(); i++) {
+            EXPECT_EQ(computed[i], expected[i]);
+        }
     }
 }
