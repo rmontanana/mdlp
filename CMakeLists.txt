@@ -7,7 +7,7 @@ endif ()
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_library(mdlp CPPFImdlp.cpp Metrics.cpp sample/sample.cpp)
+add_library(mdlp CPPFImdlp.cpp Metrics.cpp)
 add_subdirectory(sample)
 add_subdirectory(tests)
 
