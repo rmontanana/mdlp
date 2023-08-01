@@ -211,6 +211,7 @@ namespace mdlp {
     }
     labels_t& CPPFImdlp::transform(const samples_t& data)
     {
+        discretizedData.clear();
         discretizedData.reserve(data.size());
         for (const precision_t& item : data) {
             auto upper = upper_bound(cutPoints.begin(), cutPoints.end(), item);
