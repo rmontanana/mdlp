@@ -31,6 +31,8 @@
 *.out
 *.app
 **/build
+build_Debug
+build_Release
 **/lcoverage
 .idea
 cmake-*
