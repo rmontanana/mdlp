@@ -22,7 +22,7 @@ namespace mdlp {
             }
             return discretizedData;
         };
-        static inline std::string version() { return "1.1.3"; };
+        static inline std::string version() { return "1.2.0"; };
     protected:
         labels_t discretizedData = labels_t();
         cutPoints_t cutPoints;
