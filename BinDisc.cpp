@@ -7,7 +7,8 @@
 
 namespace mdlp {
 
-    BinDisc::BinDisc(int n_bins, strategy_t strategy) : n_bins{ n_bins }, strategy{ strategy }, Discretizer()
+    BinDisc::BinDisc(int n_bins, strategy_t strategy) :
+        Discretizer(), n_bins{ n_bins }, strategy{ strategy }
     {
         if (n_bins < 3) {
             throw std::invalid_argument("n_bins must be greater than 2");

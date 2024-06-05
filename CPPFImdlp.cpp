@@ -6,10 +6,11 @@
 
 namespace mdlp {
 
-    CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_, float proposed) : min_length(min_length_),
+    CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_, float proposed) :
+        Discretizer(),
+        min_length(min_length_),
         max_depth(max_depth_),
-        proposed_cuts(proposed),
-        Discretizer()
+        proposed_cuts(proposed)
     {
     }
 
