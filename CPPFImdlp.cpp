@@ -6,15 +6,13 @@
 
 namespace mdlp {
 
-    CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_, float proposed) : min_length(min_length_),
+    CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_, float proposed) :
+        Discretizer(),
+        min_length(min_length_),
         max_depth(max_depth_),
         proposed_cuts(proposed)
     {
     }
-
-    CPPFImdlp::CPPFImdlp() = default;
-
-    CPPFImdlp::~CPPFImdlp() = default;
 
     size_t CPPFImdlp::compute_max_num_cut_points() const
     {
@@ -208,14 +206,5 @@ namespace mdlp {
         }
         cutPoints.erase(cutPoints.begin() + static_cast<long>(maxEntropyIdx));
     }
-    labels_t& CPPFImdlp::transform(const samples_t& data)
-    {
-        discretizedData.clear();
-        discretizedData.reserve(data.size());
-        for (const precision_t& item : data) {
-            auto upper = std::upper_bound(cutPoints.begin(), cutPoints.end(), item);
-            discretizedData.push_back(upper - cutPoints.begin());
-        }
-        return discretizedData;
-    }
+
 }

@@ -8,15 +8,10 @@
             "name": "C++ Launch config",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/sample/sample",
-            "cwd": "${workspaceFolder}/build/sample",
-            "args": [
-                "-f",
-                "glass"
-            ],
-            "targetArchitecture": "arm64",
+            "program": "${workspaceFolder}/tests/build/BinDisc_unittest",
+            "cwd": "${workspaceFolder}/tests/build",
+            "args": [],
             "launchCompleteCommand": "exec-run",
-            "preLaunchTask": "CMake: build",
             "stopAtEntry": false,
             "linux": {
                 "MIMode": "gdb",

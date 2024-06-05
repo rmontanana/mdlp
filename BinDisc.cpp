@@ -7,7 +7,8 @@
 
 namespace mdlp {
 
-    BinDisc::BinDisc(int n_bins, strategy_t strategy) : n_bins{ n_bins }, strategy{ strategy }
+    BinDisc::BinDisc(int n_bins, strategy_t strategy) :
+        Discretizer(), n_bins{ n_bins }, strategy{ strategy }
     {
         if (n_bins < 3) {
             throw std::invalid_argument("n_bins must be greater than 2");
@@ -16,6 +17,7 @@ namespace mdlp {
     BinDisc::~BinDisc() = default;
     void BinDisc::fit(samples_t& X)
     {
+        // y is included for compatibility with the Discretizer interface
         cutPoints.clear();
         if (X.empty()) {
             cutPoints.push_back(std::numeric_limits<precision_t>::max());
@@ -26,6 +28,10 @@ namespace mdlp {
         } else if (strategy == strategy_t::UNIFORM) {
             fit_uniform(X);
         }
+    }
+    void BinDisc::fit(samples_t& X, labels_t& y)
+    {
+        fit(X);
     }
     std::vector<precision_t> linspace(precision_t start, precision_t end, int num)
     {
@@ -90,49 +96,4 @@ namespace mdlp {
         // Remove first as it is not needed
         cutPoints.erase(cutPoints.begin());
     }
-    labels_t& BinDisc::transform(const samples_t& X)
-    {
-        discretizedData.clear();
-        discretizedData.reserve(X.size());
-        for (const precision_t& item : X) {
-            auto upper = std::upper_bound(cutPoints.begin(), cutPoints.end(), item);
-            discretizedData.push_back(upper - cutPoints.begin());
-        }
-        return discretizedData;
-    }
 }
-// void BinDisc::fit_quantile(samples_t& X)
-    // {
-    //     cutPoints.clear();
-    //     if (X.empty()) {
-    //         cutPoints.push_back(std::numeric_limits<float>::max());
-    //         return;
-    //     }
-    //     samples_t data = X;
-    //     std::sort(data.begin(), data.end());
-    //     float min_val = data.front();
-    //     float max_val = data.back();
-    //     // Handle case of all data points having the same value
-    //     if (min_val == max_val) {
-    //         cutPoints.push_back(std::numeric_limits<float>::max());
-    //         return;
-    //     }
-    //     int first = X.size() / n_bins;
-    //     cutPoints.push_back(data.at(first - 1));
-    //     int bins_done = 1;
-    //     int prev = first - 1;
-    //     while (bins_done < n_bins) {
-    //         int next = first * (bins_done + 1) - 1;
-    //         while (next < X.size() && data.at(next) == data[prev]) {
-    //             ++next;
-    //         }
-    //         if (next == X.size() || bins_done == n_bins - 1) {
-    //             cutPoints.push_back(std::numeric_limits<float>::max());
-    //             break;
-    //         } else {
-    //             cutPoints.push_back(data[next]);
-    //             bins_done++;
-    //             prev = next;
-    //         }
-    //     }
-    // }
