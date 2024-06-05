@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.20)
 set(CMAKE_CXX_STANDARD 11)
 include(FetchContent)
 
@@ -16,14 +17,18 @@ enable_testing()
 
 add_executable(Metrics_unittest ../Metrics.cpp Metrics_unittest.cpp)
 add_executable(FImdlp_unittest ../CPPFImdlp.cpp ArffFiles.cpp ../Metrics.cpp FImdlp_unittest.cpp)
+add_executable(BinDisc_unittest ../BinDisc.cpp ArffFiles.cpp BinDisc_unittest.cpp)
 target_link_libraries(Metrics_unittest GTest::gtest_main)
 target_link_libraries(FImdlp_unittest GTest::gtest_main)
+target_link_libraries(BinDisc_unittest GTest::gtest_main)
 target_compile_options(Metrics_unittest PRIVATE --coverage)
 target_compile_options(FImdlp_unittest PRIVATE --coverage)
+target_compile_options(BinDisc_unittest PRIVATE --coverage)
 target_link_options(Metrics_unittest PRIVATE --coverage)
 target_link_options(FImdlp_unittest PRIVATE --coverage)
+target_link_options(BinDisc_unittest PRIVATE --coverage)
 
 include(GoogleTest)
 gtest_discover_tests(Metrics_unittest)
 gtest_discover_tests(FImdlp_unittest)
-
+gtest_discover_tests(BinDisc_unittest)

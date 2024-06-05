@@ -3,7 +3,6 @@
 #include <set>
 #include <cmath>
 #include "CPPFImdlp.h"
-#include "Metrics.h"
 
 namespace mdlp {
 
@@ -178,7 +177,7 @@ namespace mdlp {
     indices_t CPPFImdlp::sortIndices(samples_t& X_, labels_t& y_)
     {
         indices_t idx(X_.size());
-        iota(idx.begin(), idx.end(), 0);
+        std::iota(idx.begin(), idx.end(), 0);
         stable_sort(idx.begin(), idx.end(), [&X_, &y_](size_t i1, size_t i2) {
             if (X_[i1] == X_[i2])
                 return y_[i1] < y_[i2];
@@ -214,7 +213,7 @@ namespace mdlp {
         discretizedData.clear();
         discretizedData.reserve(data.size());
         for (const precision_t& item : data) {
-            auto upper = upper_bound(cutPoints.begin(), cutPoints.end(), item);
+            auto upper = std::upper_bound(cutPoints.begin(), cutPoints.end(), item);
             discretizedData.push_back(upper - cutPoints.begin());
         }
         return discretizedData;
