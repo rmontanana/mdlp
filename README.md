@@ -23,12 +23,10 @@ The algorithm returns the cut points for the variable.
 To run the sample, just execute the following commands:
 
 ```bash
-cd sample
-cmake -B build
-cd build
-make
-./sample -f iris -m 2
-./sample -h
+cmake -B build -S .
+cmake --build build
+build/sample/sample -f iris -m 2
+build/sample/sample -h
 ```
 
 ## Test

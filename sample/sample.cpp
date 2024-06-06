@@ -11,7 +11,7 @@
 using namespace std;
 using namespace mdlp;
 
-const string PATH = "../../tests/datasets/";
+const string PATH = "tests/datasets/";
 
 /* print a description of all supported options */
 void usage(const char* path)
@@ -131,6 +131,12 @@ void process_file(const string& path, const string& file_name, bool class_last, 
     }
     cout << "Total cut points ...: " << total << endl;
     cout << "Total feature states: " << total + attributes.size() << endl;
+    cout << "Version ............: " << test.version() << endl;
+    cout << "Transformed data ...: " << endl;
+    auto data = test.transform(X[0]);
+    for (int i = 0; i < 5; i++) {
+        cout << fixed << setprecision(1) << X[0][i] << " " << data[i] << endl;
+    }
 }
 
 void process_all_files(const map<string, bool>& datasets, const string& path, int max_depth, int min_length,
