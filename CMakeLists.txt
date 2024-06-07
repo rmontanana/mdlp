@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 project(mdlp)
-
-set(CMAKE_CXX_STANDARD 11)
-
-add_library(mdlp CPPFImdlp.cpp Metrics.cpp BinDisc.cpp)
+set(CMAKE_CXX_STANDARD 17)
+find_package(Torch REQUIRED)
+include_directories(${TORCH_INCLUDE_DIRS})
+add_library(mdlp CPPFImdlp.cpp Metrics.cpp BinDisc.cpp Discretizer.cpp)
+target_link_libraries(mdlp "${TORCH_LIBRARIES}")
 add_subdirectory(sample)
 add_subdirectory(tests)
-

@@ -5,11 +5,11 @@
 #include <algorithm>
 #include <cstring>
 #include <getopt.h>
+#include <torch/torch.h>
+#include "../Discretizer.h"
 #include "../CPPFImdlp.h"
+#include "../BinDisc.h"
 #include "../tests/ArffFiles.h"
-
-using namespace std;
-using namespace mdlp;
 
 const string PATH = "tests/datasets/";
 
@@ -20,17 +20,17 @@ void usage(const char* path)
     const char* basename = strrchr(path, '/');
     basename = basename ? basename + 1 : path;
 
-    cout << "usage: " << basename << "[OPTION]" << endl;
-    cout << "  -h, --help\t\t Print this help and exit." << endl;
-    cout
+    std::cout << "usage: " << basename << "[OPTION]" << std::endl;
+    std::cout << "  -h, --help\t\t Print this help and exit." << std::endl;
+    std::cout
         << "  -f, --file[=FILENAME]\t {all, diabetes, glass, iris, kdd_JapaneseVowels, letter, liver-disorders, mfeat-factors, test}."
-        << endl;
-    cout << "  -p, --path[=FILENAME]\t folder where the arff dataset is located, default " << PATH << endl;
-    cout << "  -m, --max_depth=INT\t max_depth pased to discretizer. Default = MAX_INT" << endl;
-    cout
+        << std::endl;
+    std::cout << "  -p, --path[=FILENAME]\t folder where the arff dataset is located, default " << PATH << std::endl;
+    std::cout << "  -m, --max_depth=INT\t max_depth pased to discretizer. Default = MAX_INT" << std::endl;
+    std::cout
         << "  -c, --max_cutpoints=FLOAT\t percentage of lines expressed in decimal or integer number or cut points. Default = 0 -> any"
-        << endl;
-    cout << "  -n, --min_length=INT\t interval min_length pased to discretizer. Default = 3" << endl;
+        << std::endl;
+    std::cout << "  -n, --min_length=INT\t interval min_length pased to discretizer. Default = 3" << std::endl;
 }
 
 tuple<string, string, int, int, float> parse_arguments(int argc, char** argv)
@@ -96,62 +96,79 @@ void process_file(const string& path, const string& file_name, bool class_last, 
     file.load(path + file_name + ".arff", class_last);
     const auto attributes = file.getAttributes();
     const auto items = file.getSize();
-    cout << "Number of lines: " << items << endl;
-    cout << "Attributes: " << endl;
+    std::cout << "Number of lines: " << items << std::endl;
+    std::cout << "Attributes: " << std::endl;
     for (auto attribute : attributes) {
-        cout << "Name: " << get<0>(attribute) << " Type: " << get<1>(attribute) << endl;
+        std::cout << "Name: " << get<0>(attribute) << " Type: " << get<1>(attribute) << std::endl;
     }
-    cout << "Class name: " << file.getClassName() << endl;
-    cout << "Class type: " << file.getClassType() << endl;
-    cout << "Data: " << endl;
-    vector<samples_t>& X = file.getX();
-    labels_t& y = file.getY();
+    std::cout << "Class name: " << file.getClassName() << std::endl;
+    std::cout << "Class type: " << file.getClassType() << std::endl;
+    std::cout << "Data: " << std::endl;
+    std::vector<mdlp::samples_t>& X = file.getX();
+    mdlp::labels_t& y = file.getY();
     for (int i = 0; i < 5; i++) {
         for (auto feature : X) {
-            cout << fixed << setprecision(1) << feature[i] << " ";
+            std::cout << fixed << setprecision(1) << feature[i] << " ";
         }
-        cout << y[i] << endl;
+        std::cout << y[i] << std::endl;
     }
     auto test = mdlp::CPPFImdlp(min_length, max_depth, max_cutpoints);
     size_t total = 0;
     for (auto i = 0; i < attributes.size(); i++) {
         auto min_max = minmax_element(X[i].begin(), X[i].end());
-        cout << "Cut points for feature " << get<0>(attributes[i]) << ": [" << setprecision(3);
+        std::cout << "Cut points for feature " << get<0>(attributes[i]) << ": [" << setprecision(3);
         test.fit(X[i], y);
         auto cut_points = test.getCutPoints();
         for (auto item : cut_points) {
-            cout << item;
+            std::cout << item;
             if (item != cut_points.back())
-                cout << ", ";
+                std::cout << ", ";
         }
         total += test.getCutPoints().size();
-        cout << "]" << endl;
-        cout << "Min: " << *min_max.first << " Max: " << *min_max.second << endl;
-        cout << "--------------------------" << endl;
+        std::cout << "]" << std::endl;
+        std::cout << "Min: " << *min_max.first << " Max: " << *min_max.second << std::endl;
+        std::cout << "--------------------------" << std::endl;
     }
-    cout << "Total cut points ...: " << total << endl;
-    cout << "Total feature states: " << total + attributes.size() << endl;
-    cout << "Version ............: " << test.version() << endl;
-    cout << "Transformed data ...: " << endl;
+    std::cout << "Total cut points ...: " << total << std::endl;
+    std::cout << "Total feature states: " << total + attributes.size() << std::endl;
+    std::cout << "Version ............: " << test.version() << std::endl;
+    std::cout << "Transformed data (vector)..: " << std::endl;
+    test.fit(X[0], y);
     auto data = test.transform(X[0]);
-    for (int i = 0; i < 5; i++) {
-        cout << fixed << setprecision(1) << X[0][i] << " " << data[i] << endl;
+    for (int i = 130; i < 135; i++) {
+        std::cout << std::fixed << std::setprecision(1) << X[0][i] << " " << data[i] << std::endl;
+    }
+    auto Xt = torch::tensor(X[0], torch::kFloat32);
+    auto yt = torch::tensor(y, torch::kInt64);
+    //test.fit_t(Xt, yt);
+    auto result = test.fit_transform_t(Xt, yt);
+    std::cout << "Transformed data (torch)...: " << std::endl;
+    for (int i = 130; i < 135; i++) {
+        std::cout << std::fixed << std::setprecision(1) << Xt[i].item<float>() << " " << result[i].item<int64_t>() << std::endl;
+    }
+    auto disc = mdlp::BinDisc(3);
+    auto res_v = disc.fit_transform(X[0], y);
+    disc.fit_t(Xt, yt);
+    auto res_t = disc.transform_t(Xt);
+    std::cout << "Transformed data (BinDisc)...: " << std::endl;
+    for (int i = 130; i < 135; i++) {
+        std::cout << std::fixed << std::setprecision(1) << Xt[i].item<float>() << " " << res_v[i] << " " << res_t[i].item<int64_t>() << std::endl;
     }
 }
 
 void process_all_files(const map<string, bool>& datasets, const string& path, int max_depth, int min_length,
     float max_cutpoints)
 {
-    cout << "Results: " << "Max_depth: " << max_depth << "  Min_length: " << min_length << "  Max_cutpoints: "
-        << max_cutpoints << endl << endl;
+    std::cout << "Results: " << "Max_depth: " << max_depth << "  Min_length: " << min_length << "  Max_cutpoints: "
+        << max_cutpoints << std::endl << std::endl;
     printf("%-20s %4s %4s\n", "Dataset", "Feat", "Cuts Time(ms)");
     printf("==================== ==== ==== ========\n");
     for (const auto& dataset : datasets) {
         ArffFiles file;
         file.load(path + dataset.first + ".arff", dataset.second);
         auto attributes = file.getAttributes();
-        vector<samples_t>& X = file.getX();
-        labels_t& y = file.getY();
+        std::vector<mdlp::samples_t>& X = file.getX();
+        mdlp::labels_t& y = file.getY();
         size_t timing = 0;
         size_t cut_points = 0;
         for (auto i = 0; i < attributes.size(); i++) {
@@ -169,7 +186,7 @@ void process_all_files(const map<string, bool>& datasets, const string& path, in
 
 int main(int argc, char** argv)
 {
-    map<string, bool> datasets = {
+    std::map<std::string, bool> datasets = {
             {"diabetes",           true},
             {"glass",              true},
             {"iris",               true},
@@ -179,14 +196,14 @@ int main(int argc, char** argv)
             {"mfeat-factors",      true},
             {"test",               true}
     };
-    string file_name;
-    string path;
+    std::string file_name;
+    std::string path;
     int max_depth;
     int min_length;
     float max_cutpoints;
     tie(file_name, path, max_depth, min_length, max_cutpoints) = parse_arguments(argc, argv);
     if (datasets.find(file_name) == datasets.end() && file_name != "all") {
-        cout << "Invalid file name: " << file_name << endl;
+        std::cout << "Invalid file name: " << file_name << std::endl;
         usage(argv[0]);
         exit(1);
     }
@@ -194,10 +211,10 @@ int main(int argc, char** argv)
         process_all_files(datasets, path, max_depth, min_length, max_cutpoints);
     else {
         process_file(path, file_name, datasets[file_name], max_depth, min_length, max_cutpoints);
-        cout << "File name ....: " << file_name << endl;
-        cout << "Max depth ....: " << max_depth << endl;
-        cout << "Min length ...: " << min_length << endl;
-        cout << "Max cutpoints : " << max_cutpoints << endl;
+        std::cout << "File name ....: " << file_name << std::endl;
+        std::cout << "Max depth ....: " << max_depth << std::endl;
+        std::cout << "Min length ...: " << min_length << std::endl;
+        std::cout << "Max cutpoints : " << max_cutpoints << std::endl;
     }
     return 0;
 }

@@ -8,7 +8,7 @@
             "name": "C++ Launch config",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/tests/build/BinDisc_unittest",
+            "program": "${workspaceFolder}/tests/build/Metrics_unittest",
             "cwd": "${workspaceFolder}/tests/build",
             "args": [],
             "launchCompleteCommand": "exec-run",

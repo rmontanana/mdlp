@@ -2,13 +2,13 @@
 #include "../Metrics.h"
 
 namespace mdlp {
-    class TestMetrics: public Metrics, public testing::Test {
+    class TestMetrics : public Metrics, public testing::Test {
     public:
         labels_t y_ = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
         indices_t indices_ = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-        precision_t precision = 0.000001f;
+        precision_t precision = 1e-6;
 
-        TestMetrics(): Metrics(y_, indices_) {};
+        TestMetrics() : Metrics(y_, indices_) {};
 
         void SetUp() override
         {

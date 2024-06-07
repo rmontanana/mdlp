@@ -88,6 +88,22 @@
         "*.toml": "toml",
         "utility": "cpp",
         "span": "cpp",
-        "*.tcc": "cpp"
+        "*.tcc": "cpp",
+        "bit": "cpp",
+        "charconv": "cpp",
+        "cinttypes": "cpp",
+        "codecvt": "cpp",
+        "functional": "cpp",
+        "iterator": "cpp",
+        "memory_resource": "cpp",
+        "random": "cpp",
+        "source_location": "cpp",
+        "format": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp",
+        "text_encoding": "cpp",
+        "typeindex": "cpp",
+        "valarray": "cpp"
     }
 }

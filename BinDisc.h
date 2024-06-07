@@ -6,7 +6,6 @@
 #include <string>
 
 namespace mdlp {
-
     enum class strategy_t {
         UNIFORM,
         QUANTILE

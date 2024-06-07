@@ -4,8 +4,8 @@
 
 using namespace std;
 namespace mdlp {
-    Metrics::Metrics(labels_t& y_, indices_t& indices_): y(y_), indices(indices_),
-        numClasses(computeNumClasses(0, indices.size()))
+    Metrics::Metrics(labels_t& y_, indices_t& indices_) : y(y_), indices(indices_),
+        numClasses(computeNumClasses(0, indices_.size()))
     {
     }
 

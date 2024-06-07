@@ -15,4 +15,4 @@ mkdir gcovr-report
 #lcov --remove lcoverage/main_coverage.info 'v1/*' '/Applications/*' '*/tests/*' --output-file lcoverage/main_coverage.info -q
 #lcov --list lcoverage/main_coverage.info
 cd ..
-gcovr  --gcov-filter "CPPFImdlp.cpp" --gcov-filter "Metrics.cpp" --gcov-filter "BinDisc.cpp" --gcov-filter "Discretizer.h" --txt --sonarqube=tests/gcovr-report/coverage.xml --exclude-noncode-lines
+gcovr  --gcov-filter "CPPFImdlp.cpp" --gcov-filter "Metrics.cpp" --gcov-filter "BinDisc.cpp" --gcov-filter "Discretizer.cpp" --txt --sonarqube=tests/gcovr-report/coverage.xml --exclude-noncode-lines
