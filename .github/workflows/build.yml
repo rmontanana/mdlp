@@ -34,7 +34,7 @@ jobs:
           make
           ctest -C Release --output-on-failure --test-dir tests
           cd ..
-          gcovr -f CPPFImdlp.cpp -f Metrics.cpp  -f BinDisc.cpp --txt --sonarqube=coverage.xml
+          gcovr -f CPPFImdlp.cpp -f Metrics.cpp -f BinDisc.cpp -f Discretizer.cpp --txt --sonarqube=coverage.xml
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
