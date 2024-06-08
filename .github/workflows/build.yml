@@ -26,9 +26,8 @@ jobs:
         run: |
           wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcpu.zip
           unzip libtorch-cxx11-abi-shared-with-deps-2.3.1+cpu.zip
-          mv libtorch /usr/local
-          export LIBTORCH=/usr/local/libtorch
-          export Torch_DIR=/usr/local/libtorch
+          export LIBTORCH=`pwd`/libtorch
+          export Torch_DIR=`pwd`/libtorch
       - name: Tests & build-wrapper
         run: |
           cmake -S . -B build -Wno-dev 
