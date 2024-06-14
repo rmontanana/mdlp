@@ -33,6 +33,8 @@
 **/build
 build_Debug
 build_Release
+build_debug
+build_release
 **/lcoverage
 .idea
 cmake-*
