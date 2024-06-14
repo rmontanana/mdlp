@@ -34,6 +34,5 @@ build/sample/sample -h
 To run the tests and see coverage (llvm & gcovr have to be installed), execute the following commands:
 
 ```bash
-cd tests
-./test
+make test
 ```
