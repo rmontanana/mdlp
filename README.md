@@ -14,9 +14,17 @@ The implementation tries to mitigate the problem of different label values with 
 Other features:
 
 - Intervals with the same value of the variable are not taken into account for cutpoints.
-- Intervals have to have more than two examples to be evaluated.
+- Intervals have to have more than two examples to be evaluated (mdlp).
 
-The algorithm returns the cut points for the variable.
+- The algorithm returns the cut points for the variable.
+
+- The transform method uses the cut points returning its index in the following way:
+
+        cut[i - 1] <= x < cut[i]
+
+    using the [std::upper_bound](https://en.cppreference.com/w/cpp/algorithm/upper_bound) method
+
+- K-Bins discretization is also implemented, and "quantile" and "uniform" strategies are available.
 
 ## Sample
 
