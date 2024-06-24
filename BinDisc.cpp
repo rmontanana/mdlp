@@ -58,7 +58,7 @@ namespace mdlp {
         results.reserve(percentiles.size());
         for (auto percentile : percentiles) {
             const size_t i = static_cast<size_t>(std::floor(static_cast<double>(data.size() - 1) * percentile / 100.));
-            const auto indexLower = clip(i, 0, data.size() - 1);
+            const auto indexLower = clip(i, 0, data.size() - 2);
             const double percentI = static_cast<double>(indexLower) / static_cast<double>(data.size() - 1);
             const double fraction =
                 (percentile / 100.0 - percentI) /
