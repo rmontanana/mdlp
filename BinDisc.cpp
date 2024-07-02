@@ -24,8 +24,10 @@ namespace mdlp {
             return;
         }
         if (strategy == strategy_t::QUANTILE) {
+            direction = bound_dir_t::RIGHT;
             fit_quantile(X);
         } else if (strategy == strategy_t::UNIFORM) {
+            direction = bound_dir_t::RIGHT;
             fit_uniform(X);
         }
     }

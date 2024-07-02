@@ -12,6 +12,7 @@ namespace mdlp {
         max_depth(max_depth_),
         proposed_cuts(proposed)
     {
+        direction = bound_dir_t::LEFT;
     }
 
     size_t CPPFImdlp::compute_max_num_cut_points() const

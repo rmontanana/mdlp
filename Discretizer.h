@@ -7,6 +7,10 @@
 #include "typesFImdlp.h"
 
 namespace mdlp {
+    enum class bound_dir_t {
+        LEFT,
+        RIGHT
+    };
     class Discretizer {
     public:
         Discretizer() = default;
@@ -22,6 +26,7 @@ namespace mdlp {
     protected:
         labels_t discretizedData = labels_t();
         cutPoints_t cutPoints; // At least two cutpoints must be provided, the first and the last will be ignored in transform
+        bound_dir_t direction; // used in transform
     };
 }
 #endif

@@ -6,6 +6,7 @@ with open("datasets/tests.txt") as f:
 
 data = [x.strip() for x in data if x[0] != "#"]
 
+errors = False
 for i in range(0, len(data), 4):
     experiment_type = data[i]
     print("Experiment:", data[i + 1])
@@ -31,20 +32,28 @@ for i in range(0, len(data), 4):
     result = disc.transform(X)
     result = [int(x) for x in result.flatten()]
     expected = [int(x) for x in expected_data.split(",")]
+    #
+    # Check the Results
+    #
     assert len(result) == len(expected)
     for j in range(len(result)):
         if result[j] != expected[j]:
-            print("Error at", j, "Expected=", expected[j], "Result=", result[j])
+            print("* Error at", j, "Expected=", expected[j], "Result=", result[j])
+            errors = True
     expected_cuts = disc.bin_edges_[0]
     computed_cuts = [float(x) for x in cuts_data.split(",")]
     assert len(expected_cuts) == len(computed_cuts)
     for j in range(len(expected_cuts)):
         if round(expected_cuts[j], 5) != computed_cuts[j]:
             print(
-                "Error at",
+                "* Error at",
                 j,
                 "Expected=",
                 expected_cuts[j],
                 "Result=",
                 computed_cuts[j],
             )
+            errors = True
+if errors:
+    raise Exception("There were errors!")
+print("*** All tests run succesfully! ***")

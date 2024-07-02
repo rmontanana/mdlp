@@ -7,13 +7,39 @@
 #include<vector>
 #include<tuple>
 #include "../typesFImdlp.h"
+
+template <typename T>
+void show_vector(const std::vector<T>& data, std::string title)
+{
+    std::cout << title << ": ";
+    std::string sep = "";
+    for (const auto& d : data) {
+        std::cout << sep << d;
+        sep = ", ";
+    }
+    std::cout << std::endl;
+}
+enum class experiment_t {
+    RANGE,
+    VECTOR
+};
 class Experiment {
 public:
     Experiment(float from_, float to_, float step_, int n_bins, std::string strategy, std::vector<int> data_discretized, std::vector<float> cutpoints) :
-        from_{ from_ }, to_{ to_ }, step_{ step_ }, n_bins_{ n_bins }, strategy_{ strategy }, discretized_data_{ data_discretized }, cutpoints_{ cutpoints }
+        from_{ from_ }, to_{ to_ }, step_{ step_ }, n_bins_{ n_bins }, strategy_{ strategy }, discretized_data_{ data_discretized }, cutpoints_{ cutpoints }, type_{ experiment_t::RANGE }
     {
-        if (strategy != "Q" && strategy != "U") {
-            throw std::invalid_argument("Invalid strategy " + strategy);
+        validate_strategy();
+
+    }
+    Experiment(std::vector<float> dataset, int n_bins, std::string strategy, std::vector<int> data_discretized, std::vector<float> cutpoints) :
+        n_bins_{ n_bins }, strategy_{ strategy }, dataset_{ dataset }, discretized_data_{ data_discretized }, cutpoints_{ cutpoints }, type_{ experiment_t::VECTOR }
+    {
+        validate_strategy();
+    }
+    void validate_strategy()
+    {
+        if (strategy_ != "Q" && strategy_ != "U") {
+            throw std::invalid_argument("Invalid strategy " + strategy_);
         }
     }
     float from_;
@@ -21,8 +47,10 @@ public:
     float step_;
     int n_bins_;
     std::string strategy_;
+    std::vector<float> dataset_;
     std::vector<int> discretized_data_;
     std::vector<float> cutpoints_;
+    experiment_t type_;
 };
 class Experiments {
 public:
@@ -76,33 +104,30 @@ private:
     }
     Experiment parse_experiment(std::string& line)
     {
+        // Read experiment lines
+        std::string experiment, data, cuts, strategy;
+        std::getline(test_file, experiment);
+        std::getline(test_file, data);
+        std::getline(test_file, cuts);
+        // split data into variables
+        float from_, to_, step_;
+        int n_bins;
+        std::vector<float> dataset;
+        auto data_discretized = parse_vector<int>(data);
+        auto cutpoints = parse_vector<float>(cuts);
         if (line == "RANGE") {
-            std::getline(test_file, line);
-            auto [from_, to_, step_, n_bins, strategy] = parse_header(line);
-        } else {
-            std::getline(test_file, line);
-
+            tie(from_, to_, step_, n_bins, strategy) = parse_header(experiment);
+            return Experiment{ from_, to_, step_, n_bins, strategy, data_discretized, cutpoints };
         }
-        std::getline(test_file, line);
-        auto data_discretized = parse_vector<int>(line);
-        std::getline(test_file, line);
-        auto cutpoints = parse_vector<float>(line);
-        return Experiment{ from_, to_, step_, n_bins, strategy, data_discretized, cutpoints };
+        strategy = experiment.substr(0, 1);
+        n_bins = std::stoi(experiment.substr(1, 1));
+        data = experiment.substr(3, experiment.size() - 4);
+        dataset = parse_vector<float>(data);
+        return Experiment(dataset, n_bins, strategy, data_discretized, cutpoints);
     }
     std::ifstream test_file;
     std::string filename;
     std::string line;
     bool exp_end;
 };
-template <typename T>
-void show_vector(const std::vector<T>& data, std::string title)
-{
-    std::cout << title << ": ";
-    std::string sep = "";
-    for (const auto& d : data) {
-        std::cout << sep << d;
-        sep = ", ";
-    }
-    std::cout << std::endl;
-}
 #endif
