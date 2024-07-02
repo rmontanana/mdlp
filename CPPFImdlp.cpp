@@ -25,7 +25,7 @@ namespace mdlp {
         }
         if (proposed_cuts < 1)
             return static_cast<size_t>(round(static_cast<float>(X.size()) * proposed_cuts));
-        return static_cast<size_t>(proposed_cuts); // As the first and last cutpoints shall be ignored in transform
+        return static_cast<size_t>(proposed_cuts); // The 2 extra cutpoints should not be considered here as this parameter is considered before they are added
     }
 
     void CPPFImdlp::fit(samples_t& X_, labels_t& y_)

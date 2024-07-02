@@ -76,7 +76,13 @@ private:
     }
     Experiment parse_experiment(std::string& line)
     {
-        auto [from_, to_, step_, n_bins, strategy] = parse_header(line);
+        if (line == "RANGE") {
+            std::getline(test_file, line);
+            auto [from_, to_, step_, n_bins, strategy] = parse_header(line);
+        } else {
+            std::getline(test_file, line);
+
+        }
         std::getline(test_file, line);
         auto data_discretized = parse_vector<int>(line);
         std::getline(test_file, line);

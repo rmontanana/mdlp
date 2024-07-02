@@ -347,44 +347,44 @@ namespace mdlp {
         labels_t expected = { 0, 0, 0, 0, 1, 1, 2, 2, 2, 3 };
         EXPECT_EQ(expected, labels);
     }
-    // TEST_F(TestBinDisc4U, irisUniform)
-    // {
-    //     ArffFiles file;
-    //     file.load(data_path + "iris.arff", true);
-    //     vector<samples_t>& X = file.getX();
-    //     fit(X[0]);
-    //     auto Xt = transform(X[0]);
-    //     labels_t expected = { 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 2, 2, 1, 2, 1, 2, 0, 2, 0, 0, 1, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 0, 1, 1, 1, 2, 0, 1, 2, 1, 3, 2, 2, 3, 0, 3, 2, 3, 2, 2, 2, 1, 1, 2, 2, 3, 3, 1, 2, 1, 3, 2, 2, 3, 2, 1, 2, 3, 3, 3, 2, 2, 1, 3, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
-    //     EXPECT_EQ(expected, Xt);
-    //     auto Xtt = fit_transform(X[0], file.getY());
-    //     EXPECT_EQ(expected, Xtt);
-    //     auto Xt_t = torch::tensor(X[0], torch::kFloat32);
-    //     auto y_t = torch::tensor(file.getY(), torch::kInt32);
-    //     auto Xtt_t = fit_transform_t(Xt_t, y_t);
-    //     for (int i = 0; i < expected.size(); i++)
-    //         EXPECT_EQ(expected[i], Xtt_t[i].item<int>());
-    // }
-    // TEST_F(TestBinDisc4Q, irisQuantile)
-    // {
-    //     ArffFiles file;
-    //     file.load(data_path + "iris.arff", true);
-    //     vector<samples_t>& X = file.getX();
-    //     fit(X[0]);
-    //     auto Xt = transform(X[0]);
-    //     labels_t expected = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 3, 3, 3, 1, 3, 1, 2, 0, 3, 1, 0, 2, 2, 2, 1, 3, 1, 2, 2, 1, 2, 2, 2, 2, 3, 3, 3, 3, 2, 1, 1, 1, 2, 2, 1, 2, 3, 2, 1, 1, 1, 2, 2, 0, 1, 1, 1, 2, 1, 1, 2, 2, 3, 2, 3, 3, 0, 3, 3, 3, 3, 3, 3, 1, 2, 3, 3, 3, 3, 2, 3, 1, 3, 2, 3, 3, 2, 2, 3, 3, 3, 3, 3, 2, 2, 3, 2, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 2, 2 };
-    //     EXPECT_EQ(expected, Xt);
-    //     auto Xtt = fit_transform(X[0], file.getY());
-    //     EXPECT_EQ(expected, Xtt);
-    //     auto Xt_t = torch::tensor(X[0], torch::kFloat32);
-    //     auto y_t = torch::tensor(file.getY(), torch::kInt32);
-    //     auto Xtt_t = fit_transform_t(Xt_t, y_t);
-    //     for (int i = 0; i < expected.size(); i++)
-    //         EXPECT_EQ(expected[i], Xtt_t[i].item<int>());
-    //     fit_t(Xt_t, y_t);
-    //     auto Xt_t2 = transform_t(Xt_t);
-    //     for (int i = 0; i < expected.size(); i++)
-    //         EXPECT_EQ(expected[i], Xt_t2[i].item<int>());
-    // }
+    TEST_F(TestBinDisc4U, irisUniform)
+    {
+        ArffFiles file;
+        file.load(data_path + "iris.arff", true);
+        vector<samples_t>& X = file.getX();
+        fit(X[0]);
+        auto Xt = transform(X[0]);
+        labels_t expected = { 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 2, 2, 1, 2, 1, 2, 0, 2, 0, 0, 1, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 0, 1, 1, 1, 2, 0, 1, 2, 1, 3, 2, 2, 3, 0, 3, 2, 3, 2, 2, 2, 1, 1, 2, 2, 3, 3, 1, 2, 1, 3, 2, 2, 3, 2, 1, 2, 3, 3, 3, 2, 2, 1, 3, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
+        EXPECT_EQ(expected, Xt);
+        auto Xtt = fit_transform(X[0], file.getY());
+        EXPECT_EQ(expected, Xtt);
+        auto Xt_t = torch::tensor(X[0], torch::kFloat32);
+        auto y_t = torch::tensor(file.getY(), torch::kInt32);
+        auto Xtt_t = fit_transform_t(Xt_t, y_t);
+        for (int i = 0; i < expected.size(); i++)
+            EXPECT_EQ(expected[i], Xtt_t[i].item<int>());
+    }
+    TEST_F(TestBinDisc4Q, irisQuantile)
+    {
+        ArffFiles file;
+        file.load(data_path + "iris.arff", true);
+        vector<samples_t>& X = file.getX();
+        fit(X[0]);
+        auto Xt = transform(X[0]);
+        labels_t expected = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 3, 3, 3, 1, 3, 1, 2, 0, 3, 1, 0, 2, 2, 2, 1, 3, 1, 2, 2, 1, 2, 2, 2, 2, 3, 3, 3, 3, 2, 1, 1, 1, 2, 2, 1, 2, 3, 2, 1, 1, 1, 2, 2, 0, 1, 1, 1, 2, 1, 1, 2, 2, 3, 2, 3, 3, 0, 3, 3, 3, 3, 3, 3, 1, 2, 3, 3, 3, 3, 2, 3, 1, 3, 2, 3, 3, 2, 2, 3, 3, 3, 3, 3, 2, 2, 3, 2, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 2, 2 };
+        EXPECT_EQ(expected, Xt);
+        auto Xtt = fit_transform(X[0], file.getY());
+        EXPECT_EQ(expected, Xtt);
+        auto Xt_t = torch::tensor(X[0], torch::kFloat32);
+        auto y_t = torch::tensor(file.getY(), torch::kInt32);
+        auto Xtt_t = fit_transform_t(Xt_t, y_t);
+        for (int i = 0; i < expected.size(); i++)
+            EXPECT_EQ(expected[i], Xtt_t[i].item<int>());
+        fit_t(Xt_t, y_t);
+        auto Xt_t2 = transform_t(Xt_t);
+        for (int i = 0; i < expected.size(); i++)
+            EXPECT_EQ(expected[i], Xt_t2[i].item<int>());
+    }
     TEST(TestBinDiscGeneric, Fileset)
     {
         Experiments exps(data_path + "tests.txt");
