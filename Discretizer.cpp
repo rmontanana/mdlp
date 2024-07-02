@@ -5,9 +5,19 @@ namespace mdlp {
     {
         discretizedData.clear();
         discretizedData.reserve(data.size());
+        // CutPoints always have more than two items
+        // Have to ignore first and last cut points provided
+        auto first = cutPoints.begin() + 1;
+        auto last = cutPoints.end() - 1;
         for (const precision_t& item : data) {
-            auto upper = std::upper_bound(cutPoints.begin(), cutPoints.end(), item);
-            discretizedData.push_back(upper - cutPoints.begin());
+            auto upper = std::lower_bound(first, last, item);
+            int number = upper - first;
+            /*
+            OJO
+            */
+            if (number < 0)
+                throw std::runtime_error("number is less than 0 in discretizer::transform");
+            discretizedData.push_back(number);
         }
         return discretizedData;
     }

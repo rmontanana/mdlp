@@ -25,7 +25,7 @@ namespace mdlp {
         }
         if (proposed_cuts < 1)
             return static_cast<size_t>(round(static_cast<float>(X.size()) * proposed_cuts));
-        return static_cast<size_t>(proposed_cuts);
+        return static_cast<size_t>(proposed_cuts); // As the first and last cutpoints shall be ignored in transform
     }
 
     void CPPFImdlp::fit(samples_t& X_, labels_t& y_)
@@ -58,6 +58,10 @@ namespace mdlp {
                 resizeCutPoints();
             }
         }
+        // Insert first & last X value to the cutpoints as them shall be ignored in transform
+        auto minmax = std::minmax_element(X.begin(), X.end());
+        cutPoints.push_back(*minmax.second);
+        cutPoints.insert(cutPoints.begin(), *minmax.first);
     }
 
     pair<precision_t, size_t> CPPFImdlp::valueCutPoint(size_t start, size_t cut, size_t end)

@@ -21,6 +21,15 @@ namespace mdlp {
     }
     const std::string data_path = set_data_path();
 
+    TEST(Discretizer, Version)
+    {
+        Discretizer* disc = new BinDisc(4, strategy_t::UNIFORM);
+        auto version = disc->version();
+        delete disc;
+        std::cout << "Version computed: " << version;
+        EXPECT_EQ("1.2.3", version);
+    }
+
     TEST(Discretizer, BinIrisUniform)
     {
         ArffFiles file;
