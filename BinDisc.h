@@ -20,7 +20,6 @@ namespace mdlp {
     private:
         void fit_uniform(samples_t&);
         void fit_quantile(samples_t&);
-        void normalizeCutPoints();
         int n_bins;
         strategy_t strategy;
     };
