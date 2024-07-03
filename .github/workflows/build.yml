@@ -31,8 +31,8 @@ jobs:
           cmake -S . -B build -Wno-dev -DCMAKE_PREFIX_PATH=$(pwd)/libtorch -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTING=ON
           build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build/ --config Debug
           cmake --build build -j 4
-          ctest -C Debug --output-on-failure -j 4
           cd build
+          ctest -C Debug --output-on-failure -j 4
           gcovr -f ../CPPFImdlp.cpp -f ../Metrics.cpp -f ../BinDisc.cpp -f ../Discretizer.cpp --txt --sonarqube=coverage.xml
       - name: Run sonar-scanner
         env:
