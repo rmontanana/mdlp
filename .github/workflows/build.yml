@@ -13,7 +13,7 @@ jobs:
     env:
       BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory # Directory where build-wrapper output will be placed
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - name: Install sonar-scanner and build-wrapper
@@ -28,17 +28,20 @@ jobs:
           unzip libtorch-cxx11-abi-shared-with-deps-2.3.1+cpu.zip
       - name: Tests & build-wrapper
         run: |
-          cmake -S . -B build -Wno-dev -DCMAKE_PREFIX_PATH=$(pwd)/libtorch -DENABLE_TESTING=ON
-          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build/ --config Release
-          cd build
-          make
-          ctest -C Release --output-on-failure --test-dir tests
-          cd ..
-          gcovr -f CPPFImdlp.cpp -f Metrics.cpp -f BinDisc.cpp -f Discretizer.cpp --txt --sonarqube=coverage.xml
+          cmake -S . -B build -Wno-dev -DCMAKE_PREFIX_PATH=$(pwd)/libtorch -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTING=ON
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build/ --config Debug
+          cmake --build build -j 4
+          ctest -C Debug --output-on-failure -j 4
+          lcov --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' --output-file coverage.info 
+          lcov --remove coverage.info 'lib/*' --output-file coverage.info 
+          lcov --remove coverage.info 'libtorch/*' --output-file coverage.info
+          lcov --remove coverage.info 'tests/*' --output-file coverage.info 
+          lcov --remove coverage.info 'gtest/*' --output-file coverage.info
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          sonar-scanner --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}" \
-                        --define sonar.coverageReportPaths=coverage.xml
+          sonar-scanner --define sonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}" \
+                        --define sonar.coverageReportPaths=build/coverage.info
