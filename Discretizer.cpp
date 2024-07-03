@@ -1,3 +1,9 @@
+// ****************************************************************
+// SPDX - FileCopyrightText: Copyright 2024 Ricardo Montañana Gómez
+// SPDX - FileType: SOURCE
+// SPDX - License - Identifier: MIT
+// ****************************************************************
+
 #include "Discretizer.h"
 
 namespace mdlp {
@@ -14,11 +20,6 @@ namespace mdlp {
         for (const precision_t& item : data) {
             auto pos = bound(first, last, item);
             int number = pos - first;
-            /*
-            OJO
-            */
-            if (number < 0)
-                throw std::runtime_error("number is less than 0 in discretizer::transform");
             discretizedData.push_back(number);
         }
         return discretizedData;

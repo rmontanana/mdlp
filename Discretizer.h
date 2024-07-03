@@ -1,3 +1,9 @@
+// ****************************************************************
+// SPDX - FileCopyrightText: Copyright 2024 Ricardo Montañana Gómez
+// SPDX - FileType: SOURCE
+// SPDX - License - Identifier: MIT
+// ****************************************************************
+
 #ifndef DISCRETIZER_H
 #define DISCRETIZER_H
 
@@ -24,7 +30,6 @@ namespace mdlp {
         torch::Tensor fit_transform_t(torch::Tensor& X_, torch::Tensor& y_);
         static inline std::string version() { return "1.2.3"; };
     protected:
-        void normalize_cutpoints();
         labels_t discretizedData = labels_t();
         cutPoints_t cutPoints; // At least two cutpoints must be provided, the first and the last will be ignored in transform
         bound_dir_t direction; // used in transform

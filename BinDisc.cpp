@@ -1,3 +1,9 @@
+// ****************************************************************
+// SPDX - FileCopyrightText: Copyright 2024 Ricardo Montañana Gómez
+// SPDX - FileType: SOURCE
+// SPDX - License - Identifier: MIT
+// ****************************************************************
+
 #include <algorithm>
 #include <cmath>
 #include "BinDisc.h"

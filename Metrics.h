@@ -1,3 +1,9 @@
+// ****************************************************************
+// SPDX - FileCopyrightText: Copyright 2024 Ricardo Montañana Gómez
+// SPDX - FileType: SOURCE
+// SPDX - License - Identifier: MIT
+// ****************************************************************
+
 #ifndef CCMETRICS_H
 #define CCMETRICS_H
 
