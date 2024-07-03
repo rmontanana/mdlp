@@ -25,13 +25,13 @@ enum class experiment_t {
 };
 class Experiment {
 public:
-    Experiment(float from_, float to_, float step_, int n_bins, std::string strategy, std::vector<int> data_discretized, std::vector<float> cutpoints) :
+    Experiment(float from_, float to_, float step_, int n_bins, std::string strategy, std::vector<int> data_discretized, std::vector<mdlp::precision_t> cutpoints) :
         from_{ from_ }, to_{ to_ }, step_{ step_ }, n_bins_{ n_bins }, strategy_{ strategy }, discretized_data_{ data_discretized }, cutpoints_{ cutpoints }, type_{ experiment_t::RANGE }
     {
         validate_strategy();
 
     }
-    Experiment(std::vector<float> dataset, int n_bins, std::string strategy, std::vector<int> data_discretized, std::vector<float> cutpoints) :
+    Experiment(std::vector<mdlp::precision_t> dataset, int n_bins, std::string strategy, std::vector<int> data_discretized, std::vector<mdlp::precision_t> cutpoints) :
         n_bins_{ n_bins }, strategy_{ strategy }, dataset_{ dataset }, discretized_data_{ data_discretized }, cutpoints_{ cutpoints }, type_{ experiment_t::VECTOR }
     {
         validate_strategy();
@@ -47,9 +47,9 @@ public:
     float step_;
     int n_bins_;
     std::string strategy_;
-    std::vector<float> dataset_;
+    std::vector<mdlp::precision_t> dataset_;
     std::vector<int> discretized_data_;
-    std::vector<float> cutpoints_;
+    std::vector<mdlp::precision_t> cutpoints_;
     experiment_t type_;
 };
 class Experiments {
@@ -112,9 +112,9 @@ private:
         // split data into variables
         float from_, to_, step_;
         int n_bins;
-        std::vector<float> dataset;
+        std::vector<mdlp::precision_t> dataset;
         auto data_discretized = parse_vector<int>(data);
-        auto cutpoints = parse_vector<float>(cuts);
+        auto cutpoints = parse_vector<mdlp::precision_t>(cuts);
         if (line == "RANGE") {
             tie(from_, to_, step_, n_bins, strategy) = parse_header(experiment);
             return Experiment{ from_, to_, step_, n_bins, strategy, data_discretized, cutpoints };
@@ -122,7 +122,7 @@ private:
         strategy = experiment.substr(0, 1);
         n_bins = std::stoi(experiment.substr(1, 1));
         data = experiment.substr(3, experiment.size() - 4);
-        dataset = parse_vector<float>(data);
+        dataset = parse_vector<mdlp::precision_t>(data);
         return Experiment(dataset, n_bins, strategy, data_discretized, cutpoints);
     }
     std::ifstream test_file;

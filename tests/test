@@ -8,7 +8,7 @@ fi
 cmake -S . -B build -Wno-dev -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_C_FLAGS="--coverage"
 cmake --build build
 cd build
-ctest --output-on-failure
+ctest --output-on-failure -j 8
 cd ..
 mkdir gcovr-report
 cd ..

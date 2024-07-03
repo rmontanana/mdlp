@@ -29,6 +29,12 @@ for i in range(0, len(data), 4):
     expected_data = data[i + 2]
     cuts_data = data[i + 3]
     disc.fit(X)
+    #
+    # Normalize the cutpoints to remove numerical errors such as 33.0000000001
+    # instead of 33
+    #
+    for j in range(len(disc.bin_edges_[0])):
+        disc.bin_edges_[0][j] = round(disc.bin_edges_[0][j], 5)
     result = disc.transform(X)
     result = [int(x) for x in result.flatten()]
     expected = [int(x) for x in expected_data.split(",")]
