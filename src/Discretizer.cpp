@@ -20,7 +20,7 @@ namespace mdlp {
         for (const precision_t& item : data) {
             auto pos = bound(first, last, item);
             auto number = pos - first;
-            discretizedData.push_back(number);
+            discretizedData.push_back(static_cast<label_t>(number));
         }
         return discretizedData;
     }
@@ -41,7 +41,7 @@ namespace mdlp {
         auto num_elements = X_.numel();
         samples_t X(X_.data_ptr<precision_t>(), X_.data_ptr<precision_t>() + num_elements);
         auto result = transform(X);
-        return torch::tensor(result, torch::kInt32);
+        return torch::tensor(result, torch_label_t);
     }
     torch::Tensor Discretizer::fit_transform_t(const torch::Tensor& X_, const torch::Tensor& y_)
     {
@@ -49,6 +49,6 @@ namespace mdlp {
         samples_t X(X_.data_ptr<precision_t>(), X_.data_ptr<precision_t>() + num_elements);
         labels_t y(y_.data_ptr<int>(), y_.data_ptr<int>() + num_elements);
         auto result = fit_transform(X, y);
-        return torch::tensor(result, torch::kInt32);
+        return torch::tensor(result, torch_label_t);
     }
 }

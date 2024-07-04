@@ -12,7 +12,7 @@
 #include<fstream>
 #include<vector>
 #include<tuple>
-#include "../typesFImdlp.h"
+#include "typesFImdlp.h"
 
 template <typename T>
 void show_vector(const std::vector<T>& data, std::string title)

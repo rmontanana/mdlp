@@ -5,7 +5,7 @@
 // ****************************************************************
 
 #include "gtest/gtest.h"
-#include "../Metrics.h"
+#include "Metrics.h"
 
 namespace mdlp {
     class TestMetrics : public Metrics, public testing::Test {

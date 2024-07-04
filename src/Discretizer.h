@@ -9,14 +9,15 @@
 
 #include <string>
 #include <algorithm>
-#include <torch/torch.h>
 #include "typesFImdlp.h"
+#include <torch/torch.h>
 
 namespace mdlp {
     enum class bound_dir_t {
         LEFT,
         RIGHT
     };
+    const auto torch_label_t = torch::kInt32;
     class Discretizer {
     public:
         Discretizer() = default;

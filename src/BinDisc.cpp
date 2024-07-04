@@ -65,12 +65,12 @@ namespace mdlp {
         bool first = true;
         results.reserve(percentiles.size());
         for (auto percentile : percentiles) {
-            const auto i = static_cast<size_t>(std::floor(static_cast<double>(data.size() - 1) * percentile / 100.));
+            const auto i = static_cast<size_t>(std::floor(static_cast<precision_t>(data.size() - 1) * percentile / 100.));
             const auto indexLower = clip(i, 0, data.size() - 2);
-            const double percentI = static_cast<double>(indexLower) / static_cast<double>(data.size() - 1);
-            const double fraction =
+            const precision_t percentI = static_cast<precision_t>(indexLower) / static_cast<precision_t>(data.size() - 1);
+            const precision_t fraction =
                 (percentile / 100.0 - percentI) /
-                (static_cast<double>(indexLower + 1) / static_cast<double>(data.size() - 1) - percentI);
+                (static_cast<precision_t>(indexLower + 1) / static_cast<precision_t>(data.size() - 1) - percentI);
             if (const auto value = data[indexLower] + (data[indexLower + 1] - data[indexLower]) * fraction; value != results.back() || first) // first needed as results.back() return is undefined for empty vectors
                 results.push_back(value);
             first = false;

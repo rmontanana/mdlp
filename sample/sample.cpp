@@ -12,10 +12,10 @@
 #include <cstring>
 #include <getopt.h>
 #include <torch/torch.h>
-#include "../Discretizer.h"
-#include "../CPPFImdlp.h"
-#include "../BinDisc.h"
-#include "../tests/ArffFiles.h"
+#include <ArffFiles.hpp>
+#include "Discretizer.h"
+#include "CPPFImdlp.h"
+#include "BinDisc.h"
 
 const string PATH = "tests/datasets/";
 

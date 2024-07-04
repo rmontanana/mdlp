@@ -4,12 +4,12 @@
 // SPDX - License - Identifier: MIT
 // ****************************************************************
 
-#include "gtest/gtest.h"
-#include "../Metrics.h"
-#include "../CPPFImdlp.h"
 #include <fstream>
 #include <iostream>
-#include "ArffFiles.h"
+#include <ArffFiles.hpp>
+#include "gtest/gtest.h"
+#include "Metrics.h"
+#include "CPPFImdlp.h"
 
 #define EXPECT_THROW_WITH_MESSAGE(stmt, etype, whatstring) EXPECT_THROW( \
 try { \

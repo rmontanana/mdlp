@@ -7,11 +7,11 @@
 #include <fstream>
 #include <string>
 #include <iostream>
+#include <ArffFiles.hpp>
 #include "gtest/gtest.h"
-#include "ArffFiles.h"
-#include "../Discretizer.h"
-#include "../BinDisc.h"
-#include "../CPPFImdlp.h"
+#include "Discretizer.h"
+#include "BinDisc.h"
+#include "CPPFImdlp.h"
 
 namespace mdlp {
     const float margin = 1e-4;
