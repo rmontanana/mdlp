@@ -24,8 +24,8 @@ namespace mdlp {
         void fit(samples_t& X_, labels_t& y) override;
         void fit(samples_t& X);
     private:
-        void fit_uniform(samples_t&);
-        void fit_quantile(samples_t&);
+        void fit_uniform(const samples_t&);
+        void fit_quantile(const samples_t&);
         int n_bins;
         strategy_t strategy;
     };

@@ -66,9 +66,9 @@ namespace mdlp {
             }
         }
         // Insert first & last X value to the cutpoints as them shall be ignored in transform
-        auto minmax = std::minmax_element(X.begin(), X.end());
-        cutPoints.push_back(*minmax.second);
-        cutPoints.insert(cutPoints.begin(), *minmax.first);
+        auto [vmin, vmax] = std::minmax_element(X.begin(), X.end());
+        cutPoints.push_back(*vmax);
+        cutPoints.insert(cutPoints.begin(), *vmin);
     }
 
     pair<precision_t, size_t> CPPFImdlp::valueCutPoint(size_t start, size_t cut, size_t end)

@@ -25,9 +25,9 @@ namespace mdlp {
         virtual void fit(samples_t& X_, labels_t& y_) = 0;
         labels_t& transform(const samples_t& data);
         labels_t& fit_transform(samples_t& X_, labels_t& y_);
-        void fit_t(torch::Tensor& X_, torch::Tensor& y_);
-        torch::Tensor transform_t(torch::Tensor& X_);
-        torch::Tensor fit_transform_t(torch::Tensor& X_, torch::Tensor& y_);
+        void fit_t(const torch::Tensor& X_, const torch::Tensor& y_);
+        torch::Tensor transform_t(const torch::Tensor& X_);
+        torch::Tensor fit_transform_t(const torch::Tensor& X_, const torch::Tensor& y_);
         static inline std::string version() { return "1.2.3"; };
     protected:
         labels_t discretizedData = labels_t();

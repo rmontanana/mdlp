@@ -19,7 +19,7 @@ namespace mdlp {
         auto bound = direction == bound_dir_t::LEFT ? std::lower_bound<std::vector<precision_t>::iterator, precision_t> : std::upper_bound<std::vector<precision_t>::iterator, precision_t>;
         for (const precision_t& item : data) {
             auto pos = bound(first, last, item);
-            int number = pos - first;
+            auto number = pos - first;
             discretizedData.push_back(number);
         }
         return discretizedData;
@@ -29,21 +29,21 @@ namespace mdlp {
         fit(X_, y_);
         return transform(X_);
     }
-    void Discretizer::fit_t(torch::Tensor& X_, torch::Tensor& y_)
+    void Discretizer::fit_t(const torch::Tensor& X_, const torch::Tensor& y_)
     {
         auto num_elements = X_.numel();
         samples_t X(X_.data_ptr<precision_t>(), X_.data_ptr<precision_t>() + num_elements);
         labels_t y(y_.data_ptr<int>(), y_.data_ptr<int>() + num_elements);
         fit(X, y);
     }
-    torch::Tensor Discretizer::transform_t(torch::Tensor& X_)
+    torch::Tensor Discretizer::transform_t(const torch::Tensor& X_)
     {
         auto num_elements = X_.numel();
         samples_t X(X_.data_ptr<precision_t>(), X_.data_ptr<precision_t>() + num_elements);
         auto result = transform(X);
         return torch::tensor(result, torch::kInt32);
     }
-    torch::Tensor Discretizer::fit_transform_t(torch::Tensor& X_, torch::Tensor& y_)
+    torch::Tensor Discretizer::fit_transform_t(const torch::Tensor& X_, const torch::Tensor& y_)
     {
         auto num_elements = X_.numel();
         samples_t X(X_.data_ptr<precision_t>(), X_.data_ptr<precision_t>() + num_elements);

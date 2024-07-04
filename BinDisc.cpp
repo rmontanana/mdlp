@@ -54,31 +54,30 @@ namespace mdlp {
         }
         return linspc;
     }
-    size_t clip(const size_t n, size_t lower, size_t upper)
+    size_t clip(const size_t n, const size_t lower, const size_t upper)
     {
         return std::max(lower, std::min(n, upper));
     }
-    std::vector<precision_t> percentile(samples_t& data, std::vector<precision_t>& percentiles)
+    std::vector<precision_t> percentile(samples_t& data, const std::vector<precision_t>& percentiles)
     {
         // Implementation taken from https://dpilger26.github.io/NumCpp/doxygen/html/percentile_8hpp_source.html
         std::vector<precision_t> results;
         bool first = true;
         results.reserve(percentiles.size());
         for (auto percentile : percentiles) {
-            const size_t i = static_cast<size_t>(std::floor(static_cast<double>(data.size() - 1) * percentile / 100.));
+            const auto i = static_cast<size_t>(std::floor(static_cast<double>(data.size() - 1) * percentile / 100.));
             const auto indexLower = clip(i, 0, data.size() - 2);
             const double percentI = static_cast<double>(indexLower) / static_cast<double>(data.size() - 1);
             const double fraction =
                 (percentile / 100.0 - percentI) /
                 (static_cast<double>(indexLower + 1) / static_cast<double>(data.size() - 1) - percentI);
-            const auto value = data[indexLower] + (data[indexLower + 1] - data[indexLower]) * fraction;
-            if (value != results.back() || first) // first needed as results.back() return is undefined for empty vectors
+            if (const auto value = data[indexLower] + (data[indexLower + 1] - data[indexLower]) * fraction; value != results.back() || first) // first needed as results.back() return is undefined for empty vectors
                 results.push_back(value);
             first = false;
         }
         return results;
     }
-    void BinDisc::fit_quantile(samples_t& X)
+    void BinDisc::fit_quantile(const samples_t& X)
     {
         auto quantiles = linspace(0.0, 100.0, n_bins + 1);
         auto data = X;
@@ -91,9 +90,9 @@ namespace mdlp {
         }
         cutPoints = percentile(data, quantiles);
     }
-    void BinDisc::fit_uniform(samples_t& X)
+    void BinDisc::fit_uniform(const samples_t& X)
     {
-        auto minmax = std::minmax_element(X.begin(), X.end());
-        cutPoints = linspace(*minmax.first, *minmax.second, n_bins + 1);
+        auto [vmin, vmax] = std::minmax_element(X.begin(), X.end());
+        cutPoints = linspace(*vmin, *vmax, n_bins + 1);
     }
 }
