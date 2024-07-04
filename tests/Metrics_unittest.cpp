@@ -1,5 +1,11 @@
+// ****************************************************************
+// SPDX - FileCopyrightText: Copyright 2024 Ricardo Montañana Gómez
+// SPDX - FileType: SOURCE
+// SPDX - License - Identifier: MIT
+// ****************************************************************
+
 #include "gtest/gtest.h"
-#include "../Metrics.h"
+#include "Metrics.h"
 
 namespace mdlp {
     class TestMetrics : public Metrics, public testing::Test {

@@ -1,9 +1,16 @@
+// ****************************************************************
+// SPDX - FileCopyrightText: Copyright 2024 Ricardo Montañana Gómez
+// SPDX - FileType: SOURCE
+// SPDX - License - Identifier: MIT
+// ****************************************************************
+
 #include <fstream>
 #include <string>
 #include <iostream>
 #include "gtest/gtest.h"
-#include "ArffFiles.h"
-#include "../BinDisc.h"
+#include <ArffFiles.hpp>
+#include "BinDisc.h"
+#include "Experiments.hpp"
 
 namespace mdlp {
     const float margin = 1e-4;
@@ -40,10 +47,11 @@ namespace mdlp {
         auto y = labels_t();
         fit(X, y);
         auto cuts = getCutPoints();
-        ASSERT_EQ(3, cuts.size());
-        EXPECT_NEAR(3.66667, cuts.at(0), margin);
-        EXPECT_NEAR(6.33333, cuts.at(1), margin);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts.at(2));
+        ASSERT_EQ(4, cuts.size());
+        EXPECT_NEAR(1, cuts.at(0), margin);
+        EXPECT_NEAR(3.66667, cuts.at(1), margin);
+        EXPECT_NEAR(6.33333, cuts.at(2), margin);
+        EXPECT_NEAR(9.0, cuts.at(3), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 1, 1, 1, 2, 2, 2 };
         EXPECT_EQ(expected, labels);
@@ -53,10 +61,11 @@ namespace mdlp {
         samples_t X = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
         fit(X);
         auto cuts = getCutPoints();
-        ASSERT_EQ(3, cuts.size());
-        EXPECT_NEAR(3.666667, cuts[0], margin);
-        EXPECT_NEAR(6.333333, cuts[1], margin);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[2]);
+        ASSERT_EQ(4, cuts.size());
+        EXPECT_NEAR(1, cuts[0], margin);
+        EXPECT_NEAR(3.666667, cuts[1], margin);
+        EXPECT_NEAR(6.333333, cuts[2], margin);
+        EXPECT_NEAR(9, cuts[3], margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 1, 1, 1, 2, 2, 2 };
         EXPECT_EQ(expected, labels);
@@ -66,10 +75,11 @@ namespace mdlp {
         samples_t X = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0 };
         fit(X);
         auto cuts = getCutPoints();
-        ASSERT_EQ(3, cuts.size());
-        EXPECT_EQ(4.0, cuts[0]);
-        EXPECT_EQ(7.0, cuts[1]);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[2]);
+        ASSERT_EQ(4, cuts.size());
+        EXPECT_NEAR(1, cuts.at(0), margin);
+        EXPECT_NEAR(4.0, cuts.at(1), margin);
+        EXPECT_NEAR(7.0, cuts.at(2), margin);
+        EXPECT_NEAR(10.0, cuts.at(3), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 1, 1, 1, 2, 2, 2, 2 };
         EXPECT_EQ(expected, labels);
@@ -79,10 +89,11 @@ namespace mdlp {
         samples_t X = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0 };
         fit(X);
         auto cuts = getCutPoints();
-        ASSERT_EQ(3, cuts.size());
-        EXPECT_EQ(4, cuts[0]);
-        EXPECT_EQ(7, cuts[1]);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[2]);
+        ASSERT_EQ(4, cuts.size());
+        EXPECT_NEAR(1, cuts.at(0), margin);
+        EXPECT_NEAR(4.0, cuts.at(1), margin);
+        EXPECT_NEAR(7.0, cuts.at(2), margin);
+        EXPECT_NEAR(10.0, cuts.at(3), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 1, 1, 1, 2, 2, 2, 2 };
         EXPECT_EQ(expected, labels);
@@ -92,10 +103,11 @@ namespace mdlp {
         samples_t X = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0 };
         fit(X);
         auto cuts = getCutPoints();
-        ASSERT_EQ(3, cuts.size());
-        EXPECT_NEAR(4.33333, cuts[0], margin);
-        EXPECT_NEAR(7.66667, cuts[1], margin);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[2]);
+        ASSERT_EQ(4, cuts.size());
+        EXPECT_NEAR(1, cuts.at(0), margin);
+        EXPECT_NEAR(4.33333, cuts.at(1), margin);
+        EXPECT_NEAR(7.66667, cuts.at(2), margin);
+        EXPECT_NEAR(11.0, cuts.at(3), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2 };
         EXPECT_EQ(expected, labels);
@@ -105,10 +117,11 @@ namespace mdlp {
         samples_t X = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0 };
         fit(X);
         auto cuts = getCutPoints();
-        ASSERT_EQ(3, cuts.size());
-        EXPECT_NEAR(4.33333, cuts[0], margin);
-        EXPECT_NEAR(7.66667, cuts[1], margin);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[2]);
+        ASSERT_EQ(4, cuts.size());
+        EXPECT_NEAR(1, cuts.at(0), margin);
+        EXPECT_NEAR(4.33333, cuts.at(1), margin);
+        EXPECT_NEAR(7.66667, cuts.at(2), margin);
+        EXPECT_NEAR(11.0, cuts.at(3), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2 };
         EXPECT_EQ(expected, labels);
@@ -118,8 +131,9 @@ namespace mdlp {
         samples_t X = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
         fit(X);
         auto cuts = getCutPoints();
-        ASSERT_EQ(1, cuts.size());
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[0]);
+        ASSERT_EQ(2, cuts.size());
+        EXPECT_NEAR(1, cuts.at(0), margin);
+        EXPECT_NEAR(1, cuts.at(1), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 0, 0, 0 };
         EXPECT_EQ(expected, labels);
@@ -129,8 +143,9 @@ namespace mdlp {
         samples_t X = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(1, cuts.size());
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[0]);
+        ASSERT_EQ(2, cuts.size());
+        EXPECT_NEAR(1, cuts.at(0), margin);
+        EXPECT_NEAR(1, cuts.at(1), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 0, 0, 0 };
         EXPECT_EQ(expected, labels);
@@ -140,16 +155,18 @@ namespace mdlp {
         samples_t X = {};
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(1, cuts.size());
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[0]);
+        ASSERT_EQ(2, cuts.size());
+        EXPECT_NEAR(0, cuts.at(0), margin);
+        EXPECT_NEAR(0, cuts.at(1), margin);
     }
     TEST_F(TestBinDisc3Q, EmptyQuantile)
     {
         samples_t X = {};
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(1, cuts.size());
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[0]);
+        ASSERT_EQ(2, cuts.size());
+        EXPECT_NEAR(0, cuts.at(0), margin);
+        EXPECT_NEAR(0, cuts.at(1), margin);
     }
     TEST(TestBinDisc3, ExceptionNumberBins)
     {
@@ -160,10 +177,11 @@ namespace mdlp {
         samples_t X = { 3.0, 1.0, 1.0, 3.0, 1.0, 1.0, 3.0, 1.0, 1.0 };
         fit(X);
         auto cuts = getCutPoints();
-        ASSERT_EQ(3, cuts.size());
-        EXPECT_NEAR(1.66667, cuts[0], margin);
-        EXPECT_NEAR(2.33333, cuts[1], margin);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[2]);
+        ASSERT_EQ(4, cuts.size());
+        EXPECT_NEAR(1, cuts.at(0), margin);
+        EXPECT_NEAR(1.66667, cuts.at(1), margin);
+        EXPECT_NEAR(2.33333, cuts.at(2), margin);
+        EXPECT_NEAR(3.0, cuts.at(3), margin);
         auto labels = transform(X);
         labels_t expected = { 2, 0, 0, 2, 0, 0, 2, 0, 0 };
         EXPECT_EQ(expected, labels);
@@ -174,9 +192,10 @@ namespace mdlp {
         samples_t X = { 3.0, 1.0, 1.0, 3.0, 1.0, 1.0, 3.0, 1.0, 1.0 };
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(2, cuts.size());
-        EXPECT_NEAR(1.66667, cuts[0], margin);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[1]);
+        ASSERT_EQ(3, cuts.size());
+        EXPECT_NEAR(1, cuts.at(0), margin);
+        EXPECT_NEAR(1.66667, cuts.at(1), margin);
+        EXPECT_NEAR(3.0, cuts.at(2), margin);
         auto labels = transform(X);
         labels_t expected = { 1, 0, 0, 1, 0, 0, 1, 0, 0 };
         EXPECT_EQ(expected, labels);
@@ -187,11 +206,12 @@ namespace mdlp {
         samples_t X = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0 };
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(4, cuts.size());
-        ASSERT_EQ(3.75, cuts[0]);
-        EXPECT_EQ(6.5, cuts[1]);
-        EXPECT_EQ(9.25, cuts[2]);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[3]);
+        ASSERT_EQ(5, cuts.size());
+        EXPECT_NEAR(1.0, cuts.at(0), margin);
+        EXPECT_NEAR(3.75, cuts.at(1), margin);
+        EXPECT_NEAR(6.5, cuts.at(2), margin);
+        EXPECT_NEAR(9.25, cuts.at(3), margin);
+        EXPECT_NEAR(12.0, cuts.at(4), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3 };
         EXPECT_EQ(expected, labels);
@@ -201,11 +221,12 @@ namespace mdlp {
         samples_t X = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0 };
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(4, cuts.size());
-        ASSERT_EQ(3.75, cuts[0]);
-        EXPECT_EQ(6.5, cuts[1]);
-        EXPECT_EQ(9.25, cuts[2]);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[3]);
+        ASSERT_EQ(5, cuts.size());
+        EXPECT_NEAR(1.0, cuts.at(0), margin);
+        EXPECT_NEAR(3.75, cuts.at(1), margin);
+        EXPECT_NEAR(6.5, cuts.at(2), margin);
+        EXPECT_NEAR(9.25, cuts.at(3), margin);
+        EXPECT_NEAR(12.0, cuts.at(4), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3 };
         EXPECT_EQ(expected, labels);
@@ -215,11 +236,12 @@ namespace mdlp {
         samples_t X = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0 };
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(4, cuts.size());
-        EXPECT_EQ(4.0, cuts[0]);
-        EXPECT_EQ(7.0, cuts[1]);
-        EXPECT_EQ(10.0, cuts[2]);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[3]);
+        ASSERT_EQ(5, cuts.size());
+        EXPECT_NEAR(1.0, cuts.at(0), margin);
+        EXPECT_NEAR(4.0, cuts.at(1), margin);
+        EXPECT_NEAR(7.0, cuts.at(2), margin);
+        EXPECT_NEAR(10.0, cuts.at(3), margin);
+        EXPECT_NEAR(13.0, cuts.at(4), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3 };
         EXPECT_EQ(expected, labels);
@@ -229,11 +251,12 @@ namespace mdlp {
         samples_t X = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0 };
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(4, cuts.size());
-        EXPECT_EQ(4.0, cuts[0]);
-        EXPECT_EQ(7.0, cuts[1]);
-        EXPECT_EQ(10.0, cuts[2]);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[3]);
+        ASSERT_EQ(5, cuts.size());
+        EXPECT_NEAR(1.0, cuts.at(0), margin);
+        EXPECT_NEAR(4.0, cuts.at(1), margin);
+        EXPECT_NEAR(7.0, cuts.at(2), margin);
+        EXPECT_NEAR(10.0, cuts.at(3), margin);
+        EXPECT_NEAR(13.0, cuts.at(4), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3 };
         EXPECT_EQ(expected, labels);
@@ -243,11 +266,12 @@ namespace mdlp {
         samples_t X = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0 };
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(4, cuts.size());
-        EXPECT_EQ(4.25, cuts[0]);
-        EXPECT_EQ(7.5, cuts[1]);
-        EXPECT_EQ(10.75, cuts[2]);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[3]);
+        ASSERT_EQ(5, cuts.size());
+        EXPECT_NEAR(1.0, cuts.at(0), margin);
+        EXPECT_NEAR(4.25, cuts.at(1), margin);
+        EXPECT_NEAR(7.5, cuts.at(2), margin);
+        EXPECT_NEAR(10.75, cuts.at(3), margin);
+        EXPECT_NEAR(14.0, cuts.at(4), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3 };
         EXPECT_EQ(expected, labels);
@@ -257,11 +281,12 @@ namespace mdlp {
         samples_t X = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0 };
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(4, cuts.size());
-        EXPECT_EQ(4.25, cuts[0]);
-        EXPECT_EQ(7.5, cuts[1]);
-        EXPECT_EQ(10.75, cuts[2]);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[3]);
+        ASSERT_EQ(5, cuts.size());
+        EXPECT_NEAR(1.0, cuts.at(0), margin);
+        EXPECT_NEAR(4.25, cuts.at(1), margin);
+        EXPECT_NEAR(7.5, cuts.at(2), margin);
+        EXPECT_NEAR(10.75, cuts.at(3), margin);
+        EXPECT_NEAR(14.0, cuts.at(4), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3 };
         EXPECT_EQ(expected, labels);
@@ -271,11 +296,12 @@ namespace mdlp {
         samples_t X = { 15.0, 8.0, 12.0, 14.0, 6.0, 1.0, 13.0, 11.0, 10.0, 9.0, 7.0, 4.0, 3.0, 5.0, 2.0 };
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(4, cuts.size());
-        EXPECT_EQ(4.5, cuts[0]);
-        EXPECT_EQ(8, cuts[1]);
-        EXPECT_EQ(11.5, cuts[2]);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[3]);
+        ASSERT_EQ(5, cuts.size());
+        EXPECT_NEAR(1.0, cuts.at(0), margin);
+        EXPECT_NEAR(4.5, cuts.at(1), margin);
+        EXPECT_NEAR(8, cuts.at(2), margin);
+        EXPECT_NEAR(11.5, cuts.at(3), margin);
+        EXPECT_NEAR(15.0, cuts.at(4), margin);
         auto labels = transform(X);
         labels_t expected = { 3, 2, 3, 3, 1, 0, 3, 2, 2, 2, 1, 0, 0, 1, 0 };
         EXPECT_EQ(expected, labels);
@@ -285,11 +311,12 @@ namespace mdlp {
         samples_t X = { 15.0, 13.0, 12.0, 14.0, 6.0, 1.0, 8.0, 11.0, 10.0, 9.0, 7.0, 4.0, 3.0, 5.0, 2.0 };
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(4, cuts.size());
-        EXPECT_EQ(4.5, cuts[0]);
-        EXPECT_EQ(8, cuts[1]);
-        EXPECT_EQ(11.5, cuts[2]);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[3]);
+        ASSERT_EQ(5, cuts.size());
+        EXPECT_NEAR(1.0, cuts.at(0), margin);
+        EXPECT_NEAR(4.5, cuts.at(1), margin);
+        EXPECT_NEAR(8, cuts.at(2), margin);
+        EXPECT_NEAR(11.5, cuts.at(3), margin);
+        EXPECT_NEAR(15.0, cuts.at(4), margin);
         auto labels = transform(X);
         labels_t expected = { 3, 3, 3, 3, 1, 0, 2, 2, 2, 2, 1, 0, 0, 1, 0 };
         EXPECT_EQ(expected, labels);
@@ -300,11 +327,12 @@ namespace mdlp {
         //               0    1     2   3    4    5    6    7    8    9
         fit(X);
         auto cuts = getCutPoints();
-        EXPECT_EQ(4, cuts.size());
-        EXPECT_EQ(1.0, cuts[0]);
-        EXPECT_EQ(2.0, cuts[1]);
-        ASSERT_EQ(3.0, cuts[2]);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[3]);
+        ASSERT_EQ(5, cuts.size());
+        EXPECT_NEAR(0.0, cuts.at(0), margin);
+        EXPECT_NEAR(1.0, cuts.at(1), margin);
+        EXPECT_NEAR(2.0, cuts.at(2), margin);
+        EXPECT_NEAR(3.0, cuts.at(3), margin);
+        EXPECT_NEAR(4.0, cuts.at(4), margin);
         auto labels = transform(X);
         labels_t expected = { 0, 1, 1, 1, 2, 2, 3, 3, 3, 3 };
         EXPECT_EQ(expected, labels);
@@ -315,50 +343,69 @@ namespace mdlp {
         //               0    1     2   3    4    5    6    7    8    9
         fit(X);
         auto cuts = getCutPoints();
-        ASSERT_EQ(3, cuts.size());
-        EXPECT_EQ(2.0, cuts[0]);
-        ASSERT_EQ(3.0, cuts[1]);
-        EXPECT_EQ(numeric_limits<float>::max(), cuts[2]);
+        ASSERT_EQ(5, cuts.size());
+        EXPECT_NEAR(0.0, cuts.at(0), margin);
+        EXPECT_NEAR(1.0, cuts.at(1), margin);
+        EXPECT_NEAR(2.0, cuts.at(2), margin);
+        EXPECT_NEAR(3.0, cuts.at(3), margin);
+        EXPECT_NEAR(4.0, cuts.at(4), margin);
         auto labels = transform(X);
-        labels_t expected = { 0, 0, 0, 0, 1, 1, 2, 2, 2, 2 };
+        labels_t expected = { 0, 1, 1, 1, 2, 2, 3, 3, 3, 3 };
         EXPECT_EQ(expected, labels);
     }
-    TEST_F(TestBinDisc4U, irisUniform)
+    TEST(TestBinDiscGeneric, Fileset)
     {
-        ArffFiles file;
-        file.load(data_path + "iris.arff", true);
-        vector<samples_t>& X = file.getX();
-        fit(X[0]);
-        auto Xt = transform(X[0]);
-        labels_t expected = { 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 2, 2, 1, 2, 1, 2, 0, 2, 0, 0, 1, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 0, 1, 1, 1, 2, 0, 1, 2, 1, 3, 2, 2, 3, 0, 3, 2, 3, 2, 2, 2, 1, 1, 2, 2, 3, 3, 1, 2, 1, 3, 2, 2, 3, 2, 1, 2, 3, 3, 3, 2, 2, 1, 3, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
-        EXPECT_EQ(expected, Xt);
-        auto Xtt = fit_transform(X[0], file.getY());
-        EXPECT_EQ(expected, Xtt);
-        auto Xt_t = torch::tensor(X[0], torch::kFloat32);
-        auto y_t = torch::tensor(file.getY(), torch::kInt32);
-        auto Xtt_t = fit_transform_t(Xt_t, y_t);
-        for (int i = 0; i < expected.size(); i++)
-            EXPECT_EQ(expected[i], Xtt_t[i].item<int>());
-    }
-    TEST_F(TestBinDisc4Q, irisQuantile)
-    {
-        ArffFiles file;
-        file.load(data_path + "iris.arff", true);
-        vector<samples_t>& X = file.getX();
-        fit(X[0]);
-        auto Xt = transform(X[0]);
-        labels_t expected = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 3, 3, 3, 1, 3, 1, 2, 0, 3, 1, 0, 2, 2, 2, 1, 3, 1, 2, 2, 1, 2, 2, 2, 2, 3, 3, 3, 3, 2, 1, 1, 1, 2, 2, 1, 2, 3, 2, 1, 1, 1, 2, 2, 0, 1, 1, 1, 2, 1, 1, 2, 2, 3, 2, 3, 3, 0, 3, 3, 3, 3, 3, 3, 1, 2, 3, 3, 3, 3, 2, 3, 1, 3, 2, 3, 3, 2, 2, 3, 3, 3, 3, 3, 2, 2, 3, 2, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 2, 2 };
-        EXPECT_EQ(expected, Xt);
-        auto Xtt = fit_transform(X[0], file.getY());
-        EXPECT_EQ(expected, Xtt);
-        auto Xt_t = torch::tensor(X[0], torch::kFloat32);
-        auto y_t = torch::tensor(file.getY(), torch::kInt32);
-        auto Xtt_t = fit_transform_t(Xt_t, y_t);
-        for (int i = 0; i < expected.size(); i++)
-            EXPECT_EQ(expected[i], Xtt_t[i].item<int>());
-        fit_t(Xt_t, y_t);
-        auto Xt_t2 = transform_t(Xt_t);
-        for (int i = 0; i < expected.size(); i++)
-            EXPECT_EQ(expected[i], Xt_t2[i].item<int>());
+        Experiments exps(data_path + "tests.txt");
+        int num = 0;
+        while (exps.is_next()) {
+            ++num;
+            Experiment exp = exps.next();
+            BinDisc disc(exp.n_bins_, exp.strategy_[0] == 'Q' ? strategy_t::QUANTILE : strategy_t::UNIFORM);
+            std::vector<precision_t> test;
+            if (exp.type_ == experiment_t::RANGE) {
+                for (float i = exp.from_; i < exp.to_; i += exp.step_) {
+                    test.push_back(i);
+                }
+            } else {
+                test = exp.dataset_;
+            }
+            // show_vector(test, "Test");
+            auto empty = std::vector<int>();
+            auto Xt = disc.fit_transform(test, empty);
+            auto cuts = disc.getCutPoints();
+            EXPECT_EQ(exp.discretized_data_.size(), Xt.size());
+            auto flag = false;
+            size_t n_errors = 0;
+            if (num < 40) {
+                //
+                // Check discretization of only the first 40 tests as after we cannot ensure the same codification due to precision problems
+                //
+                for (int i = 0; i < exp.discretized_data_.size(); ++i) {
+                    if (exp.discretized_data_.at(i) != Xt.at(i)) {
+                        if (!flag) {
+                            if (exp.type_ == experiment_t::RANGE)
+                                std::cout << "+Exp #: " << num << " From: " << exp.from_ << " To: " << exp.to_ << " Step: " << exp.step_ << " Bins: " << exp.n_bins_ << " Strategy: " << exp.strategy_ << std::endl;
+                            else {
+                                std::cout << "+Exp #: " << num << " strategy: " << exp.strategy_ << " " << " n_bins: " << exp.n_bins_ << " ";
+                                show_vector(exp.dataset_, "Dataset");
+                            }
+                            show_vector(cuts, "Cuts");
+                            std::cout << "Error at " << i << " test[i]=" << test.at(i) << " Expected: " << exp.discretized_data_.at(i) << " Got: " << Xt.at(i) << std::endl;
+                            flag = true;
+                            EXPECT_EQ(exp.discretized_data_.at(i), Xt.at(i));
+                        }
+                        n_errors++;
+                    }
+                }
+                if (flag) {
+                    std::cout << "*** Found " << n_errors << " mistakes in this experiment dataset" << std::endl;
+                }
+            }
+            EXPECT_EQ(exp.cutpoints_.size(), cuts.size());
+            for (int i = 0; i < exp.cutpoints_.size(); ++i) {
+                EXPECT_NEAR(exp.cutpoints_.at(i), cuts.at(i), margin);
+            }
+        }
+        std::cout << "* Number of experiments tested: " << num << std::endl;
     }
 }

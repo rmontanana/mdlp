@@ -1,3 +1,9 @@
+// ****************************************************************
+// SPDX - FileCopyrightText: Copyright 2024 Ricardo Montañana Gómez
+// SPDX - FileType: SOURCE
+// SPDX - License - Identifier: MIT
+// ****************************************************************
+
 #include <iostream>
 #include <vector>
 #include <iomanip>
@@ -6,10 +12,10 @@
 #include <cstring>
 #include <getopt.h>
 #include <torch/torch.h>
-#include "../Discretizer.h"
-#include "../CPPFImdlp.h"
-#include "../BinDisc.h"
-#include "../tests/ArffFiles.h"
+#include <ArffFiles.hpp>
+#include "Discretizer.h"
+#include "CPPFImdlp.h"
+#include "BinDisc.h"
 
 const string PATH = "tests/datasets/";
 
@@ -144,7 +150,7 @@ void process_file(const string& path, const string& file_name, bool class_last, 
     auto result = test.fit_transform_t(Xt, yt);
     std::cout << "Transformed data (torch)...: " << std::endl;
     for (int i = 130; i < 135; i++) {
-        std::cout << std::fixed << std::setprecision(1) << Xt[i].item<float>() << " " << result[i].item<int>() << std::endl;
+        std::cout << std::fixed << std::setprecision(1) << Xt[i].item<mdlp::precision_t>() << " " << result[i].item<int>() << std::endl;
     }
     auto disc = mdlp::BinDisc(3);
     auto res_v = disc.fit_transform(X[0], y);
@@ -152,7 +158,7 @@ void process_file(const string& path, const string& file_name, bool class_last, 
     auto res_t = disc.transform_t(Xt);
     std::cout << "Transformed data (BinDisc)...: " << std::endl;
     for (int i = 130; i < 135; i++) {
-        std::cout << std::fixed << std::setprecision(1) << Xt[i].item<float>() << " " << res_v[i] << " " << res_t[i].item<int>() << std::endl;
+        std::cout << std::fixed << std::setprecision(1) << Xt[i].item<mdlp::precision_t>() << " " << res_v[i] << " " << res_t[i].item<int>() << std::endl;
     }
 }
 

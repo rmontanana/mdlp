@@ -1,6 +1,7 @@
 [![Build](https://github.com/rmontanana/mdlp/actions/workflows/build.yml/badge.svg)](https://github.com/rmontanana/mdlp/actions/workflows/build.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rmontanana_mdlp&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=rmontanana_mdlp)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=rmontanana_mdlp&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=rmontanana_mdlp)
+[![Coverage Badge](https://img.shields.io/badge/Coverage-100,0%25-green)](html/index.html)
 
 # <img src="logo.png" alt="logo" width="50"/> mdlp
 
@@ -31,15 +32,14 @@ Other features:
 To run the sample, just execute the following commands:
 
 ```bash
-cmake -B build -S .
-cmake --build build
-build/sample/sample -f iris -m 2
-build/sample/sample -h
+make build
+build_release/sample/sample -f iris -m 2
+build_release/sample/sample -h
 ```
 
 ## Test
 
-To run the tests and see coverage (llvm & gcovr have to be installed), execute the following commands:
+To run the tests and see coverage (llvm with lcov and genhtml have to be installed), execute the following commands:
 
 ```bash
 make test

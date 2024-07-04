@@ -1,9 +1,15 @@
-#include "gtest/gtest.h"
-#include "../Metrics.h"
-#include "../CPPFImdlp.h"
+// ****************************************************************
+// SPDX - FileCopyrightText: Copyright 2024 Ricardo Montañana Gómez
+// SPDX - FileType: SOURCE
+// SPDX - License - Identifier: MIT
+// ****************************************************************
+
 #include <fstream>
 #include <iostream>
-#include "ArffFiles.h"
+#include <ArffFiles.hpp>
+#include "gtest/gtest.h"
+#include "Metrics.h"
+#include "CPPFImdlp.h"
 
 #define EXPECT_THROW_WITH_MESSAGE(stmt, etype, whatstring) EXPECT_THROW( \
 try { \
@@ -124,7 +130,7 @@ namespace mdlp {
     {
         samples_t X_ = { 1, 2, 2, 3, 4, 2, 3 };
         labels_t y_ = { 0, 0, 1, 2, 3, 4, 5 };
-        cutPoints_t expected = { 1.5f, 2.5f };
+        cutPoints_t expected = { 1.0, 1.5f, 2.5f, 4.0 };
         fit(X_, y_);
         auto computed = getCutPoints();
         EXPECT_EQ(computed.size(), expected.size());
@@ -167,29 +173,31 @@ namespace mdlp {
         y = { 1 };
         fit(X, y);
         computed = getCutPoints();
-        EXPECT_EQ(computed.size(), 0);
+        EXPECT_EQ(computed.size(), 2);
         X = { 1, 3 };
         y = { 1, 2 };
         fit(X, y);
         computed = getCutPoints();
-        EXPECT_EQ(computed.size(), 0);
+        EXPECT_EQ(computed.size(), 2);
         X = { 2, 4 };
         y = { 1, 2 };
         fit(X, y);
         computed = getCutPoints();
-        EXPECT_EQ(computed.size(), 0);
+        EXPECT_EQ(computed.size(), 2);
         X = { 1, 2, 3 };
         y = { 1, 2, 2 };
         fit(X, y);
         computed = getCutPoints();
-        EXPECT_EQ(computed.size(), 1);
-        EXPECT_NEAR(computed[0], 1.5, precision);
+        EXPECT_EQ(computed.size(), 3);
+        EXPECT_NEAR(computed[0], 1, precision);
+        EXPECT_NEAR(computed[1], 1.5, precision);
+        EXPECT_NEAR(computed[2], 3, precision);
     }
 
     TEST_F(TestFImdlp, TestArtificialDataset)
     {
         fit(X, y);
-        cutPoints_t expected = { 5.05f };
+        cutPoints_t expected = { 4.7, 5.05, 6.0 };
         vector<precision_t> computed = getCutPoints();
         EXPECT_EQ(computed.size(), expected.size());
         for (unsigned long i = 0; i < computed.size(); i++) {
@@ -200,10 +208,10 @@ namespace mdlp {
     TEST_F(TestFImdlp, TestIris)
     {
         vector<cutPoints_t> expected = {
-                {5.45f, 5.75f},
-                {2.75f, 2.85f, 2.95f, 3.05f, 3.35f},
-                {2.45f, 4.75f, 5.05f},
-                {0.8f,  1.75f}
+                {4.3, 5.45f, 5.75f, 7.9},
+                {2, 2.75f, 2.85f, 2.95f, 3.05f, 3.35f, 4.4},
+                {1, 2.45f, 4.75f, 5.05f, 6.9},
+                {0.1, 0.8f,  1.75f, 2.5}
         };
         vector<int> depths = { 3, 5, 4, 3 };
         auto test = CPPFImdlp();
@@ -213,7 +221,7 @@ namespace mdlp {
     TEST_F(TestFImdlp, ComputeCutPointsGCase)
     {
         cutPoints_t expected;
-        expected = { 1.5 };
+        expected = { 0, 1.5, 2 };
         samples_t X_ = { 0, 1, 2, 2, 2 };
         labels_t y_ = { 1, 1, 1, 2, 2 };
         fit(X_, y_);
@@ -247,10 +255,10 @@ namespace mdlp {
         // Set max_depth to 1
         auto test = CPPFImdlp(3, 1, 0);
         vector<cutPoints_t> expected = {
-                {5.45f},
-                {3.35f},
-                {2.45f},
-                {0.8f}
+                {4.3, 5.45f, 7.9},
+                {2, 3.35f, 4.4},
+                {1, 2.45f, 6.9},
+                {0.1, 0.8f, 2.5}
         };
         vector<int> depths = { 1, 1, 1, 1 };
         test_dataset(test, "iris", expected, depths);
@@ -261,10 +269,10 @@ namespace mdlp {
         auto test = CPPFImdlp(75, 100, 0);
         // Set min_length to 75
         vector<cutPoints_t> expected = {
-                {5.45f, 5.75f},
-                {2.85f, 3.35f},
-                {2.45f, 4.75f},
-                {0.8f,  1.75f}
+                {4.3, 5.45f, 5.75f, 7.9},
+                {2, 2.85f, 3.35f, 4.4},
+                {1, 2.45f, 4.75f, 6.9},
+                {0.1, 0.8f,  1.75f, 2.5}
         };
         vector<int> depths = { 3, 2, 2, 2 };
         test_dataset(test, "iris", expected, depths);
@@ -275,10 +283,10 @@ namespace mdlp {
         // Set min_length to 75
         auto test = CPPFImdlp(75, 2, 0);
         vector<cutPoints_t> expected = {
-                {5.45f, 5.75f},
-                {2.85f, 3.35f},
-                {2.45f, 4.75f},
-                {0.8f,  1.75f}
+                {4.3, 5.45f, 5.75f, 7.9},
+                {2, 2.85f, 3.35f, 4.4},
+                {1, 2.45f, 4.75f, 6.9},
+                {0.1, 0.8f,  1.75f, 2.5}
         };
         vector<int> depths = { 2, 2, 2, 2 };
         test_dataset(test, "iris", expected, depths);
@@ -289,10 +297,10 @@ namespace mdlp {
         // Set min_length to 75
         auto test = CPPFImdlp(75, 2, 1);
         vector<cutPoints_t> expected = {
-                {5.45f},
-                {2.85f},
-                {2.45f},
-                {0.8f}
+                {4.3, 5.45f, 7.9},
+                {2, 2.85f, 4.4},
+                {1, 2.45f, 6.9},
+                {0.1, 0.8f, 2.5}
         };
         vector<int> depths = { 2, 2, 2, 2 };
         test_dataset(test, "iris", expected, depths);
@@ -304,10 +312,10 @@ namespace mdlp {
         // Set min_length to 75
         auto test = CPPFImdlp(75, 2, 0.2f);
         vector<cutPoints_t> expected = {
-                {5.45f, 5.75f},
-                {2.85f, 3.35f},
-                {2.45f, 4.75f},
-                {0.8f,  1.75f}
+                {4.3, 5.45f, 5.75f, 7.9},
+                {2, 2.85f, 3.35f, 4.4},
+                {1, 2.45f, 4.75f, 6.9},
+                {0.1, 0.8f,  1.75f, 2.5}
         };
         vector<int> depths = { 2, 2, 2, 2 };
         test_dataset(test, "iris", expected, depths);
@@ -327,7 +335,6 @@ namespace mdlp {
             computed = compute_max_num_cut_points();
             ASSERT_EQ(expected, computed);
         }
-
     }
     TEST_F(TestFImdlp, TransformTest)
     {
@@ -345,15 +352,15 @@ namespace mdlp {
         vector<samples_t>& X = file.getX();
         labels_t& y = file.getY();
         fit(X[1], y);
-        // auto computed = transform(X[1]);
-        // EXPECT_EQ(computed.size(), expected.size());
-        // for (unsigned long i = 0; i < computed.size(); i++) {
-        //     EXPECT_EQ(computed[i], expected[i]);
-        // }
-        // auto computed_ft = fit_transform(X[1], y);
-        // EXPECT_EQ(computed_ft.size(), expected.size());
-        // for (unsigned long i = 0; i < computed_ft.size(); i++) {
-        //     EXPECT_EQ(computed_ft[i], expected[i]);
-        // }
+        auto computed = transform(X[1]);
+        EXPECT_EQ(computed.size(), expected.size());
+        for (unsigned long i = 0; i < computed.size(); i++) {
+            EXPECT_EQ(computed[i], expected[i]);
+        }
+        auto computed_ft = fit_transform(X[1], y);
+        EXPECT_EQ(computed_ft.size(), expected.size());
+        for (unsigned long i = 0; i < computed_ft.size(); i++) {
+            EXPECT_EQ(computed_ft[i], expected[i]);
+        }
     }
 }

@@ -1,3 +1,9 @@
+// ****************************************************************
+// SPDX - FileCopyrightText: Copyright 2024 Ricardo Montañana Gómez
+// SPDX - FileType: SOURCE
+// SPDX - License - Identifier: MIT
+// ****************************************************************
+
 #include <numeric>
 #include <algorithm>
 #include <set>
@@ -12,6 +18,7 @@ namespace mdlp {
         max_depth(max_depth_),
         proposed_cuts(proposed)
     {
+        direction = bound_dir_t::RIGHT;
     }
 
     size_t CPPFImdlp::compute_max_num_cut_points() const
@@ -20,12 +27,12 @@ namespace mdlp {
         if (proposed_cuts == 0) {
             return numeric_limits<size_t>::max();
         }
-        if (proposed_cuts < 0 || proposed_cuts > static_cast<float>(X.size())) {
+        if (proposed_cuts < 0 || proposed_cuts > static_cast<precision_t>(X.size())) {
             throw invalid_argument("wrong proposed num_cuts value");
         }
         if (proposed_cuts < 1)
-            return static_cast<size_t>(round(static_cast<float>(X.size()) * proposed_cuts));
-        return static_cast<size_t>(proposed_cuts);
+            return static_cast<size_t>(round(static_cast<precision_t>(X.size()) * proposed_cuts));
+        return static_cast<size_t>(proposed_cuts); // The 2 extra cutpoints should not be considered here as this parameter is considered before they are added
     }
 
     void CPPFImdlp::fit(samples_t& X_, labels_t& y_)
@@ -58,6 +65,10 @@ namespace mdlp {
                 resizeCutPoints();
             }
         }
+        // Insert first & last X value to the cutpoints as them shall be ignored in transform
+        auto [vmin, vmax] = std::minmax_element(X.begin(), X.end());
+        cutPoints.push_back(*vmax);
+        cutPoints.insert(cutPoints.begin(), *vmin);
     }
 
     pair<precision_t, size_t> CPPFImdlp::valueCutPoint(size_t start, size_t cut, size_t end)
