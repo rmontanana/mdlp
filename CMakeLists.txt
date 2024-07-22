@@ -34,3 +34,11 @@ include_directories(
 
 add_library(fimdlp src/CPPFImdlp.cpp src/Metrics.cpp src/BinDisc.cpp src/Discretizer.cpp)
 target_link_libraries(fimdlp "${TORCH_LIBRARIES}")
+
+# Installation
+# ------------
+install(TARGETS fimdlp
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        CONFIGURATIONS Release)
+install(DIRECTORY src/ DESTINATION include/fimdlp FILES_MATCHING CONFIGURATIONS Release PATTERN "*.h")

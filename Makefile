@@ -9,6 +9,9 @@ build:
 	@cmake -B build_release -S . -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=OFF -DENABLE_SAMPLE=ON
 	@cmake --build build_release -j 8
 
+install:
+	@cmake --build build_release --target install -j 8		
+
 test:
 	@if [ -d build_debug ]; then rm -fr build_debug; fi
 	@mkdir build_debug
