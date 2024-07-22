@@ -6,13 +6,13 @@ lcov := lcov
 build: 
 	@if [ -d build_release ]; then rm -fr build_release; fi
 	@mkdir build_release
-	@cmake -B build_release -S . -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=OFF
+	@cmake -B build_release -S . -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=OFF -DENABLE_SAMPLE=ON
 	@cmake --build build_release -j 8
 
 test:
 	@if [ -d build_debug ]; then rm -fr build_debug; fi
 	@mkdir build_debug
-	@cmake -B build_debug -S . -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTING=ON
+	@cmake -B build_debug -S . -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTING=ON -DENABLE_SAMPLE=ON
 	@cmake --build build_debug -j 8
 	@cd build_debug/tests && ctest --output-on-failure -j 8
 	@cd build_debug/tests && $(lcov) --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch --output-file coverage.info >/dev/null 2>&1; \

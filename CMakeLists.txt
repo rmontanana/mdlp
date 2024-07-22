@@ -22,8 +22,10 @@ else(ENABLE_TESTING)
     MESSAGE("Release mode")
 endif(ENABLE_TESTING)
 
-
-add_subdirectory(sample)
+if (ENABLE_SAMPLE)
+    message("Building sample")
+    add_subdirectory(sample)
+endif(ENABLE_SAMPLE)
 
 include_directories(
     ${TORCH_INCLUDE_DIRS}
