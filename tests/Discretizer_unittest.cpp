@@ -33,7 +33,7 @@ namespace mdlp {
         auto version = disc->version();
         delete disc;
         std::cout << "Version computed: " << version;
-        EXPECT_EQ("2.0.0", version);
+        EXPECT_EQ("2.0.1", version);
     }
     TEST(Discretizer, BinIrisUniform)
     {
