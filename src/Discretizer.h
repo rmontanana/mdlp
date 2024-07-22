@@ -11,6 +11,7 @@
 #include <algorithm>
 #include "typesFImdlp.h"
 #include <torch/torch.h>
+#include "config.h"
 
 namespace mdlp {
     enum class bound_dir_t {
@@ -29,7 +30,7 @@ namespace mdlp {
         void fit_t(const torch::Tensor& X_, const torch::Tensor& y_);
         torch::Tensor transform_t(const torch::Tensor& X_);
         torch::Tensor fit_transform_t(const torch::Tensor& X_, const torch::Tensor& y_);
-        static inline std::string version() { return "2.0.1"; };
+        static inline std::string version() { return { project_version.begin(), project_version.end() };; };
     protected:
         labels_t discretizedData = labels_t();
         cutPoints_t cutPoints; // At least two cutpoints must be provided, the first and the last will be ignored in transform

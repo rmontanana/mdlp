@@ -5,6 +5,7 @@ set(CMAKE_BUILD_TYPE Debug)
 include_directories(
     ${fimdlp_SOURCE_DIR}/src
     ${fimdlp_SOURCE_DIR}/tests/lib/Files
+    ${CMAKE_BINARY_DIR}/configured_files/include
 )
 
 add_executable(sample sample.cpp )

@@ -11,7 +11,8 @@ FetchContent_MakeAvailable(googletest)
 include_directories(
         ${TORCH_INCLUDE_DIRS}
         ${fimdlp_SOURCE_DIR}/src
-        ${fimdlp_SOURCE_DIR}/tests/lib/Files
+        ${fimdlp_SOURCE_DIR}/tests/lib/Files    
+        ${CMAKE_BINARY_DIR}/configured_files/include
 )
 
 add_executable(Metrics_unittest ${fimdlp_SOURCE_DIR}/src/Metrics.cpp Metrics_unittest.cpp)
