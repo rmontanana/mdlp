@@ -30,7 +30,7 @@ namespace mdlp {
         void fit_t(const torch::Tensor& X_, const torch::Tensor& y_);
         torch::Tensor transform_t(const torch::Tensor& X_);
         torch::Tensor fit_transform_t(const torch::Tensor& X_, const torch::Tensor& y_);
-        static inline std::string version() { return { project_version.begin(), project_version.end() };; };
+        static inline std::string version() { return { project_mdlp_version.begin(), project_mdlp_version.end() };; };
     protected:
         labels_t discretizedData = labels_t();
         cutPoints_t cutPoints; // At least two cutpoints must be provided, the first and the last will be ignored in transform
