@@ -9,7 +9,7 @@ project(fimdlp
 set(CMAKE_CXX_STANDARD 17)
 cmake_policy(SET CMP0135 NEW)
 
-find_package(Torch CONFIG REQUIRED)
+find_package(Torch REQUIRED)
 
 # Options
 # -------
@@ -41,13 +41,12 @@ if (ENABLE_SAMPLE)
 endif()
 
 include_directories(
-    ${TORCH_INCLUDE_DIRS}
     ${fimdlp_SOURCE_DIR}/src
     ${CMAKE_BINARY_DIR}/configured_files/include
 )
 
 add_library(fimdlp src/CPPFImdlp.cpp src/Metrics.cpp src/BinDisc.cpp src/Discretizer.cpp)
-target_link_libraries(fimdlp "${TORCH_LIBRARIES}")
+target_link_libraries(fimdlp torch::torch)
 
 # Installation
 # ------------
