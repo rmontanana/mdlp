@@ -22,13 +22,15 @@ namespace mdlp {
     BinDisc::~BinDisc() = default;
     void BinDisc::fit(samples_t& X)
     {
-        // y is included for compatibility with the Discretizer interface
-        cutPoints.clear();
+        // Input validation
         if (X.empty()) {
-            cutPoints.push_back(0.0);
-            cutPoints.push_back(0.0);
-            return;
+            throw std::invalid_argument("Input data X cannot be empty");
         }
+        if (X.size() < static_cast<size_t>(n_bins)) {
+            throw std::invalid_argument("Input data size must be at least equal to n_bins");
+        }
+
+        cutPoints.clear();
         if (strategy == strategy_t::QUANTILE) {
             direction = bound_dir_t::RIGHT;
             fit_quantile(X);
@@ -39,10 +41,31 @@ namespace mdlp {
     }
     void BinDisc::fit(samples_t& X, labels_t& y)
     {
+        // Input validation for supervised interface
+        if (X.size() != y.size()) {
+            throw std::invalid_argument("X and y must have the same size");
+        }
+        if (X.empty() || y.empty()) {
+            throw std::invalid_argument("X and y cannot be empty");
+        }
+
+        // BinDisc is inherently unsupervised, but we validate inputs for consistency
+        // Note: y parameter is validated but not used in binning strategy
         fit(X);
     }
     std::vector<precision_t> linspace(precision_t start, precision_t end, int num)
     {
+        // Input validation
+        if (num < 2) {
+            throw std::invalid_argument("Number of points must be at least 2 for linspace");
+        }
+        if (std::isnan(start) || std::isnan(end)) {
+            throw std::invalid_argument("Start and end values cannot be NaN");
+        }
+        if (std::isinf(start) || std::isinf(end)) {
+            throw std::invalid_argument("Start and end values cannot be infinite");
+        }
+
         if (start == end) {
             return { start, end };
         }
@@ -60,6 +83,14 @@ namespace mdlp {
     }
     std::vector<precision_t> percentile(samples_t& data, const std::vector<precision_t>& percentiles)
     {
+        // Input validation
+        if (data.empty()) {
+            throw std::invalid_argument("Data cannot be empty for percentile calculation");
+        }
+        if (percentiles.empty()) {
+            throw std::invalid_argument("Percentiles cannot be empty");
+        }
+
         // Implementation taken from https://dpilger26.github.io/NumCpp/doxygen/html/percentile_8hpp_source.html
         std::vector<precision_t> results;
         bool first = true;

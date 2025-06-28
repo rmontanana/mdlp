@@ -4,7 +4,7 @@ project(fimdlp
     LANGUAGES CXX
     DESCRIPTION "Discretization algorithm based on the paper by Fayyad & Irani Multi-Interval Discretization of Continuous-Valued Attributes for Classification Learning."
     HOMEPAGE_URL "https://github.com/rmontanana/mdlp"
-    VERSION 2.0.1
+    VERSION 2.1.0
 )
 set(CMAKE_CXX_STANDARD 17)
 cmake_policy(SET CMP0135 NEW)

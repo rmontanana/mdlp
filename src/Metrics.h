@@ -8,6 +8,7 @@
 #define CCMETRICS_H
 
 #include "typesFImdlp.h"
+#include <mutex>
 
 namespace mdlp {
     class Metrics {
@@ -15,6 +16,7 @@ namespace mdlp {
         labels_t& y;
         indices_t& indices;
         int numClasses;
+        mutable std::mutex cache_mutex;
         cacheEnt_t entropyCache = cacheEnt_t();
         cacheIg_t igCache = cacheIg_t();
     public:

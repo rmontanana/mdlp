@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <set>
 #include <cmath>
+#include <stdexcept>
 #include "CPPFImdlp.h"
 
 namespace mdlp {
@@ -18,6 +19,17 @@ namespace mdlp {
         max_depth(max_depth_),
         proposed_cuts(proposed)
     {
+        // Input validation for constructor parameters
+        if (min_length_ < 3) {
+            throw std::invalid_argument("min_length must be greater than 2");
+        }
+        if (max_depth_ < 1) {
+            throw std::invalid_argument("max_depth must be greater than 0");
+        }
+        if (proposed < 0.0f) {
+            throw std::invalid_argument("proposed_cuts must be non-negative");
+        }
+        
         direction = bound_dir_t::RIGHT;
     }
 
@@ -49,12 +61,6 @@ namespace mdlp {
         if (X.empty() || y.empty()) {
             throw invalid_argument("X and y must have at least one element");
         }
-        if (min_length < 3) {
-            throw invalid_argument("min_length must be greater than 2");
-        }
-        if (max_depth < 1) {
-            throw invalid_argument("max_depth must be greater than 0");
-        }
         indices = sortIndices(X_, y_);
         metrics.setData(y, indices);
         computeCutPoints(0, X.size(), 1);
@@ -81,26 +87,32 @@ namespace mdlp {
         precision_t previous;
         precision_t actual;
         precision_t next;
-        previous = X[indices[idxPrev]];
-        actual = X[indices[cut]];
-        next = X[indices[idxNext]];
+        previous = safe_X_access(idxPrev);
+        actual = safe_X_access(cut);
+        next = safe_X_access(idxNext);
         // definition 2 of the paper => X[t-1] < X[t]
         // get the first equal value of X in the interval
         while (idxPrev > start && actual == previous) {
-            previous = X[indices[--idxPrev]];
+            --idxPrev;
+            previous = safe_X_access(idxPrev);
         }
         backWall = idxPrev == start && actual == previous;
         // get the last equal value of X in the interval
         while (idxNext < end - 1 && actual == next) {
-            next = X[indices[++idxNext]];
+            ++idxNext;
+            next = safe_X_access(idxNext);
         }
         // # of duplicates before cutpoint
-        n = cut - 1 - idxPrev;
+        n = safe_subtract(safe_subtract(cut, 1), idxPrev);
         // # of duplicates after cutpoint
-        m = idxNext - cut - 1;
+        m = safe_subtract(safe_subtract(idxNext, cut), 1);
         // Decide which values to use
-        cut = cut + (backWall ? m + 1 : -n);
-        actual = X[indices[cut]];
+        if (backWall) {
+            cut = cut + m + 1;
+        } else {
+            cut = safe_subtract(cut, n);
+        }
+        actual = safe_X_access(cut);
         return { (actual + previous) / 2, cut };
     }
 
@@ -109,7 +121,7 @@ namespace mdlp {
         size_t cut;
         pair<precision_t, size_t> result;
         // Check if the interval length and the depth are Ok
-        if (end - start < min_length || depth_ > max_depth)
+        if (end < start || safe_subtract(end, start) < min_length || depth_ > max_depth)
             return;
         depth = depth_ > depth ? depth_ : depth;
         cut = getCandidate(start, end);
@@ -129,14 +141,14 @@ namespace mdlp {
         /* Definition 1: A binary discretization for A is determined by selecting the cut point TA for which
         E(A, TA; S) is minimal amongst all the candidate cut points. */
         size_t candidate = numeric_limits<size_t>::max();
-        size_t elements = end - start;
+        size_t elements = safe_subtract(end, start);
         bool sameValues = true;
         precision_t entropy_left;
         precision_t entropy_right;
         precision_t minEntropy;
         // Check if all the values of the variable in the interval are the same
         for (size_t idx = start + 1; idx < end; idx++) {
-            if (X[indices[idx]] != X[indices[start]]) {
+            if (safe_X_access(idx) != safe_X_access(start)) {
                 sameValues = false;
                 break;
             }
@@ -146,7 +158,7 @@ namespace mdlp {
         minEntropy = metrics.entropy(start, end);
         for (size_t idx = start + 1; idx < end; idx++) {
             // Cutpoints are always on boundaries (definition 2)
-            if (y[indices[idx]] == y[indices[idx - 1]])
+            if (safe_y_access(idx) == safe_y_access(idx - 1))
                 continue;
             entropy_left = precision_t(idx - start) / static_cast<precision_t>(elements) * metrics.entropy(start, idx);
             entropy_right = precision_t(end - idx) / static_cast<precision_t>(elements) * metrics.entropy(idx, end);
@@ -168,7 +180,7 @@ namespace mdlp {
         precision_t ent;
         precision_t ent1;
         precision_t ent2;
-        auto N = precision_t(end - start);
+        auto N = precision_t(safe_subtract(end, start));
         k = metrics.computeNumClasses(start, end);
         k1 = metrics.computeNumClasses(start, cut);
         k2 = metrics.computeNumClasses(cut, end);
@@ -188,6 +200,9 @@ namespace mdlp {
         indices_t idx(X_.size());
         std::iota(idx.begin(), idx.end(), 0);
         stable_sort(idx.begin(), idx.end(), [&X_, &y_](size_t i1, size_t i2) {
+            if (i1 >= X_.size() || i2 >= X_.size() || i1 >= y_.size() || i2 >= y_.size()) {
+                throw std::out_of_range("Index out of bounds in sort comparison");
+            }
             if (X_[i1] == X_[i2])
                 return y_[i1] < y_[i2];
             else
@@ -206,7 +221,7 @@ namespace mdlp {
         size_t end;
         for (size_t idx = 0; idx < cutPoints.size(); idx++) {
             end = begin;
-            while (X[indices[end]] < cutPoints[idx] && end < X.size())
+            while (end < indices.size() && safe_X_access(end) < cutPoints[idx] && end < X.size())
                 end++;
             entropy = metrics.entropy(begin, end);
             if (entropy > maxEntropy) {

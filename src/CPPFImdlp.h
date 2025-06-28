@@ -39,6 +39,33 @@ namespace mdlp {
         size_t getCandidate(size_t, size_t);
         size_t compute_max_num_cut_points() const;
         pair<precision_t, size_t> valueCutPoint(size_t, size_t, size_t);
+    private:
+        inline precision_t safe_X_access(size_t idx) const {
+            if (idx >= indices.size()) {
+                throw std::out_of_range("Index out of bounds for indices array");
+            }
+            size_t real_idx = indices[idx];
+            if (real_idx >= X.size()) {
+                throw std::out_of_range("Index out of bounds for X array");
+            }
+            return X[real_idx];
+        }
+        inline label_t safe_y_access(size_t idx) const {
+            if (idx >= indices.size()) {
+                throw std::out_of_range("Index out of bounds for indices array");
+            }
+            size_t real_idx = indices[idx];
+            if (real_idx >= y.size()) {
+                throw std::out_of_range("Index out of bounds for y array");
+            }
+            return y[real_idx];
+        }
+        inline size_t safe_subtract(size_t a, size_t b) const {
+            if (b > a) {
+                throw std::underflow_error("Subtraction would cause underflow");
+            }
+            return a - b;
+        }
     };
 }
 #endif
