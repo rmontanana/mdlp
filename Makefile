@@ -1,35 +1,41 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := build
-.PHONY: build test
+.PHONY: build install test
 lcov := lcov
 
-build: 
-	@if [ -d build_release ]; then rm -fr build_release; fi
-	@mkdir build_release
-	@cmake -B build_release -S . -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=OFF -DENABLE_SAMPLE=ON
-	@cmake --build build_release -j 8
+f_debug = build_debug
+f_release = build_release
 
-install:
+build: ## Build the project for Release
+	@echo ">>> Building the project for Release..."
+	@if [ -d $(f_release) ]; then rm -fr $(f_release); fi
+	@conan install . --build=missing -of $(f_release) -s build_type=Release --profile:build=default --profile:host=default
+	cmake -S . -B $(f_release) -DCMAKE_TOOLCHAIN_FILE=$(f_release)/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=OFF -DENABLE_SAMPLE=ON
+	@cmake --build $(f_release) -j 8
+
+install: ## Install the project
+	@echo ">>> Installing the project..."
 	@cmake --build build_release --target install -j 8		
 
-test:
-	@if [ -d build_debug ]; then rm -fr build_debug; fi
-	@mkdir build_debug
-	@cmake -B build_debug -S . -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTING=ON -DENABLE_SAMPLE=ON
-	@cmake --build build_debug -j 8
-	@cd build_debug/tests && ctest --output-on-failure -j 8
-	@cd build_debug/tests && $(lcov) --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch --output-file coverage.info >/dev/null 2>&1; \
+test: ## Build Debug version and run tests
+	@echo ">>> Building Debug version and running tests..."
+	@if [ -d $(f_debug) ]; then rm -fr $(f_debug); fi
+	@conan install . --build=missing -of $(f_debug) -s build_type=Debug
+	@cmake -B $(f_debug) -S . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=$(f_debug)/build/Debug/generators/conan_toolchain.cmake -DENABLE_TESTING=ON -DENABLE_SAMPLE=ON
+	@cmake --build $(f_debug) -j 8
+	@cd $(f_debug)/tests && ctest --output-on-failure -j 8
+	@cd $(f_debug)/tests && $(lcov) --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info '/usr/*' --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info 'lib/*' --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info 'libtorch/*' --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info 'tests/*' --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info 'gtest/*' --output-file coverage.info >/dev/null 2>&1;
-	@genhtml build_debug/tests/coverage.info --demangle-cpp --output-directory build_debug/tests/coverage --title "Discretizer mdlp Coverage Report" -s -k -f --legend
-	@echo "* Coverage report is generated at build_debug/tests/coverage/index.html"
+	@genhtml $(f_debug)/tests/coverage.info --demangle-cpp --output-directory $(f_debug)/tests/coverage --title "Discretizer mdlp Coverage Report" -s -k -f --legend
+	@echo "* Coverage report is generated at $(f_debug)/tests/coverage/index.html"
 	@which python || (echo ">>> Please install python"; exit 1)
-	@if [ ! -f build_debug/tests/coverage.info ]; then \
+	@if [ ! -f $(f_debug)/tests/coverage.info ]; then \
 		echo ">>> No coverage.info file found!"; \
 		exit 1; \
 	fi
 	@echo ">>> Updating coverage badge..."
-	@env python update_coverage.py build_debug/tests
+	@env python update_coverage.py $(f_debug)/tests

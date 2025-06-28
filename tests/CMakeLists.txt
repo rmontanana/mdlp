@@ -1,15 +1,25 @@
-include(FetchContent)
-include_directories(${GTEST_INCLUDE_DIRS})
-FetchContent_Declare(
-        googletest
-        URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
-)
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
+# Check if we should use Catch2 from Conan or GoogleTest via FetchContent
+find_package(Catch2 3 QUIET)
+
+if(Catch2_FOUND)
+    message(STATUS "Using Catch2 from Conan")
+    set(TEST_FRAMEWORK "Catch2")
+else()
+    message(STATUS "Using GoogleTest via FetchContent")
+    set(TEST_FRAMEWORK "GoogleTest")
+    include(FetchContent)
+    include_directories(${GTEST_INCLUDE_DIRS})
+    FetchContent_Declare(
+            googletest
+            URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+    )
+    # For Windows: Prevent overriding the parent project's compiler/linker settings
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+endif()
 
 include_directories(
-        ${TORCH_INCLUDE_DIRS}
+        ${libtorch_INCLUDE_DIRS_DEBUG}
         ${fimdlp_SOURCE_DIR}/src
         ${fimdlp_SOURCE_DIR}/tests/lib/Files    
         ${CMAKE_BINARY_DIR}/configured_files/include

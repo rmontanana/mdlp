@@ -1,8 +1,8 @@
-import re
-import os
 from conan import ConanFile
-from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout, CMakeDeps
-from conan.tools.files import save, load
+from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
+from conan.tools.files import copy
+import os
+
 
 class FimdlpConan(ConanFile):
     name = "fimdlp"
@@ -10,10 +10,26 @@ class FimdlpConan(ConanFile):
     license = "MIT"
     author = "Ricardo Montañana <rmontanana@gmail.com>"
     url = "https://github.com/rmontanana/mdlp"
-    description = "Discretization algorithm based on the paper by Fayyad & Irani."
-    topics = ("discretization", "classification", "machine learning")
+    description = "Discretization algorithm based on the paper by Fayyad & Irani Multi-Interval Discretization of Continuous-Valued Attributes for Classification Learning."
+    topics = ("machine-learning", "discretization", "mdlp", "classification")
+    
+    # Package configuration
     settings = "os", "compiler", "build_type", "arch"
-    exports_sources = "src/*", "CMakeLists.txt", "README.md", "config/*", "fimdlpConfig.cmake.in"
+    options = {
+        "shared": [True, False],
+        "fPIC": [True, False],
+        "enable_testing": [True, False],
+        "enable_sample": [True, False],
+    }
+    default_options = {
+        "shared": False,
+        "fPIC": True,
+        "enable_testing": False,
+        "enable_sample": False,
+    }
+    
+    # Sources are located in the same place as this recipe, copy them to the recipe
+    exports_sources = "CMakeLists.txt", "src/*", "sample/*", "tests/*", "config/*", "fimdlpConfig.cmake.in"
 
     def set_version(self):
         # Read the CMakeLists.txt file to get the version
@@ -23,33 +39,75 @@ class FimdlpConan(ConanFile):
             if match:
                 self.version = match.group(1)
         except Exception:
-            self.version = "2.0.1"  # fallback version
-
+            self.version = "0.0.1"  # fallback version
+    
+    def config_options(self):
+        if self.settings.os == "Windows":
+            self.options.rm_safe("fPIC")
+    
+    def configure(self):
+        if self.options.shared:
+            self.options.rm_safe("fPIC")
+    
     def requirements(self):
+        # PyTorch dependency for tensor operations
         self.requires("libtorch/2.7.0")
         
+    def build_requirements(self):
+        # Test dependencies - only when testing is enabled
+        if self.options.enable_testing:
+            self.requires("catch2/3.8.1")
+            # Note: arff-files is included as a local copy, but could be a conan dependency
+            # For now, we'll use the local version in tests/lib/Files/
+    
     def layout(self):
         cmake_layout(self)
-        
+    
     def generate(self):
+        # Generate CMake configuration files
         deps = CMakeDeps(self)
         deps.generate()
+        
         tc = CMakeToolchain(self)
+        # Set CMake variables based on options
+        tc.variables["ENABLE_TESTING"] = self.options.enable_testing
+        tc.variables["ENABLE_SAMPLE"] = self.options.enable_sample
+        tc.variables["BUILD_SHARED_LIBS"] = self.options.shared
         tc.generate()
-
+    
     def build(self):
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
-
+        
+        # Run tests if enabled
+        if self.options.enable_testing:
+            cmake.test()
+    
     def package(self):
+        # Install using CMake
         cmake = CMake(self)
         cmake.install()
-
+        
+        # Copy license file
+        copy(self, "LICENSE", src=self.source_folder, dst=os.path.join(self.package_folder, "licenses"))
+    
     def package_info(self):
+        # Library configuration
         self.cpp_info.libs = ["fimdlp"]
         self.cpp_info.includedirs = ["include"]
-        self.cpp_info.libdirs = ["lib"]
-        self.cpp_info.set_property("cmake_find_mode", "both")
-        self.cpp_info.set_property("cmake_target_name", "fimdlp::fimdlp")
+        
+        # CMake package configuration
         self.cpp_info.set_property("cmake_file_name", "fimdlp")
+        self.cpp_info.set_property("cmake_target_name", "fimdlp::fimdlp")
+        
+        # Compiler features
+        self.cpp_info.cppstd = "17"
+        
+        # System libraries (if needed)
+        if self.settings.os in ["Linux", "FreeBSD"]:
+            self.cpp_info.system_libs.append("m")  # Math library
+            self.cpp_info.system_libs.append("pthread")  # Threading
+        
+        # Build information for consumers
+        self.cpp_info.builddirs = ["lib/cmake/fimdlp"]

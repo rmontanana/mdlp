@@ -9,6 +9,7 @@ project(fimdlp
 set(CMAKE_CXX_STANDARD 17)
 cmake_policy(SET CMP0135 NEW)
 
+# Find dependencies
 find_package(Torch REQUIRED)
 
 # Options
