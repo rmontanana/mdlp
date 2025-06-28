@@ -40,13 +40,13 @@ namespace mdlp {
 
         static string set_data_path()
         {
-            string path = "../datasets/";
+            string path = "datasets/";
             ifstream file(path + "iris.arff");
             if (file.is_open()) {
                 file.close();
                 return path;
             }
-            return "../../tests/datasets/";
+            return "tests/datasets/";
         }
 
         void checkSortedVector()

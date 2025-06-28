@@ -28,6 +28,7 @@ endif()
 
 if (ENABLE_TESTING)
     message("Debug mode")
+    
     enable_testing()
     set(CODE_COVERAGE ON)
     set(GCC_COVERAGE_LINK_FLAGS "${GCC_COVERAGE_LINK_FLAGS} -lgcov --coverage")
@@ -47,7 +48,7 @@ include_directories(
 )
 
 add_library(fimdlp src/CPPFImdlp.cpp src/Metrics.cpp src/BinDisc.cpp src/Discretizer.cpp)
-target_link_libraries(fimdlp torch::torch)
+target_link_libraries(fimdlp PRIVATE torch::torch)
 
 # Installation
 # ------------

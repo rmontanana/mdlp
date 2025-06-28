@@ -104,6 +104,10 @@
         "stop_token": "cpp",
         "text_encoding": "cpp",
         "typeindex": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "csignal": "cpp",
+        "regex": "cpp",
+        "future": "cpp",
+        "shared_mutex": "cpp"
     }
 }

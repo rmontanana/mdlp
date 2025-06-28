@@ -16,13 +16,13 @@ namespace mdlp {
     const float margin = 1e-4;
     static std::string set_data_path()
     {
-        std::string path = "../datasets/";
+        std::string path = "datasets/";
         std::ifstream file(path + "iris.arff");
         if (file.is_open()) {
             file.close();
             return path;
         }
-        return "../../tests/datasets/";
+        return "tests/datasets/";
     }
     const std::string data_path = set_data_path();
     class TestBinDisc3U : public BinDisc, public testing::Test {

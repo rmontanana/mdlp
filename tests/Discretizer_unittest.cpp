@@ -17,13 +17,13 @@ namespace mdlp {
     const float margin = 1e-4;
     static std::string set_data_path()
     {
-        std::string path = "../datasets/";
+        std::string path = "datasets/";
         std::ifstream file(path + "iris.arff");
         if (file.is_open()) {
             file.close();
             return path;
         }
-        return "../../tests/datasets/";
+        return "tests/datasets/";
     }
     const std::string data_path = set_data_path();
     const labels_t iris_quantile = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 3, 3, 3, 1, 3, 1, 2, 0, 3, 1, 0, 2, 2, 2, 1, 3, 1, 2, 2, 1, 2, 2, 2, 2, 3, 3, 3, 3, 2, 1, 1, 1, 2, 2, 1, 2, 3, 2, 1, 1, 1, 2, 2, 0, 1, 1, 1, 2, 1, 1, 2, 2, 3, 2, 3, 3, 0, 3, 3, 3, 3, 3, 3, 1, 2, 3, 3, 3, 3, 2, 3, 1, 3, 2, 3, 3, 2, 2, 3, 3, 3, 3, 3, 2, 2, 3, 2, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 2, 2 };
@@ -33,7 +33,7 @@ namespace mdlp {
         auto version = disc->version();
         delete disc;
         std::cout << "Version computed: " << version;
-        EXPECT_EQ("2.0.1", version);
+        EXPECT_EQ("2.1.0", version);
     }
     TEST(Discretizer, BinIrisUniform)
     {
