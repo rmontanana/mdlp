@@ -1,3 +1,0 @@
-[submodule "tests/lib/Files"]
-	path = tests/lib/Files
-	url = https://github.com/rmontanana/ArffFiles.git

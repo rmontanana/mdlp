@@ -57,8 +57,8 @@ class FimdlpConan(ConanFile):
         # Test dependencies - only when testing is enabled
         if self.options.enable_testing:
             self.requires("catch2/3.8.1")
-            # Note: arff-files is included as a local copy, but could be a conan dependency
-            # For now, we'll use the local version in tests/lib/Files/
+            self.requires("arff/1.2.0")
+            self.requires("gtest/1.16.0")
     
     def layout(self):
         cmake_layout(self)
