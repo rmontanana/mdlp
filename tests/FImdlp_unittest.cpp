@@ -64,7 +64,7 @@ namespace mdlp {
         {
             EXPECT_EQ(computed.size(), expected.size());
             for (unsigned long i = 0; i < computed.size(); i++) {
-                cout << "(" << computed[i] << ", " << expected[i] << ") ";
+                // cout << "(" << computed[i] << ", " << expected[i] << ") ";
                 EXPECT_NEAR(computed[i], expected[i], precision);
             }
         }
@@ -76,7 +76,7 @@ namespace mdlp {
             X = X_;
             y = y_;
             indices = sortIndices(X, y);
-            cout << "* " << title << endl;
+            // cout << "* " << title << endl;
             result = valueCutPoint(0, cut, 10);
             EXPECT_NEAR(result.first, midPoint, precision);
             EXPECT_EQ(result.second, limit);
@@ -95,9 +95,9 @@ namespace mdlp {
                 test.fit(X[feature], y);
                 EXPECT_EQ(test.get_depth(), depths[feature]);
                 auto computed = test.getCutPoints();
-                cout << "Feature " << feature << ": ";
+                // cout << "Feature " << feature << ": ";
                 checkCutPoints(computed, expected[feature]);
-                cout << endl;
+                // cout << endl;
             }
         }
     };
@@ -113,17 +113,16 @@ namespace mdlp {
     {
         X = { 1, 2, 3 };
         y = { 1, 2 };
-        EXPECT_THROW_WITH_MESSAGE(fit(X, y), invalid_argument, "X and y must have the same size");
+        EXPECT_THROW_WITH_MESSAGE(fit(X, y), invalid_argument, "X and y must have the same size: " + std::to_string(X.size()) + " != " + std::to_string(y.size()));
     }
 
-    TEST_F(TestFImdlp, FitErrorMinLengtMaxDepth)
+    TEST_F(TestFImdlp, FitErrorMinLength)
     {
-        auto testLength = CPPFImdlp(2, 10, 0);
-        auto testDepth = CPPFImdlp(3, 0, 0);
-        X = { 1, 2, 3 };
-        y = { 1, 2, 3 };
-        EXPECT_THROW_WITH_MESSAGE(testLength.fit(X, y), invalid_argument, "min_length must be greater than 2");
-        EXPECT_THROW_WITH_MESSAGE(testDepth.fit(X, y), invalid_argument, "max_depth must be greater than 0");
+        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(2, 10, 0), invalid_argument, "min_length must be greater than 2");
+    }
+    TEST_F(TestFImdlp, FitErrorMaxDepth)
+    {
+        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 0, 0), invalid_argument, "max_depth must be greater than 0");
     }
 
     TEST_F(TestFImdlp, JoinFit)
@@ -137,14 +136,16 @@ namespace mdlp {
         checkCutPoints(computed, expected);
     }
 
+    TEST_F(TestFImdlp, FitErrorMinCutPoints)
+    {
+        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 10, -1), invalid_argument, "proposed_cuts must be non-negative");
+    }
     TEST_F(TestFImdlp, FitErrorMaxCutPoints)
     {
-        auto testmin = CPPFImdlp(2, 10, -1);
-        auto testmax = CPPFImdlp(3, 0, 200);
-        X = { 1, 2, 3 };
-        y = { 1, 2, 3 };
-        EXPECT_THROW_WITH_MESSAGE(testmin.fit(X, y), invalid_argument, "wrong proposed num_cuts value");
-        EXPECT_THROW_WITH_MESSAGE(testmax.fit(X, y), invalid_argument, "wrong proposed num_cuts value");
+        auto test = CPPFImdlp(3, 1, 8);
+        samples_t X_ = { 1, 2, 2, 3, 4, 2, 3 };
+        labels_t y_ = { 0, 0, 1, 2, 3, 4, 5 };
+        EXPECT_THROW_WITH_MESSAGE(test.fit(X_, y_), invalid_argument, "wrong proposed num_cuts value");
     }
 
     TEST_F(TestFImdlp, SortIndices)

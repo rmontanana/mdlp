@@ -1,7 +1,8 @@
+import os
+import re
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
-from conan.tools.files import copy
-import os
+from conan.tools.files import load, copy
 
 
 class FimdlpConan(ConanFile):
@@ -31,15 +32,14 @@ class FimdlpConan(ConanFile):
     # Sources are located in the same place as this recipe, copy them to the recipe
     exports_sources = "CMakeLists.txt", "src/*", "sample/*", "tests/*", "config/*", "fimdlpConfig.cmake.in"
 
-    def set_version(self):
-        # Read the CMakeLists.txt file to get the version
-        try:
-            content = load(self, "CMakeLists.txt")
-            match = re.search(r"VERSION\s+(\d+\.\d+\.\d+)", content)
-            if match:
-                self.version = match.group(1)
-        except Exception:
-            self.version = "0.0.1"  # fallback version
+    def init(self):
+        content = load(self, "CMakeLists.txt")
+        version_pattern = re.compile(r'project\s*\([^\)]*VERSION\s+([0-9]+\.[0-9]+\.[0-9]+)', re.IGNORECASE | re.DOTALL)
+        match = version_pattern.search(content)
+        if match:
+            self.version = match.group(1)
+        else:
+            raise Exception("Version not found in CMakeLists.txt")
     
     def config_options(self):
         if self.settings.os == "Windows":

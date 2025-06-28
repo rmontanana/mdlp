@@ -153,20 +153,12 @@ namespace mdlp {
     TEST_F(TestBinDisc3U, EmptyUniform)
     {
         samples_t X = {};
-        fit(X);
-        auto cuts = getCutPoints();
-        ASSERT_EQ(2, cuts.size());
-        EXPECT_NEAR(0, cuts.at(0), margin);
-        EXPECT_NEAR(0, cuts.at(1), margin);
+        EXPECT_THROW(fit(X), std::invalid_argument);
     }
     TEST_F(TestBinDisc3Q, EmptyQuantile)
     {
         samples_t X = {};
-        fit(X);
-        auto cuts = getCutPoints();
-        ASSERT_EQ(2, cuts.size());
-        EXPECT_NEAR(0, cuts.at(0), margin);
-        EXPECT_NEAR(0, cuts.at(1), margin);
+        EXPECT_THROW(fit(X), std::invalid_argument);
     }
     TEST(TestBinDisc3, ExceptionNumberBins)
     {
@@ -406,6 +398,6 @@ namespace mdlp {
                 EXPECT_NEAR(exp.cutpoints_.at(i), cuts.at(i), margin);
             }
         }
-        std::cout << "* Number of experiments tested: " << num << std::endl;
+        // std::cout << "* Number of experiments tested: " << num << std::endl;
     }
 }

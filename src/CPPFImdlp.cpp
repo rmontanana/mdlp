@@ -29,7 +29,7 @@ namespace mdlp {
         if (proposed < 0.0f) {
             throw std::invalid_argument("proposed_cuts must be non-negative");
         }
-        
+
         direction = bound_dir_t::RIGHT;
     }
 
@@ -39,7 +39,7 @@ namespace mdlp {
         if (proposed_cuts == 0) {
             return numeric_limits<size_t>::max();
         }
-        if (proposed_cuts < 0 || proposed_cuts > static_cast<precision_t>(X.size())) {
+        if (proposed_cuts > static_cast<precision_t>(X.size())) {
             throw invalid_argument("wrong proposed num_cuts value");
         }
         if (proposed_cuts < 1)
@@ -56,7 +56,7 @@ namespace mdlp {
         discretizedData.clear();
         cutPoints.clear();
         if (X.size() != y.size()) {
-            throw invalid_argument("X and y must have the same size");
+            throw std::invalid_argument("X and y must have the same size: " + std::to_string(X.size()) + " != " + std::to_string(y.size()));
         }
         if (X.empty() || y.empty()) {
             throw invalid_argument("X and y must have at least one element");
@@ -105,9 +105,10 @@ namespace mdlp {
         // # of duplicates before cutpoint
         n = safe_subtract(safe_subtract(cut, 1), idxPrev);
         // # of duplicates after cutpoint
-        m = safe_subtract(safe_subtract(idxNext, cut), 1);
+        m = idxNext - cut - 1;
         // Decide which values to use
         if (backWall) {
+            m = int(idxNext - cut - 1) < 0 ? 0 : m; // Ensure m right
             cut = cut + m + 1;
         } else {
             cut = safe_subtract(cut, n);

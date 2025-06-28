@@ -41,12 +41,8 @@ namespace mdlp {
     }
     void BinDisc::fit(samples_t& X, labels_t& y)
     {
-        // Input validation for supervised interface
-        if (X.size() != y.size()) {
-            throw std::invalid_argument("X and y must have the same size");
-        }
-        if (X.empty() || y.empty()) {
-            throw std::invalid_argument("X and y cannot be empty");
+        if (X.empty()) {
+            throw std::invalid_argument("X cannot be empty");
         }
 
         // BinDisc is inherently unsupervised, but we validate inputs for consistency

@@ -10,7 +10,7 @@ build: ## Build the project for Release
 	@echo ">>> Building the project for Release..."
 	@if [ -d $(f_release) ]; then rm -fr $(f_release); fi
 	@conan install . --build=missing -of $(f_release) -s build_type=Release --profile:build=default --profile:host=default
-	cmake -S . -B $(f_release) -DCMAKE_TOOLCHAIN_FILE=$(f_release)/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=OFF -DENABLE_SAMPLE=ON
+	cmake -S . -B $(f_release) -DCMAKE_TOOLCHAIN_FILE=$(f_release)/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=OFF -DENABLE_SAMPLE=OFF
 	@cmake --build $(f_release) -j 8
 
 install: ## Install the project
@@ -23,6 +23,7 @@ test: ## Build Debug version and run tests
 	@conan install . --build=missing -of $(f_debug) -s build_type=Debug
 	@cmake -B $(f_debug) -S . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=$(f_debug)/build/Debug/generators/conan_toolchain.cmake -DENABLE_TESTING=ON -DENABLE_SAMPLE=ON
 	@cmake --build $(f_debug) -j 8
+	@cp -r tests/datasets $(f_debug)/tests/datasets
 	@cd $(f_debug)/tests && ctest --output-on-failure -j 8
 	@cd $(f_debug)/tests && $(lcov) --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info '/usr/*' --output-file coverage.info >/dev/null 2>&1; \
