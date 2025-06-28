@@ -32,7 +32,7 @@ class FimdlpConan(ConanFile):
     # Sources are located in the same place as this recipe, copy them to the recipe
     exports_sources = "CMakeLists.txt", "src/*", "sample/*", "tests/*", "config/*", "fimdlpConfig.cmake.in"
 
-    def init(self):
+    def set_version(self):
         content = load(self, "CMakeLists.txt")
         version_pattern = re.compile(r'project\s*\([^\)]*VERSION\s+([0-9]+\.[0-9]+\.[0-9]+)', re.IGNORECASE | re.DOTALL)
         match = version_pattern.search(content)
