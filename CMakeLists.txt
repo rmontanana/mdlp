@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 cmake_policy(SET CMP0135 NEW)
 
 # Find dependencies
-find_package(Torch REQUIRED)
+find_package(Torch CONFIG REQUIRED)
 
 # Options
 # -------
@@ -28,7 +28,6 @@ endif()
 
 if (ENABLE_TESTING)
     message("Debug mode")
-    
     enable_testing()
     set(CODE_COVERAGE ON)
     set(GCC_COVERAGE_LINK_FLAGS "${GCC_COVERAGE_LINK_FLAGS} -lgcov --coverage")
@@ -62,11 +61,10 @@ write_basic_package_version_file(
 install(TARGETS fimdlp
         EXPORT fimdlpTargets
         ARCHIVE DESTINATION lib
-        LIBRARY DESTINATION lib
-        CONFIGURATIONS Release)
+        LIBRARY DESTINATION lib)
 
-install(DIRECTORY src/ DESTINATION include/fimdlp FILES_MATCHING CONFIGURATIONS Release PATTERN "*.h")
-install(FILES ${CMAKE_BINARY_DIR}/configured_files/include/config.h DESTINATION include/fimdlp CONFIGURATIONS Release)
+install(DIRECTORY src/ DESTINATION include/fimdlp FILES_MATCHING PATTERN "*.h")
+install(FILES ${CMAKE_BINARY_DIR}/configured_files/include/config.h DESTINATION include/fimdlp)
 
 install(EXPORT fimdlpTargets
         FILE fimdlpTargets.cmake

@@ -40,3 +40,11 @@ test: ## Build Debug version and run tests
 	fi
 	@echo ">>> Updating coverage badge..."
 	@env python update_coverage.py $(f_debug)/tests
+
+conan-create: ## Create the conan package
+	@echo ">>> Creating the conan package..."
+	conan create . --build=missing --pr:b=release -pr:h=release
+	# conan create . --build=missing -pr:b=debug -pr:h=debug
+
+
+

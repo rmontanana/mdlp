@@ -1,6 +1,7 @@
 
 find_package(arff-files REQUIRED)
 find_package(GTest REQUIRED)
+find_package(Torch CONFIG REQUIRED)
 
 include_directories(
         ${libtorch_INCLUDE_DIRS_DEBUG}
