@@ -62,8 +62,9 @@ viewcoverage: ## View the html coverage report
 
 conan-create: ## Create the conan package
 	@echo ">>> Creating the conan package..."
-	conan create . --build=missing --pr:b=release -pr:h=release
-	conan create . --build=missing -pr:b=debug -pr:h=debug
+	conan create . --build=missing -tf "" -s:a build_type=Release 
+	conan create . --build=missing -tf "" -s:a build_type=Debug -o "&:enable_testing=False"
+	@echo ">>> Done"
 
 
 
