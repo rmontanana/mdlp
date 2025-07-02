@@ -167,6 +167,15 @@ namespace mdlp {
         indices = { 1, 2, 0 };
     }
 
+    TEST_F(TestFImdlp, SortIndicesOutOfBounds)
+    {
+        // Test for out of bounds exception in sortIndices
+        samples_t X_long = { 1.0f, 2.0f, 3.0f };
+        labels_t y_short = { 1, 2 };
+        EXPECT_THROW_WITH_MESSAGE(sortIndices(X_long, y_short), std::out_of_range, "Index out of bounds in sort comparison");
+    }
+
+
     TEST_F(TestFImdlp, TestShortDatasets)
     {
         vector<precision_t> computed;

@@ -28,11 +28,7 @@ install: ## Install the project
 
 test: ## Build Debug version and run tests
 	@echo ">>> Building Debug version and running tests..."
-	@if [ ! -d $(f_debug) ]; then \
-		$(MAKE) debug; \
-	else \
-		echo ">>> Debug build already exists, skipping build."; \
-	fi
+	@$(MAKE) debug;
 	@cp -r tests/datasets $(f_debug)/tests/datasets
 	@cd $(f_debug)/tests && ctest --output-on-failure -j 8
 	@cd $(f_debug)/tests && $(lcov) --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch --output-file coverage.info >/dev/null 2>&1; \
