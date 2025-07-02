@@ -1,10 +1,12 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := release
-.PHONY: debug release install test conan-create
+.PHONY: debug release install test conan-create viewcoverage
 lcov := lcov
 
 f_debug = build_debug
 f_release = build_release
+genhtml = genhtml
+docscdir = docs
 
 define build_target
 	@echo ">>> Building the project for $(1)..."
@@ -38,7 +40,8 @@ test: ## Build Debug version and run tests
 	$(lcov) --remove coverage.info 'lib/*' --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info 'libtorch/*' --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info 'tests/*' --output-file coverage.info >/dev/null 2>&1; \
-	$(lcov) --remove coverage.info 'gtest/*' --output-file coverage.info >/dev/null 2>&1;
+	$(lcov) --remove coverage.info 'gtest/*' --output-file coverage.info >/dev/null 2>&1; \
+	$(lcov) --remove coverage.info '*/.conan2/*' --ignore-errors unused --output-file coverage.info >/dev/null 2>&1;
 	@genhtml $(f_debug)/tests/coverage.info --demangle-cpp --output-directory $(f_debug)/tests/coverage --title "Discretizer mdlp Coverage Report" -s -k -f --legend
 	@echo "* Coverage report is generated at $(f_debug)/tests/coverage/index.html"
 	@which python || (echo ">>> Please install python"; exit 1)
@@ -48,6 +51,18 @@ test: ## Build Debug version and run tests
 	fi
 	@echo ">>> Updating coverage badge..."
 	@env python update_coverage.py $(f_debug)/tests
+	@echo ">>> Done"
+
+viewcoverage: ## View the html coverage report
+	@which $(genhtml) >/dev/null || (echo ">>> Please install lcov (genhtml not found)"; exit 1)
+	@if [ ! -d $(docscdir)/coverage ]; then mkdir -p $(docscdir)/coverage; fi
+	@if [ ! -f $(f_debug)/tests/coverage.info ]; then \
+		echo ">>> No coverage.info file found. Run make coverage first!"; \
+		exit 1; \
+	fi
+	@$(genhtml) $(f_debug)/tests/coverage.info --demangle-cpp --output-directory $(docscdir)/coverage --title "FImdlp Coverage Report" -s -k -f --legend >/dev/null 2>&1;
+	@xdg-open $(docscdir)/coverage/index.html || open $(docscdir)/coverage/index.html 2>/dev/null
+	@echo ">>> Done";
 
 conan-create: ## Create the conan package
 	@echo ">>> Creating the conan package..."
