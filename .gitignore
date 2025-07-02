@@ -40,3 +40,4 @@ build_release
 cmake-*
 **/CMakeFiles
 **/gcovr-report
+CMakeUserPresets.json

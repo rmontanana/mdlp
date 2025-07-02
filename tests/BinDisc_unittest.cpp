@@ -11,6 +11,16 @@
 #include <ArffFiles.hpp>
 #include "BinDisc.h"
 #include "Experiments.hpp"
+#include <cmath>
+
+#define EXPECT_THROW_WITH_MESSAGE(stmt, etype, whatstring) EXPECT_THROW( \
+try { \
+stmt; \
+} catch (const etype& ex) { \
+EXPECT_EQ(whatstring, std::string(ex.what())); \
+throw; \
+} \
+, etype)
 
 namespace mdlp {
     const float margin = 1e-4;
@@ -399,5 +409,65 @@ namespace mdlp {
             }
         }
         // std::cout << "* Number of experiments tested: " << num << std::endl;
+    }
+
+    TEST_F(TestBinDisc3U, FitDataSizeTooSmall)
+    {
+        // Test when data size is smaller than n_bins
+        samples_t X = { 1.0, 2.0 }; // Only 2 elements for 3 bins
+        EXPECT_THROW_WITH_MESSAGE(fit(X), std::invalid_argument, "Input data size must be at least equal to n_bins");
+    }
+
+    TEST_F(TestBinDisc3Q, FitDataSizeTooSmall)
+    {
+        // Test when data size is smaller than n_bins
+        samples_t X = { 1.0, 2.0 }; // Only 2 elements for 3 bins
+        EXPECT_THROW_WITH_MESSAGE(fit(X), std::invalid_argument, "Input data size must be at least equal to n_bins");
+    }
+
+    TEST_F(TestBinDisc3U, FitWithYEmptyX)
+    {
+        // Test fit(X, y) with empty X
+        samples_t X = {};
+        labels_t y = { 1, 2, 3 };
+        EXPECT_THROW_WITH_MESSAGE(fit(X, y), std::invalid_argument, "X cannot be empty");
+    }
+
+    TEST_F(TestBinDisc3U, LinspaceInvalidNumPoints)
+    {
+        // Test linspace with num < 2
+        EXPECT_THROW_WITH_MESSAGE(linspace(0.0f, 1.0f, 1), std::invalid_argument, "Number of points must be at least 2 for linspace");
+    }
+
+    TEST_F(TestBinDisc3U, LinspaceNaNValues)
+    {
+        // Test linspace with NaN values
+        float nan_val = std::numeric_limits<float>::quiet_NaN();
+        EXPECT_THROW_WITH_MESSAGE(linspace(nan_val, 1.0f, 3), std::invalid_argument, "Start and end values cannot be NaN");
+        EXPECT_THROW_WITH_MESSAGE(linspace(0.0f, nan_val, 3), std::invalid_argument, "Start and end values cannot be NaN");
+    }
+
+    TEST_F(TestBinDisc3U, LinspaceInfiniteValues)
+    {
+        // Test linspace with infinite values
+        float inf_val = std::numeric_limits<float>::infinity();
+        EXPECT_THROW_WITH_MESSAGE(linspace(inf_val, 1.0f, 3), std::invalid_argument, "Start and end values cannot be infinite");
+        EXPECT_THROW_WITH_MESSAGE(linspace(0.0f, inf_val, 3), std::invalid_argument, "Start and end values cannot be infinite");
+    }
+
+    TEST_F(TestBinDisc3U, PercentileEmptyData)
+    {
+        // Test percentile with empty data
+        samples_t empty_data = {};
+        std::vector<precision_t> percentiles = { 25.0f, 50.0f, 75.0f };
+        EXPECT_THROW_WITH_MESSAGE(percentile(empty_data, percentiles), std::invalid_argument, "Data cannot be empty for percentile calculation");
+    }
+
+    TEST_F(TestBinDisc3U, PercentileEmptyPercentiles)
+    {
+        // Test percentile with empty percentiles
+        samples_t data = { 1.0f, 2.0f, 3.0f };
+        std::vector<precision_t> empty_percentiles = {};
+        EXPECT_THROW_WITH_MESSAGE(percentile(data, empty_percentiles), std::invalid_argument, "Percentiles cannot be empty");
     }
 }

@@ -10,12 +10,11 @@ set(CMAKE_CXX_STANDARD 17)
 cmake_policy(SET CMP0135 NEW)
 
 # Find dependencies
-find_package(Torch REQUIRED)
+find_package(Torch CONFIG REQUIRED)
 
 # Options
 # -------
 option(ENABLE_TESTING OFF)
-option(ENABLE_SAMPLE  OFF)
 option(COVERAGE       OFF)
 
 add_subdirectory(config)
@@ -26,21 +25,24 @@ if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-default-inline")
 endif()
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "Debug mode")
+else()
+    message(STATUS "Release mode")
+endif()
+
 if (ENABLE_TESTING)
-    message("Debug mode")
-    
+    message(STATUS "Testing is enabled")
     enable_testing()
     set(CODE_COVERAGE ON)
     set(GCC_COVERAGE_LINK_FLAGS "${GCC_COVERAGE_LINK_FLAGS} -lgcov --coverage")
     add_subdirectory(tests)
 else()
-    message("Release mode")
+    message(STATUS "Testing is disabled")
 endif()
 
-if (ENABLE_SAMPLE)
-    message("Building sample")
-    add_subdirectory(sample)
-endif()
+message(STATUS "Building sample")
+add_subdirectory(sample)
 
 include_directories(
     ${fimdlp_SOURCE_DIR}/src
@@ -62,11 +64,10 @@ write_basic_package_version_file(
 install(TARGETS fimdlp
         EXPORT fimdlpTargets
         ARCHIVE DESTINATION lib
-        LIBRARY DESTINATION lib
-        CONFIGURATIONS Release)
+        LIBRARY DESTINATION lib)
 
-install(DIRECTORY src/ DESTINATION include/fimdlp FILES_MATCHING CONFIGURATIONS Release PATTERN "*.h")
-install(FILES ${CMAKE_BINARY_DIR}/configured_files/include/config.h DESTINATION include/fimdlp CONFIGURATIONS Release)
+install(DIRECTORY src/ DESTINATION include/fimdlp FILES_MATCHING PATTERN "*.h")
+install(FILES ${CMAKE_BINARY_DIR}/configured_files/include/config.h DESTINATION include/fimdlp)
 
 install(EXPORT fimdlpTargets
         FILE fimdlpTargets.cmake

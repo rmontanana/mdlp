@@ -23,6 +23,9 @@ namespace mdlp {
         // y is included for compatibility with the Discretizer interface
         void fit(samples_t& X_, labels_t& y) override;
         void fit(samples_t& X);
+    protected:
+        std::vector<precision_t> linspace(precision_t start, precision_t end, int num);
+        std::vector<precision_t> percentile(samples_t& data, const std::vector<precision_t>& percentiles);
     private:
         void fit_uniform(const samples_t&);
         void fit_quantile(const samples_t&);

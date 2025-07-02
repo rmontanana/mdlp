@@ -17,7 +17,7 @@ namespace mdlp {
         if (cutPoints.size() < 2) {
             throw std::runtime_error("Discretizer not fitted yet or no valid cut points found");
         }
-        
+
         discretizedData.clear();
         discretizedData.reserve(data.size());
         // CutPoints always have at least two items
@@ -40,9 +40,6 @@ namespace mdlp {
     void Discretizer::fit_t(const torch::Tensor& X_, const torch::Tensor& y_)
     {
         // Validate tensor properties for security
-        if (!X_.is_contiguous() || !y_.is_contiguous()) {
-            throw std::invalid_argument("Tensors must be contiguous");
-        }
         if (X_.sizes().size() != 1 || y_.sizes().size() != 1) {
             throw std::invalid_argument("Only 1D tensors supported");
         }
@@ -58,7 +55,7 @@ namespace mdlp {
         if (X_.numel() == 0) {
             throw std::invalid_argument("Tensors cannot be empty");
         }
-        
+
         auto num_elements = X_.numel();
         samples_t X(X_.data_ptr<precision_t>(), X_.data_ptr<precision_t>() + num_elements);
         labels_t y(y_.data_ptr<int>(), y_.data_ptr<int>() + num_elements);
@@ -67,9 +64,6 @@ namespace mdlp {
     torch::Tensor Discretizer::transform_t(const torch::Tensor& X_)
     {
         // Validate tensor properties for security
-        if (!X_.is_contiguous()) {
-            throw std::invalid_argument("Tensor must be contiguous");
-        }
         if (X_.sizes().size() != 1) {
             throw std::invalid_argument("Only 1D tensors supported");
         }
@@ -79,7 +73,7 @@ namespace mdlp {
         if (X_.numel() == 0) {
             throw std::invalid_argument("Tensor cannot be empty");
         }
-        
+
         auto num_elements = X_.numel();
         samples_t X(X_.data_ptr<precision_t>(), X_.data_ptr<precision_t>() + num_elements);
         auto result = transform(X);
@@ -88,9 +82,6 @@ namespace mdlp {
     torch::Tensor Discretizer::fit_transform_t(const torch::Tensor& X_, const torch::Tensor& y_)
     {
         // Validate tensor properties for security
-        if (!X_.is_contiguous() || !y_.is_contiguous()) {
-            throw std::invalid_argument("Tensors must be contiguous");
-        }
         if (X_.sizes().size() != 1 || y_.sizes().size() != 1) {
             throw std::invalid_argument("Only 1D tensors supported");
         }
@@ -106,7 +97,7 @@ namespace mdlp {
         if (X_.numel() == 0) {
             throw std::invalid_argument("Tensors cannot be empty");
         }
-        
+
         auto num_elements = X_.numel();
         samples_t X(X_.data_ptr<precision_t>(), X_.data_ptr<precision_t>() + num_elements);
         labels_t y(y_.data_ptr<int>(), y_.data_ptr<int>() + num_elements);
