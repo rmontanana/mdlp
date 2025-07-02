@@ -373,4 +373,55 @@ namespace mdlp {
             EXPECT_EQ(computed_ft[i], expected[i]);
         }
     }
+    TEST_F(TestFImdlp, SafeXAccessIndexOutOfBounds)
+    {
+        // Test safe_X_access with index out of bounds for indices array
+        X = { 1.0f, 2.0f, 3.0f };
+        y = { 1, 2, 3 };
+        indices = { 0, 1 }; // shorter than expected
+
+        // This should trigger the first exception in safe_X_access (idx >= indices.size())
+        EXPECT_THROW_WITH_MESSAGE(safe_X_access(2), std::out_of_range, "Index out of bounds for indices array");
+    }
+
+    TEST_F(TestFImdlp, SafeXAccessXOutOfBounds)
+    {
+        // Test safe_X_access with real_idx out of bounds for X array
+        X = { 1.0f, 2.0f }; // shorter array
+        y = { 1, 2, 3 };
+        indices = { 0, 1, 5 }; // indices[2] = 5 is out of bounds for X
+
+        // This should trigger the second exception in safe_X_access (real_idx >= X.size())
+        EXPECT_THROW_WITH_MESSAGE(safe_X_access(2), std::out_of_range, "Index out of bounds for X array");
+    }
+
+    TEST_F(TestFImdlp, SafeYAccessIndexOutOfBounds)
+    {
+        // Test safe_y_access with index out of bounds for indices array
+        X = { 1.0f, 2.0f, 3.0f };
+        y = { 1, 2, 3 };
+        indices = { 0, 1 }; // shorter than expected
+
+        // This should trigger the first exception in safe_y_access (idx >= indices.size())
+        EXPECT_THROW_WITH_MESSAGE(safe_y_access(2), std::out_of_range, "Index out of bounds for indices array");
+    }
+
+    TEST_F(TestFImdlp, SafeYAccessYOutOfBounds)
+    {
+        // Test safe_y_access with real_idx out of bounds for y array
+        X = { 1.0f, 2.0f, 3.0f };
+        y = { 1, 2 }; // shorter array
+        indices = { 0, 1, 5 }; // indices[2] = 5 is out of bounds for y
+
+        // This should trigger the second exception in safe_y_access (real_idx >= y.size())
+        EXPECT_THROW_WITH_MESSAGE(safe_y_access(2), std::out_of_range, "Index out of bounds for y array");
+    }
+
+    TEST_F(TestFImdlp, SafeSubtractUnderflow)
+    {
+        // Test safe_subtract with underflow condition (b > a)
+        EXPECT_THROW_WITH_MESSAGE(safe_subtract(3, 5), std::underflow_error, "Subtraction would cause underflow");
+    }
+
+
 }

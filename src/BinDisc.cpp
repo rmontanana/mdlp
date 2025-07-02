@@ -49,7 +49,7 @@ namespace mdlp {
         // Note: y parameter is validated but not used in binning strategy
         fit(X);
     }
-    std::vector<precision_t> linspace(precision_t start, precision_t end, int num)
+    std::vector<precision_t> BinDisc::linspace(precision_t start, precision_t end, int num)
     {
         // Input validation
         if (num < 2) {
@@ -77,7 +77,7 @@ namespace mdlp {
     {
         return std::max(lower, std::min(n, upper));
     }
-    std::vector<precision_t> percentile(samples_t& data, const std::vector<precision_t>& percentiles)
+    std::vector<precision_t> BinDisc::percentile(samples_t& data, const std::vector<precision_t>& percentiles)
     {
         // Input validation
         if (data.empty()) {

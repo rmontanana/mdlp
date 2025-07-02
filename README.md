@@ -1,7 +1,7 @@
 [![Build](https://github.com/rmontanana/mdlp/actions/workflows/build.yml/badge.svg)](https://github.com/rmontanana/mdlp/actions/workflows/build.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rmontanana_mdlp&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=rmontanana_mdlp)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=rmontanana_mdlp&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=rmontanana_mdlp)
-[![Coverage Badge](https://img.shields.io/badge/Coverage-96,1%25-green)](html/index.html)
+[![Coverage Badge](https://img.shields.io/badge/Coverage-100,0%25-green)](html/index.html)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/rmontanana/mdlp)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14245443.svg)](https://doi.org/10.5281/zenodo.14245443)
 
