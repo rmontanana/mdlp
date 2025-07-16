@@ -51,7 +51,7 @@ class FimdlpConan(ConanFile):
     
     def requirements(self):
         # PyTorch dependency for tensor operations
-        self.requires("libtorch/2.7.0")
+        self.requires("libtorch/2.7.1")
         
     def build_requirements(self):
         self.requires("arff-files/1.2.0") # for tests and sample
