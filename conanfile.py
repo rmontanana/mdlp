@@ -54,7 +54,7 @@ class FimdlpConan(ConanFile):
         self.requires("libtorch/2.7.1")
         
     def build_requirements(self):
-        self.requires("arff-files/1.2.0") # for tests and sample
+        self.requires("arff-files/1.2.1") # for tests and sample
         if self.options.enable_testing: 
             self.test_requires("gtest/1.16.0")
     
