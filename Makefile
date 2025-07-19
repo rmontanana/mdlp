@@ -20,7 +20,7 @@ debug: ## Build Debug version of the library
 	@$(call build_target,"Debug","$(f_debug)", "ENABLE_TESTING=ON", "-o enable_testing=True")
 
 release: ## Build Release version of the library
-	@$(call build_target,"Release","$(f_release)", "ENABLE_TESTING=OFF", "")
+	@$(call build_target,"Release","$(f_release)", "ENABLE_TESTING=OFF", "-o enable_testing=False")
 
 install: ## Install the library
 	@echo ">>> Installing the project..."
