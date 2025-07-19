@@ -31,15 +31,26 @@ jobs:
       - name: Setup Conan profile
         run: |
           conan profile detect --force
+          conan remote add cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
       - name: Install dependencies with Conan
         run: |
-          conan install . --build=missing -s build_type=Debug -o enable_testing=True
+          conan install . --build=missing -of build_debug -s build_type=Debug -o enable_testing=True
+      - name: Configure with CMake
+        run: |
+          cmake -S . -B build_debug -DCMAKE_TOOLCHAIN_FILE=build_debug/build/Debug/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTING=ON
       - name: Tests & build-wrapper
         run: |
-          source ./build/Debug/generators/conanrun.sh
-          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} conan build . -s build_type=Debug -o enable_testing=True
-          cd build/Debug
-          ctest -C Debug --output-on-failure -j 4
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build_debug --config Debug -j 4
+          cp -r tests/datasets build_debug/tests/datasets
+          cd build_debug/tests
+          ctest --output-on-failure -j 4
+          lcov --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch --ignore-errors inconsistent --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' --output-file coverage.info
+          lcov --remove coverage.info 'lib/*' --output-file coverage.info  
+          lcov --remove coverage.info 'libtorch/*' --output-file coverage.info
+          lcov --remove coverage.info 'tests/*' --output-file coverage.info
+          lcov --remove coverage.info 'gtest/*' --output-file coverage.info
+          lcov --remove coverage.info '*/.conan2/*' --ignore-errors unused --output-file coverage.info
           gcovr -f ../../src/CPPFImdlp.cpp -f ../../src/Metrics.cpp -f ../../src/BinDisc.cpp -f ../../src/Discretizer.cpp --txt --sonarqube=coverage.xml
       - name: Run sonar-scanner
         env:
@@ -47,4 +58,4 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sonar-scanner --define sonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}" \
-                        --define sonar.coverageReportPaths=build/Debug/coverage.xml
+                        --define sonar.coverageReportPaths=build_debug/tests/coverage.xml
