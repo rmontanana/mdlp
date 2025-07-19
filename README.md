@@ -3,7 +3,7 @@
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=rmontanana_mdlp&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=rmontanana_mdlp)
 [![Coverage Badge](https://img.shields.io/badge/Coverage-100,0%25-green)](html/index.html)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/rmontanana/mdlp)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14245443.svg)](https://doi.org/10.5281/zenodo.14245443)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.16025501.svg)](https://doi.org/10.5281/zenodo.16025501)
 
 # <img src="logo.png" alt="logo" width="50"/> mdlp
 
@@ -18,9 +18,7 @@ Other features:
 
 - Intervals with the same value of the variable are not taken into account for cutpoints.
 - Intervals have to have more than two examples to be evaluated (mdlp).
-
 - The algorithm returns the cut points for the variable.
-
 - The transform method uses the cut points returning its index in the following way:
 
         cut[i - 1] <= x < cut[i]

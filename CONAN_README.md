@@ -7,9 +7,11 @@ This directory contains the Conan package configuration for the fimdlp library.
 The package manages the following dependencies:
 
 ### Build Requirements
+
 - **libtorch/2.4.1** - PyTorch C++ library for tensor operations
 
 ### Test Requirements (when testing enabled)
+
 - **catch2/3.8.1** - Modern C++ testing framework
 - **arff-files** - ARFF file format support (included locally in tests/lib/Files/)
 
@@ -67,7 +69,7 @@ conan create . -o shared=True --profile:build=default --profile:host=default
 
 ```bash
 # Add Cimmeria remote
-conan remote add cimmeria <cimmeria-server-url>
+conan remote add cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
 
 # Login to Cimmeria
 conan remote login cimmeria <username>

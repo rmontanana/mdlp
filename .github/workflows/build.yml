@@ -19,26 +19,29 @@ jobs:
           submodules: recursive
       - name: Install sonar-scanner and build-wrapper
         uses: SonarSource/sonarcloud-github-c-cpp@v2
+      - name: Install Python and Conan
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install python3 python3-pip
+          pip3 install conan
       - name: Install lcov & gcovr
         run: |
           sudo apt-get -y install lcov
           sudo apt-get -y install gcovr
-      - name: Install Libtorch
+      - name: Setup Conan profileson
         run: |
-          wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcpu.zip
-          unzip libtorch-cxx11-abi-shared-with-deps-2.3.1+cpu.zip
+          conan profile detect --force
+          conan remote add cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
+      - name: Install dependencies with Conan
+        run: |
+          conan install . --build=missing -of build_debug -s build_type=Debug -o enable_testing=True
+      - name: Configure with CMake
+        run: |
+          cmake -S . -B build_debug -DCMAKE_TOOLCHAIN_FILE=build_debug/build/Debug/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTING=ON
       - name: Tests & build-wrapper
         run: |
-          cmake -S . -B build -Wno-dev -DCMAKE_PREFIX_PATH=$(pwd)/libtorch -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTING=ON
-          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build/ --config Debug
-          cmake --build build -j 4
-          cd build
-          ctest -C Debug --output-on-failure -j 4
-          gcovr -f ../src/CPPFImdlp.cpp -f ../src/Metrics.cpp -f ../src/BinDisc.cpp -f ../src/Discretizer.cpp --txt --sonarqube=coverage.xml
-      - name: Run sonar-scanner
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          sonar-scanner --define sonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}" \
-                        --define sonar.coverageReportPaths=build/coverage.xml
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build_debug --config Debug -j 4
+          cp -r tests/datasets build_debug/tests/datasets
+          cd build_debug/tests
+          ctest --output-on-failure -j 4
+          
