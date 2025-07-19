@@ -19,26 +19,32 @@ jobs:
           submodules: recursive
       - name: Install sonar-scanner and build-wrapper
         uses: SonarSource/sonarcloud-github-c-cpp@v2
+      - name: Install Python and Conan
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install python3 python3-pip
+          pip3 install conan
       - name: Install lcov & gcovr
         run: |
           sudo apt-get -y install lcov
           sudo apt-get -y install gcovr
-      - name: Install Libtorch
+      - name: Setup Conan profile
         run: |
-          wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcpu.zip
-          unzip libtorch-cxx11-abi-shared-with-deps-2.3.1+cpu.zip
+          conan profile detect --force
+      - name: Install dependencies with Conan
+        run: |
+          conan install . --build=missing -s build_type=Debug -o enable_testing=True
       - name: Tests & build-wrapper
         run: |
-          cmake -S . -B build -Wno-dev -DCMAKE_PREFIX_PATH=$(pwd)/libtorch -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTING=ON
-          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build/ --config Debug
-          cmake --build build -j 4
-          cd build
+          source ./build/Debug/generators/conanrun.sh
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} conan build . -s build_type=Debug -o enable_testing=True
+          cd build/Debug
           ctest -C Debug --output-on-failure -j 4
-          gcovr -f ../src/CPPFImdlp.cpp -f ../src/Metrics.cpp -f ../src/BinDisc.cpp -f ../src/Discretizer.cpp --txt --sonarqube=coverage.xml
+          gcovr -f ../../src/CPPFImdlp.cpp -f ../../src/Metrics.cpp -f ../../src/BinDisc.cpp -f ../../src/Discretizer.cpp --txt --sonarqube=coverage.xml
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sonar-scanner --define sonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}" \
-                        --define sonar.coverageReportPaths=build/coverage.xml
+                        --define sonar.coverageReportPaths=build/Debug/coverage.xml
