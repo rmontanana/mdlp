@@ -28,7 +28,7 @@ jobs:
         run: |
           sudo apt-get -y install lcov
           sudo apt-get -y install gcovr
-      - name: Setup Conan profile
+      - name: Setup Conan profileson
         run: |
           conan profile detect --force
           conan remote add cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
@@ -44,14 +44,15 @@ jobs:
           cp -r tests/datasets build_debug/tests/datasets
           cd build_debug/tests
           ctest --output-on-failure -j 4
-          lcov --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch,mismatch --ignore-errors inconsistent --output-file coverage.info --ignore-errors unused
-          lcov --remove coverage.info '/usr/*' --output-file coverage.info
-          lcov --remove coverage.info 'libtorch/*' --output-file coverage.info
-          lcov --remove coverage.info '../tests/*' --output-file coverage.info
-          lcov --remove coverage.info 'tests/*' --output-file coverage.info
-          lcov --remove coverage.info 'gtest/*' --output-file coverage.info
-          lcov --remove coverage.info '*/.conan2/*' --ignore-errors unused --output-file coverage.info
-          gcovr -f ../../src/CPPFImdlp.cpp -f ../../src/Metrics.cpp -f ../../src/BinDisc.cpp -f ../../src/Discretizer.cpp --txt --sonarqube=coverage.xml
+          lcov --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch --ignore-errors inconsistent --output-file coverage.info --ignore-errors gcov >/dev/null 2>&1
+          lcov --remove coverage.info '/usr/*' --output-file coverage.info >/dev/null 2>&1
+          lcov --remove coverage.info 'lib/*' --output-file coverage.info >/dev/null 2>&1
+          lcov --remove coverage.info 'libtorch/*' --output-file coverage.info --ignore-errors unused >/dev/null 2>&1
+          lcov --remove coverage.info 'tests/*' --output-file coverage.info >/dev/null 2>&1
+          lcov --remove coverage.info 'gtest/*' --output-file coverage.info >/dev/null 2>&1
+          lcov --remove coverage.info '*/.conan2/*' --ignore-errors unused --output-file coverage.info >/dev/null 2>&1
+          genhtml coverage.info --demangle-cpp --output-directory coverage --title "Discretizer mdlp Coverage Report" -s -k -f --legend
+          gcovr -r ../../ -f ../src/CPPFImdlp.cpp -f ../src/Metrics.cpp -f ../src/BinDisc.cpp -f ../src/Discretizer.cpp --sonarqube=coverage.xml
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
