@@ -44,10 +44,10 @@ jobs:
           cp -r tests/datasets build_debug/tests/datasets
           cd build_debug/tests
           ctest --output-on-failure -j 4
-          lcov --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch --ignore-errors inconsistent --output-file coverage.info
+          lcov --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch,mismatch --ignore-errors inconsistent --output-file coverage.info --ignore-errors unused
           lcov --remove coverage.info '/usr/*' --output-file coverage.info
-          lcov --remove coverage.info 'lib/*' --output-file coverage.info  
           lcov --remove coverage.info 'libtorch/*' --output-file coverage.info
+          lcov --remove coverage.info '../tests/*' --output-file coverage.info
           lcov --remove coverage.info 'tests/*' --output-file coverage.info
           lcov --remove coverage.info 'gtest/*' --output-file coverage.info
           lcov --remove coverage.info '*/.conan2/*' --ignore-errors unused --output-file coverage.info
