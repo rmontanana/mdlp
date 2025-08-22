@@ -8,6 +8,18 @@ f_release = build_release
 genhtml = genhtml
 docscdir = docs
 
+# Set the number of parallel jobs to the number of available processors minus 7
+CPUS := $(shell getconf _NPROCESSORS_ONLN 2>/dev/null \
+                 || nproc --all 2>/dev/null \
+                 || sysctl -n hw.ncpu)
+JOBS := $(shell n=$(CPUS); [ $${n} -gt 7 ] && echo $$((n-7)) || echo 1)
+
+# Colors for output
+GREEN = \033[0;32m
+YELLOW = \033[1;33m
+RED = \033[0;31m
+NC = \033[0m # No Color
+
 define build_target
 	@echo ">>> Building the project for $(1)..."
 	@if [ -d $(2) ]; then rm -fr $(2); fi
@@ -15,6 +27,21 @@ define build_target
 	@cmake -S . -B $(2) -DCMAKE_TOOLCHAIN_FILE=$(2)/build/$(1)/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=$(1) -D$(3)
 	@cmake --build $(2) --config $(1) -j 8
 endef
+
+define status_file_folder
+	@if [ -d $(1) ]; then \
+		st1=" ✅ $(GREEN)"; \
+	else \
+		st1=" ❌ $(RED)"; \
+	fi; \
+	if [ -f $(1)/libfimdlp.a ]; then \
+		st2=" ✅ $(GREEN)"; \
+	else \
+		st2=" ❌ $(RED)"; \
+	fi; \
+	printf "  $(YELLOW)$(2):$(NC) $$st1 Folder $(NC)  $$st2 Library $(NC)\n"
+endef
+
 
 debug: ## Build Debug version of the library
 	@$(call build_target,"Debug","$(f_debug)", "ENABLE_TESTING=ON", "-o enable_testing=True")
@@ -61,6 +88,22 @@ viewcoverage: ## View the html coverage report
 	@xdg-open $(docscdir)/coverage/index.html || open $(docscdir)/coverage/index.html 2>/dev/null
 	@echo ">>> Done";
 
+info: ## Show project information
+	@version=$$(grep -A1 "project(fimdlp" CMakeLists.txt | grep "VERSION" | sed 's/.*VERSION \([0-9.]*\).*/\1/'); \
+	printf "$(GREEN)FImdlp Library: $(YELLOW)ver. $$version$(NC)\n"
+	@echo ""
+	@printf "$(GREEN)Project folders:$(NC)\n"
+	$(call status_file_folder, $(f_release), "Build\ Release")
+	$(call status_file_folder, $(f_debug), "Build\ Debug\ \ ")
+	@echo ""
+	@printf "$(GREEN)Build commands:$(NC)\n"
+	@printf "   $(YELLOW)make release$(NC) - Build library for release\n"
+	@printf "   $(YELLOW)make debug$(NC)   - Build library for debug\n"
+	@printf "   $(YELLOW)make test$(NC)    - Run tests\n"
+	@printf "   $(YELLOW)Usage:$(NC) make help\n"
+	@echo ""
+	@printf "   $(YELLOW)Parallel Jobs:   $(GREEN)$(JOBS)$(NC)\n"
+
 conan-create: ## Create the conan package
 	@echo ">>> Creating the conan package..."
 	conan create . --build=missing -tf "" -s:a build_type=Release 
@@ -69,7 +112,7 @@ conan-create: ## Create the conan package
 
 help: ## Show help message
 	@IFS=$$'\n' ; \
-	help_lines=(`fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##/:/'`); \
+	help_lines=(`grep -Fh "##" $(MAKEFILE_LIST) | grep -Fv fgrep | sed -e 's/\\$$//' | sed -e 's/##/:/'`); \
 	printf "%s\n\n" "Usage: make [task]"; \
 	printf "%-20s %s\n" "task" "help" ; \
 	printf "%-20s %s\n" "------" "----" ; \

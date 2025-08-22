@@ -7,6 +7,7 @@
 #include "Metrics.h"
 #include <set>
 #include <cmath>
+#include <iostream>
 
 using namespace std;
 namespace mdlp {
@@ -18,8 +19,13 @@ namespace mdlp {
     int Metrics::computeNumClasses(size_t start, size_t end)
     {
         set<int> nClasses;
+        if (indices.empty() || start >= indices.size() || end > indices.size()) {
+            return 0;
+        }
         for (auto i = start; i < end; ++i) {
-            nClasses.insert(y[indices[i]]);
+            if (i < indices.size() && indices[i] < y.size()) {
+                nClasses.insert(y[indices[i]]);
+            }
         }
         return static_cast<int>(nClasses.size());
     }
@@ -38,7 +44,7 @@ namespace mdlp {
     {
         if (end - start < 2)
             return 0;
-            
+
         // Check cache first with read lock
         {
             std::lock_guard<std::mutex> lock(cache_mutex);
@@ -46,15 +52,37 @@ namespace mdlp {
                 return entropyCache[{start, end}];
             }
         }
-        
+
         // Compute entropy outside of lock
         precision_t p;
         precision_t ventropy = 0;
         int nElements = 0;
-        labels_t counts(numClasses + 1, 0);
         
-        for (auto i = &indices[start]; i != &indices[end]; ++i) {
-            counts[y[*i]]++;
+        if (indices.empty() || start >= indices.size() || end > indices.size()) {
+            return 0;
+        }
+        
+        // First pass: find max label to size counts array properly
+        size_t max_label = 0;
+        for (size_t i = start; i < end; ++i) {
+            if (i >= indices.size()) break;
+            size_t idx = indices[i];
+            if (idx >= y.size()) continue;
+            size_t label = y[idx];
+            if (label > max_label) {
+                max_label = label;
+            }
+        }
+        
+        labels_t counts(max_label + 1, 0);
+        
+        // Second pass: count occurrences
+        for (size_t i = start; i < end; ++i) {
+            if (i >= indices.size()) break;
+            size_t idx = indices[i];
+            if (idx >= y.size()) continue;
+            size_t label = y[idx];
+            counts[label]++;
             nElements++;
         }
         for (auto count : counts) {
@@ -63,13 +91,13 @@ namespace mdlp {
                 ventropy -= p * log2(p);
             }
         }
-        
+
         // Update cache with write lock
         {
             std::lock_guard<std::mutex> lock(cache_mutex);
             entropyCache[{start, end}] = ventropy;
         }
-        
+
         return ventropy;
     }
 
@@ -82,7 +110,7 @@ namespace mdlp {
                 return igCache[make_tuple(start, cut, end)];
             }
         }
-        
+
         // Compute information gain outside of lock
         precision_t iGain;
         precision_t entropyInterval;
@@ -91,7 +119,7 @@ namespace mdlp {
         size_t nElementsLeft = cut - start;
         size_t nElementsRight = end - cut;
         size_t nElements = end - start;
-        
+
         entropyInterval = entropy(start, end);
         entropyLeft = entropy(start, cut);
         entropyRight = entropy(cut, end);
@@ -99,13 +127,13 @@ namespace mdlp {
             (static_cast<precision_t>(nElementsLeft) * entropyLeft +
                 static_cast<precision_t>(nElementsRight) * entropyRight) /
             static_cast<precision_t>(nElements);
-            
+
         // Update cache with write lock
         {
             std::lock_guard<std::mutex> lock(cache_mutex);
             igCache[make_tuple(start, cut, end)] = iGain;
         }
-        
+
         return iGain;
     }
 

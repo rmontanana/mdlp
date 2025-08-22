@@ -417,6 +417,28 @@ namespace mdlp {
         EXPECT_THROW_WITH_MESSAGE(safe_y_access(2), std::out_of_range, "Index out of bounds for y array");
     }
 
+    TEST_F(TestFImdlp, SafeXAccessEmptyIndices)
+    {
+        // Test safe_X_access with empty indices array
+        X = { 1.0f, 2.0f, 3.0f };
+        y = { 1, 2, 3 };
+        indices = {}; // empty indices array
+
+        // This should trigger the indices.empty() exception in safe_X_access
+        EXPECT_THROW_WITH_MESSAGE(safe_X_access(0), std::out_of_range, "Indices array is empty");
+    }
+
+    TEST_F(TestFImdlp, SafeYAccessEmptyIndices)
+    {
+        // Test safe_y_access with empty indices array
+        X = { 1.0f, 2.0f, 3.0f };
+        y = { 1, 2, 3 };
+        indices = {}; // empty indices array
+
+        // This should trigger the indices.empty() exception in safe_y_access
+        EXPECT_THROW_WITH_MESSAGE(safe_y_access(0), std::out_of_range, "Indices array is empty");
+    }
+
     TEST_F(TestFImdlp, SafeSubtractUnderflow)
     {
         // Test safe_subtract with underflow condition (b > a)

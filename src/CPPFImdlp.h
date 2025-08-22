@@ -41,6 +41,9 @@ namespace mdlp {
         pair<precision_t, size_t> valueCutPoint(size_t, size_t, size_t);
         inline precision_t safe_X_access(size_t idx) const
         {
+            if (indices.empty()) {
+                throw std::out_of_range("Indices array is empty");
+            }
             if (idx >= indices.size()) {
                 throw std::out_of_range("Index out of bounds for indices array");
             }
@@ -52,6 +55,9 @@ namespace mdlp {
         }
         inline label_t safe_y_access(size_t idx) const
         {
+            if (indices.empty()) {
+                throw std::out_of_range("Indices array is empty");
+            }
             if (idx >= indices.size()) {
                 throw std::out_of_range("Index out of bounds for indices array");
             }

@@ -98,7 +98,7 @@ namespace mdlp {
             const precision_t fraction =
                 (percentile / 100.0 - percentI) /
                 (static_cast<precision_t>(indexLower + 1) / static_cast<precision_t>(data.size() - 1) - percentI);
-            if (const auto value = data[indexLower] + (data[indexLower + 1] - data[indexLower]) * fraction; value != results.back() || first) // first needed as results.back() return is undefined for empty vectors
+            if (const auto value = data[indexLower] + (data[indexLower + 1] - data[indexLower]) * fraction; first || results.empty() || value != results.back()) // Check empty before calling back()
                 results.push_back(value);
             first = false;
         }
