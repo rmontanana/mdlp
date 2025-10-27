@@ -444,6 +444,28 @@ namespace mdlp {
         // Test safe_subtract with underflow condition (b > a)
         EXPECT_THROW_WITH_MESSAGE(safe_subtract(3, 5), std::underflow_error, "Subtraction would cause underflow");
     }
-
-
+    TEST_F(TestFImdlp, TestHeartStatLog)
+    {
+        ArffFiles file;
+        file.load(data_path + "heart-statlog.arff", true);
+        vector<samples_t>& X = file.getX();
+        labels_t& y = file.getY();
+        auto attributes = file.getAttributes();
+        auto xd = fit_transform(X[3], y);
+        std::cout << "Cut points for feature " << attributes[3].first << ": ";
+        for (const auto& cut : cutPoints) {
+            std::cout << cut << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "Raw Values for feature " << attributes[3].first << ": ";
+        for (const auto& value : X[3]) {
+            std::cout << value << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "Discretized values for feature " << attributes[3].first << ": ";
+        for (const auto& value : xd) {
+            std::cout << value << " ";
+        }
+        std::cout << std::endl;
+    }
 }
