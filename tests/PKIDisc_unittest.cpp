@@ -65,3 +65,18 @@ TEST(PKIDisc, no_cut_points_for_unique_value)
         EXPECT_NEAR(point, 5.0, 0.001);
     }
 }
+
+TEST(PKIDisc, min_bins_when_few_samples)
+{
+    mdlp::labels_t y = { 1, 1, 1, 1 }; // 4 samples to make sure min_bins is considered
+    mdlp::samples_t X = { { 1, 2, 3, 4 } };
+    mdlp::PKIDisc discretizer;
+    discretizer.fit(X, y);
+    auto cut_points = discretizer.getCutPoints();
+    EXPECT_EQ(cut_points.size(), 4); // min_bins = 3 -> 4 cut points
+    EXPECT_NEAR(cut_points[0], 1.0, 0.001);
+    EXPECT_NEAR(cut_points[1], 2.0, 0.001);
+    EXPECT_NEAR(cut_points[2], 3.0, 0.001);
+    EXPECT_NEAR(cut_points[3], 4.0, 0.001);
+}
+
