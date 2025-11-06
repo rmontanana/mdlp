@@ -26,6 +26,19 @@ Other features:
     using the [std::upper_bound](https://en.cppreference.com/w/cpp/algorithm/upper_bound) method
 
 - K-Bins discretization is also implemented, and "quantile" and "uniform" strategies are available.
+- Proportional k-Interval Discretization (PKID) is also implemented.
+
+## Discretization Algorithms
+
+This library provides three discretization algorithms:
+
+1. **Fayyad & Irani's MDL discretization (CPPFImdlp)**: This is the main algorithm of the library. It is a supervised discretization algorithm that uses the Minimum Description Length Principle (MDLP) to find the best cut points for a continuous attribute.
+
+2. **Binning Discretization (BinDisc)**: This is a simple unsupervised discretization algorithm that divides the range of a continuous attribute into a fixed number of bins. Two strategies are available:
+   - `uniform`: creates bins of equal width.
+   - `quantile`: creates bins with an equal number of samples.
+
+3. **Proportional k-Interval Discretization (PKIDisc)**: This is an unsupervised discretization algorithm that uses the square root of the number of samples as the number of bins for a `quantile` binning, that is equal-frequency binning. It is based on the paper by Yang & Webb, "Proportional k-Interval Discretization for Naive-Bayes Classifiers".
 
 ## Sample
 

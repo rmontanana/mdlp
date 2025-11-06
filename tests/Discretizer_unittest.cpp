@@ -41,7 +41,7 @@ namespace mdlp {
         Discretizer* disc = new BinDisc(4, strategy_t::UNIFORM);
         auto version = disc->version();
         delete disc;
-        EXPECT_EQ("2.1.2", version);
+        EXPECT_EQ("2.1.3", version);
     }
     TEST(Discretizer, BinIrisUniform)
     {

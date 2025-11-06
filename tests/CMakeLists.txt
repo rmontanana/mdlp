@@ -1,4 +1,3 @@
-
 find_package(arff-files REQUIRED)
 find_package(GTest REQUIRED)
 find_package(Torch CONFIG REQUIRED)
@@ -32,9 +31,15 @@ target_link_libraries(Discretizer_unittest GTest::gtest_main torch::torch)
 target_compile_options(Discretizer_unittest PRIVATE --coverage)
 target_link_options(Discretizer_unittest PRIVATE --coverage)
 
+add_executable(PKIDisc_unittest PKIDisc_unittest.cpp ${fimdlp_SOURCE_DIR}/src/PKIDisc.cpp ${fimdlp_SOURCE_DIR}/src/BinDisc.cpp  ${fimdlp_SOURCE_DIR}/src/Discretizer.cpp)
+target_link_libraries(PKIDisc_unittest GTest::gtest_main torch::torch)
+target_compile_options(PKIDisc_unittest PRIVATE --coverage)
+target_link_options(PKIDisc_unittest PRIVATE --coverage)
+
 include(GoogleTest)
 
 gtest_discover_tests(Metrics_unittest)
 gtest_discover_tests(FImdlp_unittest)
 gtest_discover_tests(BinDisc_unittest)
 gtest_discover_tests(Discretizer_unittest)
+gtest_discover_tests(PKIDisc_unittest)

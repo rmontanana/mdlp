@@ -13,8 +13,8 @@
 
 namespace mdlp {
     enum class strategy_t {
-        UNIFORM,
-        QUANTILE
+        UNIFORM, // Equal width
+        QUANTILE // Equal frequency
     };
     class BinDisc : public Discretizer {
     public:
@@ -26,11 +26,12 @@ namespace mdlp {
     protected:
         std::vector<precision_t> linspace(precision_t start, precision_t end, int num);
         std::vector<precision_t> percentile(samples_t& data, const std::vector<precision_t>& percentiles);
+        int n_bins;
+        strategy_t strategy;
+        const int min_bins = 3;
     private:
         void fit_uniform(const samples_t&);
         void fit_quantile(const samples_t&);
-        int n_bins;
-        strategy_t strategy;
     };
 }
 #endif

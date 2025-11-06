@@ -6,17 +6,17 @@
 
 #include <algorithm>
 #include <cmath>
-#include "BinDisc.h"
 #include <iostream>
 #include <string>
+#include "BinDisc.h"
 
 namespace mdlp {
 
     BinDisc::BinDisc(int n_bins, strategy_t strategy) :
         Discretizer(), n_bins{ n_bins }, strategy{ strategy }
     {
-        if (n_bins < 3) {
-            throw std::invalid_argument("n_bins must be greater than 2");
+        if (n_bins < min_bins) {
+            throw std::invalid_argument("n_bins must be greater than " + std::to_string(min_bins - 1));
         }
     }
     BinDisc::~BinDisc() = default;
