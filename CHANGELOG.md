@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- PKI discretization algorithm implementation based on the algorithm by Ying Yang, Geoffrey I. Webb: Proportional k-Interval Discretization for Naive-Bayes Classifiers. In: 12th European Conference on Machine Learning, 564-575, 2001.
+- PKIDisc: Implementation of the Proportional k-Interval (PKI) discretization algorithm based on Ying Yang & Geoffrey I. Webb's method (ECML 2001).
+- PKIDisc: Added the compute strategy LOG and SQRT for determining the number of bins.
+- PKIDisc: Updated unit tests to cover new functionality and edge cases.
 
 ## [2.1.2] - 2025-08-22
 

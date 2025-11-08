@@ -79,4 +79,22 @@ TEST(PKIDisc, min_bins_when_few_samples)
     EXPECT_NEAR(cut_points[2], 3.0, 0.001);
     EXPECT_NEAR(cut_points[3], 4.0, 0.001);
 }
+TEST(PKIDisc, log_strategy)
+{
+    mdlp::labels_t y = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4 }; // 22 samples
+    mdlp::samples_t X = { { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 } };
+    mdlp::PKIDisc discretizer(mdlp::compute_strategy_t::LOG);
+    discretizer.fit(X, y);
+    auto cut_points = discretizer.getCutPoints();
+    // n_bins = log(22) = 3.091... -> 3
+    // strategy = QUANTILE
+    // min = 1, max = 16
+    // cut points should be at 1 + 1*(16-1)/3
+    // 1 + 15/3 = 1 + 5 = 6
+    ASSERT_EQ(cut_points.size(), 4); // 3 bins = 4 cut points
+    EXPECT_NEAR(cut_points[0], 1.0, 0.001);
+    EXPECT_NEAR(cut_points[1], 6.0, 0.001);
+    EXPECT_NEAR(cut_points[2], 11.0, 0.001);
+    EXPECT_NEAR(cut_points[3], 16.0, 0.001);
+}
 
