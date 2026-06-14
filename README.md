@@ -7,7 +7,7 @@
 
 # <img src="logo.png" alt="logo" width="50"/> mdlp
 
-Discretization algorithm based on the paper by Fayyad &amp; Irani [Multi-Interval Discretization of Continuous-Valued Attributes for Classification Learning](https://www.ijcai.org/Proceedings/93-2/Papers/022.pdf)
+Discretization algorithm based on the paper by Fayyad & Irani [Multi-Interval Discretization of Continuous-Valued Attributes for Classification Learning](https://www.ijcai.org/Proceedings/93-2/Papers/022.pdf)
 
 The implementation tries to mitigate the problem of different label values with the same value of the variable:
 
@@ -40,6 +40,37 @@ This library provides three discretization algorithms:
 
 3. **Proportional k-Interval Discretization (PKIDisc)**: This is an unsupervised discretization algorithm that uses the square root of the number of samples as the number of bins for a `quantile` binning, that is equal-frequency binning. It is based on the paper by Yang & Webb, "Proportional k-Interval Discretization for Naive-Bayes Classifiers".
 
+## Unified Interface
+
+All discretization algorithms share a common interface with the `fit(X, y)` method signature:
+
+```cpp
+// Supervised: uses y for label information
+CPPFImdlp disc1;
+disc1.fit(X, y);
+auto result1 = disc1.transform(X);
+
+// Unsupervised: accepts y but doesn't use it (for interface consistency)
+BinDisc disc2(3, strategy_t::QUANTILE);
+disc2.fit(X, y);  // y is ignored
+auto result2 = disc2.transform(X);
+
+PKIDisc disc3;
+disc3.fit(X, y);  // y is ignored
+auto result3 = disc3.transform(X);
+```
+
+This design enables a single code path in experimentation platforms:
+
+```cpp
+void run_experiment(Discretizer& disc, samples_t& X, labels_t& y) {
+    disc.fit(X, y);  // Works for ALL discretizer types
+    auto result = disc.transform(X);
+}
+```
+
+Note: For unsupervised methods (BinDisc, PKIDisc), the y parameter is accepted for interface consistency but is not used in the discretization algorithm.
+
 ## Sample
 
 To run the sample, just execute the following commands:
@@ -57,3 +88,32 @@ To run the tests and see coverage (llvm with lcov and genhtml have to be install
 ```bash
 make test
 ```
+
+## Building from Source
+
+### Using CMake
+
+```bash
+mkdir build && cd build
+cmake ..
+make
+```
+
+### Using Conan
+
+```bash
+conan install . --output-folder=build --build=missing
+cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+## Dependencies
+
+- **PyTorch (libtorch)**: Required for tensor operations
+- **C++17**: Standard required for modern C++ features
+- **CMake 3.20+**: Build system
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

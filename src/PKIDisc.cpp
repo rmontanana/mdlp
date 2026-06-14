@@ -8,6 +8,9 @@
 
 namespace mdlp {
 
+    PKIDisc::PKIDisc(compute_strategy_t compute_strategy_) 
+        : BinDisc(), compute_strategy(compute_strategy_) {}
+
     void PKIDisc::fit(samples_t& X, labels_t& y)
     {
         if (compute_strategy == compute_strategy_t::LOG) {
