@@ -385,4 +385,75 @@ namespace mdlp {
 
         delete disc;
     }
+
+    // Regression: Discretizer::direction had no initializer, so a
+    // default-constructed CPPFImdlp never assigned it and transform() branched on
+    // an indeterminate value. The test passed only because the garbage value
+    // happened not to compare equal to bound_dir_t::LEFT.
+    TEST(Discretizer, DefaultConstructedCPPFImdlpTransformsDeterministically)
+    {
+        samples_t X = { 1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f, 3.0f, 3.0f, 3.0f };
+        labels_t y = { 0, 0, 0, 1, 1, 1, 2, 2, 2 };
+        labels_t expected = { 0, 0, 0, 1, 1, 1, 2, 2, 2 };
+
+        CPPFImdlp disc;  // default constructor: never assigns `direction`
+        disc.fit(X, y);
+        auto computed = disc.transform(X);
+
+        EXPECT_EQ(computed, expected);
+    }
+
+    // Regression: fit_t/transform_t/fit_transform_t validated rank, dtype and
+    // element count but not contiguity, then walked data_ptr() + numel(). A 1-D
+    // non-contiguous view (a column of a 2-D dataset) was therefore read as raw
+    // interleaved memory, silently yielding wrong cut points and no exception.
+    TEST(Discretizer, NonContiguousTensorIsReadCorrectly)
+    {
+        // Column 0 holds 0..9, column 1 holds 100..109.
+        auto base = torch::empty({ 10, 2 }, torch::kFloat32);
+        for (int i = 0; i < 10; ++i) {
+            base[i][0] = static_cast<float>(i);
+            base[i][1] = static_cast<float>(100 + i);
+        }
+        auto col0 = base.select(1, 0);
+        ASSERT_FALSE(col0.is_contiguous());
+        ASSERT_EQ(col0.numel(), 10);
+
+        auto y = torch::zeros({ 10 }, torch::kInt32);
+
+        BinDisc disc(3, strategy_t::UNIFORM);
+        disc.fit_t(col0, y);
+        auto cuts = disc.getCutPoints();
+
+        // Must be derived from the logical values 0..9, never from the raw
+        // buffer 0,100,1,101,... Before the fix this produced 0, 34.67, 69.33, 104.
+        ASSERT_FALSE(cuts.empty());
+        EXPECT_NEAR(cuts.front(), 0.0f, margin);
+        EXPECT_NEAR(cuts.back(), 9.0f, margin);
+
+        // transform_t must handle the same non-contiguous view.
+        auto transformed = disc.transform_t(col0);
+        ASSERT_EQ(transformed.numel(), 10);
+        auto contiguous_result = disc.transform_t(col0.contiguous());
+        EXPECT_TRUE(torch::equal(transformed, contiguous_result));
+    }
+
+    TEST(Discretizer, NonContiguousTensorFitTransform)
+    {
+        auto base = torch::empty({ 6, 2 }, torch::kFloat32);
+        for (int i = 0; i < 6; ++i) {
+            base[i][0] = static_cast<float>(i);
+            base[i][1] = static_cast<float>(500 + i);
+        }
+        auto col0 = base.select(1, 0);
+        ASSERT_FALSE(col0.is_contiguous());
+
+        auto y = torch::tensor({ 0, 0, 0, 1, 1, 1 }, torch::kInt32);
+
+        BinDisc disc(3, strategy_t::UNIFORM);
+        auto from_view = disc.fit_transform_t(col0, y);
+        auto from_contiguous = disc.fit_transform_t(col0.contiguous(), y);
+
+        EXPECT_TRUE(torch::equal(from_view, from_contiguous));
+    }
 }

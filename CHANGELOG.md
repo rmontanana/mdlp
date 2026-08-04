@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 3.0.0
+
+### Fixed
+
+- **Tensor discretization silently produced wrong results for non-contiguous input.**
+  `fit_t`, `transform_t` and `fit_transform_t` validated rank, dtype and element
+  count but not contiguity, then read `data_ptr()` directly. A 1-D non-contiguous
+  view — such as a column of a 2-D dataset, `dataset.select(1, col)` — was read as
+  raw interleaved memory, yielding wrong cut points with no error raised. Such
+  tensors are now copied into contiguous storage and read correctly. Tensors that
+  are already contiguous are unaffected and incur no copy.
+- Tensors that do not reside on the CPU are now rejected with a clear error instead
+  of having their `data_ptr()` dereferenced.
+- `Discretizer::direction` was never initialized. A default-constructed `CPPFImdlp`
+  left it indeterminate, so `transform()` branched on an uninitialized value
+  (undefined behaviour). It now defaults to `bound_dir_t::RIGHT`.
+- `Metrics::entropy` computed its size guard as `end - start < 2` in unsigned
+  arithmetic, so an inverted interval wrapped around and slipped past the check.
+- Entropy and information-gain cache keys were typed `int` while all callers pass
+  `size_t`, silently truncating interval indices. Retyped to `size_t`.
+- Fixed a signed/unsigned comparison in `BinDisc::linspace`.
+
+### Changed
+
+- Tensor validation in `Discretizer` consolidated into a single helper. All
+  existing exception messages are unchanged.
+
 ## [2.1.3] - 2025-11-06
 
 ### Added

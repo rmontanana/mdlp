@@ -37,70 +37,68 @@ namespace mdlp {
         fit(X_, y_);
         return transform(X_);
     }
-    void Discretizer::fit_t(const torch::Tensor& X_, const torch::Tensor& y_)
+    torch::Tensor Discretizer::validate_tensor(
+        const torch::Tensor& t,
+        torch::ScalarType expected_type,
+        const std::string& name,
+        const std::string& type_name,
+        const std::string& empty_message)
     {
-        // Validate tensor properties for security
-        if (X_.sizes().size() != 1 || y_.sizes().size() != 1) {
+        if (t.dim() != 1) {
             throw std::invalid_argument("Only 1D tensors supported");
         }
-        if (X_.dtype() != torch::kFloat32) {
-            throw std::invalid_argument("X tensor must be Float32 type");
+        if (!t.is_cpu()) {
+            throw std::invalid_argument(name + " tensor must reside on the CPU"); // LCOV_EXCL_LINE
         }
-        if (y_.dtype() != torch::kInt32) {
-            throw std::invalid_argument("y tensor must be Int32 type");
+        if (t.scalar_type() != expected_type) {
+            throw std::invalid_argument(name + " tensor must be " + type_name + " type");
         }
-        if (X_.numel() != y_.numel()) {
+        if (t.numel() == 0) {
+            throw std::invalid_argument(empty_message);
+        }
+        // Accept non-contiguous inputs. A column view of a 2-D dataset has a
+        // stride greater than one, so walking data_ptr() + numel() would read
+        // unrelated memory and silently produce wrong cut points. contiguous()
+        // returns the tensor unchanged when it is already contiguous, so the
+        // common case costs nothing. The caller must keep the returned tensor
+        // alive while it reads through data_ptr().
+        return t.contiguous();
+    }
+
+    std::pair<torch::Tensor, torch::Tensor> Discretizer::validate_pair(
+        const torch::Tensor& X_,
+        const torch::Tensor& y_)
+    {
+        auto X_valid = validate_tensor(X_, torch::kFloat32, "X", "Float32", "Tensors cannot be empty");
+        auto y_valid = validate_tensor(y_, torch::kInt32, "y", "Int32", "Tensors cannot be empty");
+        if (X_valid.numel() != y_valid.numel()) {
             throw std::invalid_argument("X and y tensors must have same number of elements");
         }
-        if (X_.numel() == 0) {
-            throw std::invalid_argument("Tensors cannot be empty");
-        }
+        return { X_valid, y_valid };
+    }
 
-        auto num_elements = X_.numel();
-        samples_t X(X_.data_ptr<precision_t>(), X_.data_ptr<precision_t>() + num_elements);
-        labels_t y(y_.data_ptr<int>(), y_.data_ptr<int>() + num_elements);
+    void Discretizer::fit_t(const torch::Tensor& X_, const torch::Tensor& y_)
+    {
+        auto [X_valid, y_valid] = validate_pair(X_, y_);
+        auto num_elements = X_valid.numel();
+        samples_t X(X_valid.data_ptr<precision_t>(), X_valid.data_ptr<precision_t>() + num_elements);
+        labels_t y(y_valid.data_ptr<int>(), y_valid.data_ptr<int>() + num_elements);
         fit(X, y);
     }
     torch::Tensor Discretizer::transform_t(const torch::Tensor& X_)
     {
-        // Validate tensor properties for security
-        if (X_.sizes().size() != 1) {
-            throw std::invalid_argument("Only 1D tensors supported");
-        }
-        if (X_.dtype() != torch::kFloat32) {
-            throw std::invalid_argument("X tensor must be Float32 type");
-        }
-        if (X_.numel() == 0) {
-            throw std::invalid_argument("Tensor cannot be empty");
-        }
-
-        auto num_elements = X_.numel();
-        samples_t X(X_.data_ptr<precision_t>(), X_.data_ptr<precision_t>() + num_elements);
+        auto X_valid = validate_tensor(X_, torch::kFloat32, "X", "Float32", "Tensor cannot be empty");
+        auto num_elements = X_valid.numel();
+        samples_t X(X_valid.data_ptr<precision_t>(), X_valid.data_ptr<precision_t>() + num_elements);
         auto result = transform(X);
         return torch::tensor(result, torch_label_t);
     }
     torch::Tensor Discretizer::fit_transform_t(const torch::Tensor& X_, const torch::Tensor& y_)
     {
-        // Validate tensor properties for security
-        if (X_.sizes().size() != 1 || y_.sizes().size() != 1) {
-            throw std::invalid_argument("Only 1D tensors supported");
-        }
-        if (X_.dtype() != torch::kFloat32) {
-            throw std::invalid_argument("X tensor must be Float32 type");
-        }
-        if (y_.dtype() != torch::kInt32) {
-            throw std::invalid_argument("y tensor must be Int32 type");
-        }
-        if (X_.numel() != y_.numel()) {
-            throw std::invalid_argument("X and y tensors must have same number of elements");
-        }
-        if (X_.numel() == 0) {
-            throw std::invalid_argument("Tensors cannot be empty");
-        }
-
-        auto num_elements = X_.numel();
-        samples_t X(X_.data_ptr<precision_t>(), X_.data_ptr<precision_t>() + num_elements);
-        labels_t y(y_.data_ptr<int>(), y_.data_ptr<int>() + num_elements);
+        auto [X_valid, y_valid] = validate_pair(X_, y_);
+        auto num_elements = X_valid.numel();
+        samples_t X(X_valid.data_ptr<precision_t>(), X_valid.data_ptr<precision_t>() + num_elements);
+        labels_t y(y_valid.data_ptr<int>(), y_valid.data_ptr<int>() + num_elements);
         auto result = fit_transform(X, y);
         return torch::tensor(result, torch_label_t);
     }

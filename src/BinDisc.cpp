@@ -67,7 +67,7 @@ namespace mdlp {
         }
         precision_t delta = (end - start) / static_cast<precision_t>(num - 1);
         std::vector<precision_t> linspc;
-        for (size_t i = 0; i < num; ++i) {
+        for (size_t i = 0; i < static_cast<size_t>(num); ++i) {
             precision_t val = start + delta * static_cast<precision_t>(i);
             linspc.push_back(val);
         }

@@ -2,7 +2,7 @@
 
 **Target version:** 3.0.0 (major — breaking changes)
 **Branch:** `release/3.0.0`
-**Status:** Phase 1 complete; Phase 0 and 2+ pending
+**Status:** Phases 1 and 2 complete; Phase 0 and 3+ pending
 **Supersedes:** `RELEASE_PLAN_2.2.0.md` (see [Appendix B](#appendix-b--corrections-to-the-superseded-220-plan))
 
 > **This document is the single source of truth for the 3.0.0 release.**
@@ -248,24 +248,38 @@ improvement" target with no benchmark in the repository to measure against.
 
 Delivered in commit `e143bbc`. See the inventory in §3. No open tasks.
 
-### Phase 2 — Confirmed correctness defects
+### Phase 2 — Confirmed correctness defects ✅ COMPLETE
 
-- **T2.1** (D1) Add `is_contiguous()` and `is_cpu()` validation to `fit_t`,
-  `transform_t`, `fit_transform_t`. Decide explicitly between *rejecting*
-  non-contiguous input and *accepting* it via `X_.contiguous()`; the second is
-  friendlier for column-view callers and is the recommended choice. Whichever is
-  chosen, document it in the method's Doxygen block.
-- **T2.2** (D1) Extract the duplicated validation blocks in `Discretizer.cpp` into
-  a private helper. `fit_t` (`:43-57`) and `fit_transform_t` (`:85-99`) are
-  byte-identical, and `transform_t` (`:67-75`) repeats the same checks for a single
-  tensor with a divergent message ("Tensor cannot be empty" vs. "Tensors cannot be
-  empty"). Three copies is three places to forget the D1 fix.
-- **T2.3** (D2) Give `direction` an in-class initializer (`= bound_dir_t::RIGHT`)
-  and add a regression test that default-constructs `CPPFImdlp`, fits, transforms
-  and asserts the expected labels.
-- **T2.4** (D6) Fix the `entropy` guard to `end <= start || end - start < 2`.
-- **T2.5** (D7) Fix the signed/unsigned comparison in `linspace`.
-- **T2.6** (D5) Retype `cacheEnt_t` / `cacheIg_t` keys to `size_t`.
+- [x] **T2.1** (D1) Non-contiguous and non-CPU tensor validation. **Resolution:
+  accept non-contiguous input** via `contiguous()` rather than rejecting it — a
+  column view of a 2-D dataset is the most natural way to feed one feature at a
+  time, and rejecting would force every caller to add `.contiguous()` by hand.
+  `contiguous()` is a no-op when the input already is, so the common path costs
+  nothing. Non-CPU tensors are rejected. Documented in the Doxygen blocks of all
+  three tensor methods.
+- [x] **T2.2** (D1) Validation extracted into `Discretizer::validate_tensor` and
+  `Discretizer::validate_pair`. The singular/plural empty-tensor messages were
+  preserved deliberately: they are correct for their respective arities, not drift.
+  All pre-existing exception messages are unchanged, so no existing test needed
+  editing.
+- [x] **T2.3** (D2) `direction` given an in-class initializer
+  (`= bound_dir_t::RIGHT`), plus regression test
+  `Discretizer.DefaultConstructedCPPFImdlpTransformsDeterministically`.
+- [x] **T2.4** (D6) `entropy` guard is now `end <= start || end - start < 2`.
+- [x] **T2.5** (D7) Signed/unsigned comparison in `linspace` fixed.
+- [x] **T2.6** (D5) `cacheEnt_t` / `cacheIg_t` keys retyped to `size_t`.
+
+**Verification.** 85/85 tests pass (82 pre-existing, unmodified, plus 3 new).
+Debug and release builds are warning-free. Coverage of `src/` is 99.1% lines /
+100% functions; the four uncovered lines are gcov closing-brace artifacts in
+`CPPFImdlp.h` (:148, :169, :184) and `Discretizer.cpp` (:34), all in code Phase 2
+did not touch.
+
+The two contiguity tests were confirmed to have teeth: with `contiguous()`
+temporarily reverted they fail, and they pass with it restored. The `direction`
+test cannot be shown to fail the same way — the pre-fix behaviour was
+*indeterminate*, not reliably wrong, so it passed before the fix too. It locks in
+the now-defined behaviour rather than demonstrating the old bug.
 
 ### Phase 3 — `Metrics` redesign
 

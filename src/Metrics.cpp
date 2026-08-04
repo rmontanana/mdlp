@@ -42,7 +42,9 @@ namespace mdlp {
 
     precision_t Metrics::entropy(size_t start, size_t end)
     {
-        if (end - start < 2)
+        // end <= start must be tested first: the subtraction is unsigned, so an
+        // inverted interval would wrap to a huge value and slip past the guard.
+        if (end <= start || end - start < 2)
             return 0;
 
         // Check cache first with read lock
