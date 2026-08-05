@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 3.0.0
 
+### Added
+
+- **Move-aware `fit()`**: `fit(samples_t&&, labels_t&&)` on every discretizer, so a
+  caller with no further use for its data can hand over the buffers instead of
+  having them copied. It is virtual, so it works through a `Discretizer&` like the
+  rest of the interface, and the base provides a forwarding default. `BinDisc` also
+  gains an rvalue form of its samples-only `fit()`.
+  The benefit is **memory, not speed** — measured, see `docs/benchmarks.md`.
+- **`transform(const samples_t&, labels_t& out) const`**: writes into a buffer the
+  caller owns, avoiding the copy otherwise needed to keep a result past the next
+  `transform()` call. The existing returning overload is unchanged.
+- `bench/` benchmark harness and `make bench`, behind `ENABLE_BENCHMARK`
+  (default OFF, Release-only). Baseline results in `docs/benchmarks.md`.
+
 ### Fixed
 
 - **Tensor discretization silently produced wrong results for non-contiguous input.**
@@ -26,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Entropy and information-gain cache keys were typed `int` while all callers pass
   `size_t`, silently truncating interval indices. Retyped to `size_t`.
 - Fixed a signed/unsigned comparison in `BinDisc::linspace`.
+- `BinDisc::min_bins` was a `const` non-static member, which deletes the copy and
+  move assignment operators. `BinDisc` and `PKIDisc` were therefore not assignable.
+  Changed to `static constexpr`.
 
 - `Metrics::setData()` could not replace the data it worked on. `y` and `indices`
   were reference members, and C++ cannot rebind a reference, so `setData()`

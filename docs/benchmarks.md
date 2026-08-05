@@ -1,0 +1,295 @@
+# Performance baseline — 3.0.0
+
+Baseline measurements for the 3.0.0 release, taken before any performance work.
+This is the reference every later phase compares against, so that improvements can
+be reported as measured deltas rather than asserted.
+
+Corresponds to Phase 0 of [RELEASE_PLAN_V3.md](../RELEASE_PLAN_V3.md).
+
+## Running it
+
+```bash
+export PATH="$HOME/miniconda3/bin:$PATH"   # conan
+make bench                                 # full run, ~4 minutes
+make bench LEVEL=quick                     # stops at n=10,000, ~seconds
+```
+
+`make bench` forces a Release build (`-O3`) into `build_bench/` with
+`-DENABLE_BENCHMARK=ON`. The benchmark target is off by default and is never part
+of `make test`. Almost all of a full run is the two largest `CPPFImdlp::fit`
+cells — see the scaling note below.
+
+The harness has no external dependencies. Data is generated from class-conditional
+normal distributions with a fixed seed (42), so every run measures identical work.
+
+`make bench` also stores a machine-readable result under
+`docs/benchmarks/results/`, fingerprinted with the CPU, core topology, RAM, OS,
+compiler and git commit. `LABEL=name` disambiguates two machines with the same CPU.
+
+### Which statistic to use
+
+Repetition counts are **fixed** and identical on every platform, deliberately. The
+minimum of a sample shrinks as the sample grows, so comparing minima taken with
+different rep counts would systematically favour whichever machine ran more of
+them.
+
+- **Minimum** — for before/after comparisons on *one* machine. Most stable figure
+  under load.
+- **Median** — for comparisons *across* machines. This is what
+  `docs/benchmarks-platforms.md` reports.
+
+## Comparing across platforms
+
+```bash
+# on each machine
+make bench
+git add docs/benchmarks/results && git commit -m "bench: <machine>" && git push
+
+# anywhere, once the results are gathered
+git pull
+make bench-report        # regenerates docs/benchmarks-platforms.md
+```
+
+Results are versioned in git, so they accumulate through the normal workflow. Run
+on a **clean working tree** — the driver records whether the tree was dirty and the
+report flags such results as not reproducible from the recorded commit.
+
+The generated comparison reports scaling exponents per platform, median times,
+relative speed against a reference platform, and a per-platform noise fingerprint.
+It warns loudly when results span different commits, `--level` settings or library
+versions instead of averaging incomparable numbers.
+
+Two limits are stated there and repeated here because they are easy to forget:
+
+- **The compiler is not unified.** AppleClang on macOS, GCC on Linux. Every
+  cross-platform difference is hardware *and* toolchain; none of it is a clean CPU
+  comparison.
+- **Anything smaller than a platform's noise figure is not a real difference.**
+
+No benchmarking runs in CI: GitHub's shared runners vary by more than the effects
+being measured.
+
+## Environment
+
+| | |
+|---|---|
+| Machine | Apple M4 Max, 14 cores |
+| OS | macOS 26.5.2 (arm64) |
+| Compiler | Apple clang 21.0.0 (`clang-2100.1.1.101`) |
+| Build | `CMAKE_BUILD_TYPE=Release`, `-O3`, C++17 |
+| libtorch | 2.7.1 (via conan) |
+| Library version reported | 2.1.3 (bump to 3.0.0 is T8.6) |
+| Commit | Phase 3 complete (`3e0fb52`) |
+| Dataset | 3 classes, class-conditional normals, seed 42 |
+
+## Results
+
+All times in milliseconds.
+
+| benchmark | n | reps | min | median | mean |
+|---|---:|---:|---:|---:|---:|
+| CPPFImdlp::fit | 100 | 500 | 0.0149 | 0.0166 | 0.0174 |
+| BinDisc::fit (uniform) | 100 | 500 | 0.0001 | 0.0002 | 0.0002 |
+| BinDisc::fit (quantile) | 100 | 500 | 0.0004 | 0.0005 | 0.0005 |
+| PKIDisc::fit (sqrt) | 100 | 500 | 0.0005 | 0.0005 | 0.0005 |
+| CPPFImdlp::transform | 100 | 500 | 0.0001 | 0.0002 | 0.0002 |
+| BinDisc::transform | 100 | 500 | 0.0001 | 0.0002 | 0.0002 |
+| *(reference)* copy X + y | 100 | 500 | 0.0000 | 0.0000 | 0.0000 |
+| CPPFImdlp::fit | 1 000 | 200 | 0.7795 | 0.8213 | 0.8277 |
+| BinDisc::fit (uniform) | 1 000 | 200 | 0.0013 | 0.0016 | 0.0016 |
+| BinDisc::fit (quantile) | 1 000 | 200 | 0.0048 | 0.0056 | 0.0057 |
+| PKIDisc::fit (sqrt) | 1 000 | 200 | 0.0050 | 0.0057 | 0.0057 |
+| CPPFImdlp::transform | 1 000 | 200 | 0.0020 | 0.0022 | 0.0022 |
+| BinDisc::transform | 1 000 | 200 | 0.0015 | 0.0018 | 0.0017 |
+| *(reference)* copy X + y | 1 000 | 200 | 0.0001 | 0.0001 | 0.0001 |
+| CPPFImdlp::fit | 10 000 | 50 | 78.6715 | 80.7728 | 81.2756 |
+| BinDisc::fit (uniform) | 10 000 | 50 | 0.0067 | 0.0072 | 0.0073 |
+| BinDisc::fit (quantile) | 10 000 | 50 | 0.0593 | 0.0601 | 0.0643 |
+| PKIDisc::fit (sqrt) | 10 000 | 50 | 0.0597 | 0.0656 | 0.0646 |
+| CPPFImdlp::transform | 10 000 | 50 | 0.0349 | 0.0390 | 0.0389 |
+| BinDisc::transform | 10 000 | 50 | 0.0178 | 0.0196 | 0.0227 |
+| *(reference)* copy X + y | 10 000 | 50 | 0.0008 | 0.0011 | 0.0011 |
+| CPPFImdlp::fit | 100 000 | 10 | 8248.06 | 8354.63 | 8354.81 |
+| BinDisc::fit (uniform) | 100 000 | 10 | 0.1056 | 0.1183 | 0.1231 |
+| BinDisc::fit (quantile) | 100 000 | 10 | 1.4817 | 1.4912 | 1.4935 |
+| PKIDisc::fit (sqrt) | 100 000 | 10 | 1.4900 | 1.5122 | 1.5112 |
+| CPPFImdlp::transform | 100 000 | 10 | 0.5707 | 0.5715 | 0.5750 |
+| BinDisc::transform | 100 000 | 10 | 0.3713 | 0.3881 | 0.3909 |
+| *(reference)* copy X + y | 100 000 | 10 | 0.0095 | 0.0095 | 0.0095 |
+
+## Findings
+
+### 1. `CPPFImdlp::fit` is quadratic, not O(n log n)
+
+This is the headline result, and it was not anticipated by the release plan.
+
+| n | min (ms) | factor vs. previous |
+|---:|---:|---:|
+| 100 | 0.0149 | — |
+| 1 000 | 0.7795 | **52×** |
+| 10 000 | 78.67 | **101×** |
+| 100 000 | 8 248.06 | **105×** |
+
+Ten times the data costs roughly **one hundred times** the work. That is
+unambiguously O(n²). The `ARCHITECTURE.md` draft in the superseded 2.2.0 plan
+claimed "MDLP: O(n log n) for sorting + O(n) per recursion level"; the measurement
+contradicts it.
+
+The cost is in `CPPFImdlp::getCandidate()` (`src/CPPFImdlp.cpp:140-172`). For every
+class boundary in the interval it calls `metrics.entropy(start, idx)` and
+`metrics.entropy(idx, end)`. Each *uncached* entropy call walks its whole interval
+twice (`src/Metrics.cpp`), so summing over the O(n) boundary positions gives O(n²)
+work per `getCandidate` call.
+
+This was confirmed by instrumenting `Metrics::entropy` to count calls, cache hits
+and elements actually scanned, rather than inferred from the timings:
+
+| n | entropy calls | cache hits | elements scanned | scanned / n² |
+|---:|---:|---:|---:|---:|
+| 1 000 | 1 903 | 752 | 642 268 | 0.642 |
+| 2 000 | 4 545 | 1 762 | 2 996 138 | 0.749 |
+| 4 000 | 9 453 | 3 627 | 12 433 718 | 0.777 |
+| 8 000 | 20 691 | 8 091 | 50 312 412 | 0.786 |
+| 16 000 | 46 472 | 18 570 | 206 624 902 | 0.807 |
+
+Elements scanned **quadruples on every doubling of n**, and `scanned / n²`
+converges to a constant ≈0.8 — the definition of Θ(n²). The timing side agrees
+independently: the log-log fit over the largest three sizes gives an exponent of
+**2.03 with R² = 1.000** (see `docs/benchmarks-platforms.md`). Note the shape of it: the
+*number* of entropy calls only doubles per doubling (so it is O(n)), but each call
+rescans a large interval. Memoization is working — about 40% of calls hit the cache
+— and is still powerless against this, because the misses are precisely the
+expensive full-interval scans.
+
+The fix is to compute the entropies incrementally — carry running per-class counts
+as `idx` advances instead of rescanning from `start` each time — which turns
+`getCandidate` into O(n) plus O(k) per step for k classes. This is a Phase 7 item
+and is worth far more than the "20-30%" the original plan hoped for: at n = 100 000
+the current implementation spends over eight seconds on a single feature.
+
+**Practical consequence today:** discretizing a 100 000-row dataset with MDLP costs
+~8 s *per feature*. Users with large datasets should prefer `BinDisc` or `PKIDisc`,
+which are four orders of magnitude faster at that size, until Phase 7 lands.
+
+### 2. Input copying is negligible, which reframes Phase 5
+
+The `copy X + y` reference row measures exactly what move semantics (T5.1) would
+eliminate. At n = 100 000 it is **0.0095 ms against 8 248 ms** of `CPPFImdlp::fit`
+— about **0.0001%** of the call.
+
+So T5.1 should be justified on memory and API ergonomics, not throughput. There is
+no measurable speed-up available there, and claiming one would be dishonest.
+`CPPFImdlp::fit` currently holds `X`, `y`, `indices`, and (since Phase 3) a second
+copy of `y` and `indices` inside `Metrics` — that duplication is the real cost, and
+it is a memory cost.
+
+The one place copying is a visible share of the work is `BinDisc::fit (uniform)`,
+where the 0.0095 ms copy sits against 0.1056 ms of total work (~9%). But that
+strategy does not copy the input at all today — the figure is only a scale
+reference. `BinDisc::fit (quantile)` genuinely copies to sort, and there a move
+overload could avoid the copy when the caller surrenders its data.
+
+### 3. The unsupervised discretizers scale as expected
+
+`BinDisc::fit (uniform)` is linear (a single min/max pass): 10× the data costs
+about 10-16× the time. `BinDisc::fit (quantile)` and `PKIDisc::fit` are dominated
+by a sort and scale close to n log n. `transform` is linear for both. Nothing here
+needs attention.
+
+`PKIDisc::fit (sqrt)` tracks `BinDisc::fit (quantile)` almost exactly, as expected
+— it selects a bin count and delegates.
+
+## Implications for the remaining phases
+
+| Phase | What the baseline says |
+|---|---|
+| 5 — move semantics | Justify on memory and ergonomics. No throughput gain is available; T5.3 should report the measured null result rather than hunt for a delta. |
+| 7 — performance | Retarget onto `getCandidate`'s quadratic entropy recomputation. This is the only finding of real magnitude, and it dwarfs everything else in the plan. |
+| 8 — docs | Any complexity claim written into `ARCHITECTURE.md` must match this table. MDLP is O(n²) today. |
+
+## Phase 5 — measured impact of move semantics
+
+Measured after T5.1 and T5.2 landed, on the same machine. The Phase 0 table above
+stays frozen as the reference; these are the new rows.
+
+### Run-to-run variance comes first
+
+Before reading any delta, note how noisy this machine is at the largest size. The
+same unchanged benchmark, `BinDisc::fit (quantile)` at n = 100 000, measured across
+three runs:
+
+| run | min (ms) |
+|---|---:|
+| 1 (Phase 0) | 1.4817 |
+| 2 | 1.4347 |
+| 3 | 1.5086 |
+
+That is a **~5% spread with nothing changed**. Any effect smaller than that cannot
+be claimed from these measurements. `CPPFImdlp::fit` at the same size is steadier
+(8248.06 / 8343.75 / 8349.55, ~1.2% spread) because each rep is so long.
+
+### T5.1 — `fit()` with rvalues: no measurable change
+
+| n | fit (copy) | fit (move) | delta |
+|---:|---:|---:|---:|
+| 100 | 0.0145 | 0.0145 | 0.0% |
+| 1 000 | 0.7114 | 0.7080 | −0.5% |
+| 10 000 | 79.29 | 79.84 | +0.7% |
+| 100 000 | 8 349.55 | 8 410.30 | +0.7% |
+
+Exactly the null result Phase 0 predicted: the copies removed were 0.0001% of the
+call, so no delta was available to find. The two directions of the sign here are
+noise, not a regression.
+
+For `BinDisc` QUANTILE, where the copy is a real share of a much cheaper operation,
+the comparison needs the pool-copy control row — the plain row reuses one hot
+buffer, while the move row must touch a fresh pool slot each rep, and that
+difference in cache locality is larger than the effect being measured:
+
+| n | quantile (pool copy) | quantile (move) | delta |
+|---:|---:|---:|---:|
+| 100 | 0.0004 | 0.0004 | 0.0% |
+| 1 000 | 0.0047 | 0.0047 | 0.0% |
+| 10 000 | 0.0606 | 0.0605 | −0.2% |
+| 100 000 | 1.4568 | 1.4328 | −1.6% |
+
+The move version is consistently equal or slightly faster, and at n = 100 000 it
+avoids a 400 KB copy. But −1.6% sits well inside the ~5% run-to-run variance, so
+**this is a memory result, not a speed result.**
+
+An earlier run without the control row showed the move version 8.5% *slower*,
+which is what prompted adding the control. That figure was run-to-run noise
+compounded by the pool-locality difference; it did not survive a fair comparison.
+
+### T5.2 — `transform()` into a caller buffer: no measurable change
+
+| n | transform (returns ref) | transform (caller buffer) |
+|---:|---:|---:|
+| 100 | 0.0001 | 0.0001 |
+| 1 000 | 0.0018 | 0.0019 |
+| 10 000 | 0.0351 | 0.0350 |
+| 100 000 | 0.5547 | 0.5666 |
+
+Also null, and for a reason worth recording: the returning overload already calls
+`clear()` rather than reallocating, so repeated calls at the same size reuse the
+existing capacity. There was never a per-call allocation to remove.
+
+The real benefit is one this benchmark cannot show — a caller who needs to *own*
+the result currently has to copy out of the internal buffer, because the returned
+reference is invalidated by the next `transform()`. The two-argument overload
+removes that copy and lets the caller keep one buffer across calls.
+
+### Verdict
+
+Phase 5 delivered what Phase 0 said was available: **memory and ergonomics, no
+throughput**. All rows sit within the ≤5% regression ceiling. The plan's original
+"20-30% performance improvement" would not have come from here, and the honest
+report is that it did not come from here.
+
+The performance work that matters is still Phase 7 — the quadratic `getCandidate`.
+
+## Regression policy
+
+The success criteria in the release plan allow at most a **5% regression** against
+the minimum times in this table. Re-run `make bench` on the same machine before
+tagging 3.0.0 and record the comparison here.

@@ -8,7 +8,7 @@
 
 namespace mdlp {
 
-    labels_t& Discretizer::transform(const samples_t& data)
+    void Discretizer::transform(const samples_t& data, labels_t& out) const
     {
         // Input validation
         if (data.empty()) {
@@ -18,19 +18,29 @@ namespace mdlp {
             throw std::runtime_error("Discretizer not fitted yet or no valid cut points found");
         }
 
-        discretizedData.clear();
-        discretizedData.reserve(data.size());
+        out.clear();
+        out.reserve(data.size());
         // CutPoints always have at least two items
         // Have to ignore first and last cut points provided
         auto first = cutPoints.begin() + 1;
         auto last = cutPoints.end() - 1;
-        auto bound = direction == bound_dir_t::LEFT ? std::lower_bound<std::vector<precision_t>::iterator, precision_t> : std::upper_bound<std::vector<precision_t>::iterator, precision_t>;
+        auto bound = direction == bound_dir_t::LEFT ? std::lower_bound<std::vector<precision_t>::const_iterator, precision_t> : std::upper_bound<std::vector<precision_t>::const_iterator, precision_t>;
         for (const precision_t& item : data) {
             auto pos = bound(first, last, item);
             auto number = pos - first;
-            discretizedData.push_back(static_cast<label_t>(number));
+            out.push_back(static_cast<label_t>(number));
         }
+    }
+    labels_t& Discretizer::transform(const samples_t& data)
+    {
+        transform(data, discretizedData);
         return discretizedData;
+    }
+    void Discretizer::fit(samples_t&& X_, labels_t&& y_)
+    {
+        // Default: no move-specific handling. Named rvalue references are
+        // lvalues, so this binds to the copying overload.
+        fit(X_, y_);
     }
     labels_t& Discretizer::fit_transform(samples_t& X_, labels_t& y_)
     {

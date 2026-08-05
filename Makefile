@@ -1,10 +1,11 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: debug release install test conan-create viewcoverage
+.PHONY: debug release install test bench bench-report conan-create viewcoverage
 lcov := lcov
 
 f_debug = build_debug
 f_release = build_release
+f_bench = build_bench
 genhtml = genhtml
 docscdir = docs
 
@@ -71,7 +72,27 @@ test: ## Build Debug version and run tests
 	fi
 	@echo ">>> Updating coverage badge..."
 	@env python update_coverage.py $(f_debug)/tests
-	@echo ">>> Done"
+	@echo ">>> Done"  
+
+# Benchmarks
+# ----------
+# LEVEL=quick stops at n=10,000 (seconds); LEVEL=full adds n=100,000 (minutes).
+# LABEL disambiguates machines with the same CPU, e.g. LABEL=studio.
+LEVEL ?= full
+LABEL ?=
+python3 := python3
+
+bench: ## Build and run the benchmarks, storing the result (LEVEL=quick|full, LABEL=name)
+	@echo ">>> Building benchmarks (Release)..."
+	@if [ -d $(f_bench) ]; then rm -fr $(f_bench); fi
+	@conan install . --build=missing -of $(f_bench) -s build_type=Release -o enable_testing=False
+	@cmake -S . -B $(f_bench) -DCMAKE_TOOLCHAIN_FILE=$(f_bench)/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BENCHMARK=ON
+	@cmake --build $(f_bench) --config Release -j $(JOBS)
+	@echo ">>> Running benchmarks..."
+	@$(python3) scripts/benchmarks.py run --level $(LEVEL) $(if $(LABEL),--label $(LABEL),)
+
+bench-report: ## Regenerate the cross-platform benchmark comparison
+	@$(python3) scripts/benchmarks.py report
 
 viewcoverage: ## View the html coverage report
 	@which $(genhtml) >/dev/null || (echo ">>> Please install lcov (genhtml not found)"; exit 1)

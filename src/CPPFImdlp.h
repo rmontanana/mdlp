@@ -103,6 +103,19 @@ namespace mdlp {
         void fit(samples_t& X_, labels_t& y_) override;
 
         /**
+         * @brief Fit the discretizer, adopting the caller's buffers
+         * @param X_ Input samples; surrendered by the caller
+         * @param y_ Labels; surrendered by the caller
+         *
+         * Same result as the copying overload, without duplicating X_ and y_ into
+         * this object. Note that Metrics still keeps its own copy of the labels,
+         * so this halves rather than eliminates the extra memory.
+         *
+         * @warning If this throws, X_ and y_ have already been moved from.
+         */
+        void fit(samples_t&& X_, labels_t&& y_) override;
+
+        /**
          * @brief Get the maximum depth reached during fitting
          * @return Maximum recursion depth
          */
@@ -122,6 +135,8 @@ namespace mdlp {
         Metrics metrics;
         size_t num_cut_points = numeric_limits<size_t>::max();
         static indices_t sortIndices(samples_t&, labels_t&);
+        // Shared body of both fit() overloads; assumes X and y are already set.
+        void fit_impl();
         void computeCutPoints(size_t, size_t, int);
         void resizeCutPoints();
         bool mdlp(size_t, size_t, size_t);

@@ -51,6 +51,21 @@ namespace mdlp {
     {
         X = X_;
         y = y_;
+        fit_impl();
+    }
+
+    void CPPFImdlp::fit(samples_t&& X_, labels_t&& y_)
+    {
+        X = std::move(X_);
+        y = std::move(y_);
+        fit_impl();
+    }
+
+    void CPPFImdlp::fit_impl()
+    {
+        // Validation order is load-bearing: compute_max_num_cut_points() rejects
+        // an out-of-range proposed_cuts before the size checks run, and tests
+        // depend on which message comes out.
         num_cut_points = compute_max_num_cut_points();
         depth = 0;
         discretizedData.clear();
@@ -61,7 +76,9 @@ namespace mdlp {
         if (X.empty() || y.empty()) {
             throw invalid_argument("X and y must have at least one element");
         }
-        indices = sortIndices(X_, y_);
+        // Sorts the members, not the caller's vectors: after a move the latter no
+        // longer hold the data.
+        indices = sortIndices(X, y);
         metrics.setData(y, indices);
         computeCutPoints(0, X.size(), 1);
         sort(cutPoints.begin(), cutPoints.end());

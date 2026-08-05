@@ -53,7 +53,20 @@ namespace mdlp {
          * @endcode
          */
         void fit(samples_t& X_, labels_t& y) override;
+        /**
+         * @brief Fit the discretizer, adopting the caller's buffer
+         * @param X_ Input samples; surrendered by the caller
+         * @param y Labels; read for its size to pick the bin count, then ignored
+         *
+         * @warning If this throws, X_ has already been moved from.
+         */
+        void fit(samples_t&& X_, labels_t&& y) override;
+        // Without this, declaring fit() above would hide BinDisc's samples-only
+        // overloads from PKIDisc's users.
+        using BinDisc::fit;
     private:
+        // Picks n_bins from the sample count; shared by both fit() overloads.
+        void select_bins(size_t n_samples);
         compute_strategy_t compute_strategy;
     };
 }

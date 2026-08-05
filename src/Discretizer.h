@@ -88,11 +88,49 @@ namespace mdlp {
         virtual void fit(samples_t& X_, labels_t& y_) = 0;
 
         /**
+         * @brief Fit the discretizer, taking ownership of the inputs
+         * @param X_ Input samples; surrendered by the caller
+         * @param y_ Labels; surrendered by the caller
+         *
+         * Equivalent in result to the lvalue overload, but lets implementations
+         * adopt the caller's buffers instead of copying them. Use it when the
+         * caller has no further use for X_ and y_.
+         *
+         * The default implementation simply forwards to the copying overload, so
+         * a discretizer that does not override this still behaves correctly.
+         *
+         * @note Measured gain is memory, not speed: at n = 100 000 the copies this
+         *       avoids are ~0.0001% of a CPPFImdlp::fit call. See docs/benchmarks.md.
+         * @warning If this throws, X_ and y_ have already been moved from and are
+         *          in a valid but unspecified state.
+         * @warning A derived class that declares any `fit` **hides every** `fit`
+         *          overload inherited from here, including this one. Add
+         *          `using Discretizer::fit;` (or override this too) or callers
+         *          will not be able to pass rvalues to your subclass.
+         */
+        virtual void fit(samples_t&& X_, labels_t&& y_);
+
+        /**
          * @brief Transform data using previously computed cut points
          * @param data Input samples to discretize
          * @return Discretized labels as a reference to internal storage
+         *
+         * @note The returned reference is invalidated by the next call to
+         *       transform() on this object. Use the two-argument overload to
+         *       write into a buffer you own.
          */
         labels_t& transform(const samples_t& data);
+
+        /**
+         * @brief Transform data into a caller-supplied buffer
+         * @param data Input samples to discretize
+         * @param out Destination; cleared and resized to match data
+         *
+         * Avoids the copy a caller would otherwise make to keep the result, and
+         * lets a buffer be reused across calls. Unlike the returning overload,
+         * this does not touch the object's internal storage, so it is const.
+         */
+        void transform(const samples_t& data, labels_t& out) const;
 
         /**
          * @brief Fit and transform in a single call
