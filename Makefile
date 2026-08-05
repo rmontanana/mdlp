@@ -61,12 +61,14 @@ test: ## Build Debug version and run tests
 	@echo ">>> Generating coverage report..."
 	@cd $(f_debug)/tests && $(lcov) --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch --ignore-errors inconsistent --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info '/usr/*' --output-file coverage.info >/dev/null 2>&1; \
+	$(lcov) --remove coverage.info 'v1/*' --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info 'lib/*' --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info 'libtorch/*' --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info 'tests/*' --output-file coverage.info >/dev/null 2>&1; \
 	$(lcov) --remove coverage.info 'gtest/*' --output-file coverage.info >/dev/null 2>&1; \
-	$(lcov) --remove coverage.info '*/.conan2/*' --ignore-errors unused --output-file coverage.info >/dev/null 2>&1;
-	@genhtml $(f_debug)/tests/coverage.info --demangle-cpp --output-directory $(f_debug)/tests/coverage --title "Discretizer mdlp Coverage Report" -s -k -f --legend
+	$(lcov) --remove coverage.info '*/.conan2/*' --ignore-errors unused --output-file coverage.info >/dev/null 2>&1; \
+	$(lcov) --remove coverage.info '/Applications/*' --output-file coverage.info >/dev/null 2>&1; 
+	@genhtml $(f_debug)/tests/coverage.info --demangle-cpp --output-directory $(f_debug)/tests/coverage --ignore-errors missing UNK --ignore-errors category,category UNK --title "Discretizer mdlp Coverage Report" -s -k -f --legend
 	@echo "* Coverage report is generated at $(f_debug)/tests/coverage/index.html"
 	@which python || (echo ">>> Please install python"; exit 1)
 	@if [ ! -f $(f_debug)/tests/coverage.info ]; then \

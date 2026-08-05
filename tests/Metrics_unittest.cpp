@@ -4,6 +4,8 @@
 // SPDX - License - Identifier: MIT
 // ****************************************************************
 
+#include <type_traits>
+#include <utility>
 #include "gtest/gtest.h"
 #include "Metrics.h"
 
@@ -28,6 +30,17 @@ namespace mdlp {
         EXPECT_EQ(1, computeNumClasses(4, 8));
         EXPECT_EQ(2, computeNumClasses(0, 10));
         EXPECT_EQ(2, computeNumClasses(8, 10));
+    }
+
+    TEST_F(TestMetrics, NumClassesOutOfRange)
+    {
+        EXPECT_EQ(0, computeNumClasses(0, 20)) << "end beyond indices.size()";
+        EXPECT_EQ(0, computeNumClasses(10, 12)) << "start at indices.size()";
+        EXPECT_EQ(0, computeNumClasses(11, 12)) << "start beyond indices.size()";
+
+        indices_t empty_indices = {};
+        setData(y_, empty_indices);
+        EXPECT_EQ(0, computeNumClasses(0, 1)) << "empty indices";
     }
 
     TEST_F(TestMetrics, Entropy)
@@ -82,5 +95,65 @@ namespace mdlp {
         
         // Test edge case: start == indices.size()
         EXPECT_EQ(0, entropy(2, 2)) << "Should return 0 when start == indices.size()";
+    }
+
+    // Regression: y and indices used to be reference members bound at
+    // construction. C++ cannot rebind a reference, so setData() assigned
+    // *through* them and silently overwrote the caller's original vectors
+    // instead of switching to the new ones.
+    TEST_F(TestMetrics, SetDataDoesNotClobberTheConstructorVectors)
+    {
+        const labels_t y_before = y_;
+
+        labels_t other_y = { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
+        setData(other_y, indices_);
+
+        // The new labels are in effect: a single class means zero entropy.
+        EXPECT_NEAR(0.0f, entropy(0, 10), precision);
+        // ...and the vector handed to the constructor is untouched.
+        EXPECT_EQ(y_before, y_);
+    }
+
+    TEST_F(TestMetrics, SetDataSwitchesToTheNewDataAndDropsStaleCache)
+    {
+        EXPECT_NEAR(1.0f, entropy(0, 10), precision);  // populates the cache
+
+        labels_t other_y = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        indices_t other_indices = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+        setData(other_y, other_indices);
+
+        // A stale cache would still answer 1.0 here.
+        EXPECT_NEAR(0.0f, entropy(0, 10), precision);
+
+        // Mutating the caller's vector afterwards must not reach into Metrics.
+        other_y = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
+        EXPECT_NEAR(0.0f, entropy(0, 10), precision);
+    }
+
+    // Metrics used to hold a std::mutex, which made it neither copyable nor
+    // movable and, by extension, made CPPFImdlp non-movable too.
+    TEST(Metrics, IsCopyableAndMovable)
+    {
+        static_assert(std::is_copy_constructible_v<Metrics>, "Metrics must be copy constructible");
+        static_assert(std::is_copy_assignable_v<Metrics>, "Metrics must be copy assignable");
+        static_assert(std::is_move_constructible_v<Metrics>, "Metrics must be move constructible");
+        static_assert(std::is_move_assignable_v<Metrics>, "Metrics must be move assignable");
+
+        labels_t y = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
+        indices_t indices = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+        Metrics original(y, indices);
+        const precision_t expected = original.entropy(0, 10);
+
+        Metrics copied(original);
+        EXPECT_NEAR(expected, copied.entropy(0, 10), 1e-6);
+
+        Metrics moved(std::move(original));
+        EXPECT_NEAR(expected, moved.entropy(0, 10), 1e-6);
+
+        // A copy must be independent of its source.
+        labels_t other_y = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        copied.setData(other_y, indices);
+        EXPECT_NEAR(0.0f, copied.entropy(0, 10), 1e-6);
+        EXPECT_NEAR(expected, moved.entropy(0, 10), 1e-6);
     }
 }

@@ -116,7 +116,10 @@ namespace mdlp {
         indices_t indices = indices_t();
         samples_t X = samples_t();
         labels_t y = labels_t();
-        Metrics metrics = Metrics(y, indices);
+        // Default-constructed: fit() calls metrics.setData(y, indices) before any
+        // evaluation. It must not be constructed from this object's own y/indices,
+        // which would make the class unsafe to copy or move.
+        Metrics metrics;
         size_t num_cut_points = numeric_limits<size_t>::max();
         static indices_t sortIndices(samples_t&, labels_t&);
         void computeCutPoints(size_t, size_t, int);

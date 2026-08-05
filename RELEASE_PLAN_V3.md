@@ -2,7 +2,7 @@
 
 **Target version:** 3.0.0 (major — breaking changes)
 **Branch:** `release/3.0.0`
-**Status:** Phases 1 and 2 complete; Phase 0 and 3+ pending
+**Status:** Phases 1, 2 and 3 complete; Phase 0 and 4+ pending
 **Supersedes:** `RELEASE_PLAN_2.2.0.md` (see [Appendix B](#appendix-b--corrections-to-the-superseded-220-plan))
 
 > **This document is the single source of truth for the 3.0.0 release.**
@@ -281,22 +281,50 @@ test cannot be shown to fail the same way — the pre-fix behaviour was
 *indeterminate*, not reliably wrong, so it passed before the fix too. It locks in
 the now-defined behaviour rather than demonstrating the old bug.
 
-### Phase 3 — `Metrics` redesign
+### Phase 3 — `Metrics` redesign ✅ COMPLETE
 
-Addresses D3 and D4 together; both stem from the same design choice.
+Addressed D3 and D4 together; both stemmed from the same design choice.
 
-- **T3.1** Replace the reference members with an owning or pointer-based design so
-  `setData` can genuinely rebind. Owning copies are the simpler option and match
-  how `CPPFImdlp` already copies `X_`/`y_` in `fit`.
-- **T3.2** Make `Metrics` copyable/movable. If the cache mutex must stay, hold it
-  via `std::unique_ptr<std::mutex>` or drop internal locking and document `Metrics`
-  as externally synchronized — the latter is preferable, since a per-instance
-  mutex buys nothing for the single-threaded recursive use in `computeCutPoints`.
-- **T3.3** Decide and **document** the threading contract: currently the mutex
-  implies thread safety the class does not actually deliver (the caches are guarded
-  but the data members are not). Under-promising is fine; promising falsely is not.
-- **T3.4** Add tests covering `setData` with genuinely different vectors — the case
-  that is broken today and currently untested.
+- [x] **T3.1** Reference members replaced with **owning copies**, so `setData`
+  genuinely switches to the new data and leaves the caller's vectors untouched.
+  Owning also avoids the trap a pointer member would have created: `Metrics` is a
+  member of `CPPFImdlp` and would have pointed at its *sibling* members, so every
+  copy or move of `CPPFImdlp` would need custom constructors to re-point it or the
+  pointers would dangle. Owning keeps the rule of zero.
+- [x] **T3.2** The mutex is removed, so `Metrics` is copyable and movable by rule
+  of zero — and `CPPFImdlp` with it. Asserted by
+  `Metrics.IsCopyableAndMovable` and `FImdlp.IsCopyableAndMovable`.
+- [x] **T3.3** Threading contract documented in the `Metrics` class doc: not
+  thread-safe, external synchronization required, and explicitly noting that
+  `entropy()` and `informationGain()` mutate state despite reading like queries.
+  Distinct instances share nothing.
+- [x] **T3.4** `setData` covered by `SetDataDoesNotClobberTheConstructorVectors`
+  (the regression) and `SetDataSwitchesToTheNewDataAndDropsStaleCache` (a guard
+  against a stale cache surviving a data switch).
+
+**Also removed:** the `numClasses` member. It was assigned in the constructor and
+in `setData` but never read anywhere, so each `setData` paid a full pass plus a
+`std::set` allocation for nothing. `computeNumClasses()` itself is unchanged and
+is still used by `CPPFImdlp::mdlp()`. Removing it did drop coverage of the
+out-of-range guard in `computeNumClasses`, which that dead call had been covering
+incidentally; `TestMetrics.NumClassesOutOfRange` now covers it deliberately.
+
+**Trade-off accepted:** `CPPFImdlp` copies `y` and `indices` into its `Metrics`,
+so both vectors now exist twice for the duration of a fit. Correctness and safe
+copy/move semantics were judged worth the memory. Making `Metrics` the single
+owner and having `CPPFImdlp` read through it would remove the duplication; that is
+a larger refactor of `safe_X_access`/`safe_y_access` and is a candidate for
+Phase 7.
+
+**Verification.** 90/90 tests pass. Debug and release builds are warning-free.
+Coverage of `src/` is 99.1% lines / 100% functions, with `Metrics.cpp` at 100%;
+the four uncovered lines are the same gcov closing-brace artifacts as before.
+
+The `setData` regression test was confirmed to have teeth: with the reference
+members temporarily restored it fails, reporting the constructor's vector clobbered
+from `{1,1,1,1,1,2,2,2,2,2}` to `{3,3,3,3,3,3,3,3,3,3}`. The copy/move assertions
+are self-proving — with reference members restored the test file no longer
+compiles, since `is_copy_assignable_v<Metrics>` becomes false.
 
 ### Phase 4 — Error handling
 
@@ -313,7 +341,7 @@ Addresses D3 and D4 together; both stem from the same design choice.
 
 ### Phase 5 — Move semantics and buffer reuse
 
-Depends on Phase 3 (D4 blocks all of it).
+Unblocked: Phase 3 made `CPPFImdlp` movable, which D4 had prevented.
 
 - **T5.1** Add `fit(samples_t&&, labels_t&&)` overloads; `CPPFImdlp::fit` currently
   copies both inputs (`CPPFImdlp.cpp:52-53`).

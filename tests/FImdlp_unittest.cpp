@@ -6,6 +6,8 @@
 
 #include <fstream>
 #include <iostream>
+#include <type_traits>
+#include <utility>
 #include <ArffFiles.hpp>
 #include "gtest/gtest.h"
 #include "Metrics.h"
@@ -467,5 +469,41 @@ namespace mdlp {
             std::cout << value << " ";
         }
         std::cout << std::endl;
+    }
+
+    // CPPFImdlp holds a Metrics by value. While Metrics contained a std::mutex it
+    // was neither copyable nor movable, which silently deleted CPPFImdlp's copy
+    // and move constructors too. Moving is a prerequisite for the move-semantics
+    // work tracked as T5.1.
+    TEST(FImdlp, IsCopyableAndMovable)
+    {
+        static_assert(std::is_copy_constructible_v<CPPFImdlp>, "CPPFImdlp must be copy constructible");
+        static_assert(std::is_copy_assignable_v<CPPFImdlp>, "CPPFImdlp must be copy assignable");
+        static_assert(std::is_move_constructible_v<CPPFImdlp>, "CPPFImdlp must be move constructible");
+        static_assert(std::is_move_assignable_v<CPPFImdlp>, "CPPFImdlp must be move assignable");
+
+        samples_t X = { 4.7f, 4.7f, 4.7f, 4.8f, 4.8f, 4.9f, 5.1f, 5.2f, 5.3f, 5.7f };
+        labels_t y = { 1, 1, 1, 1, 1, 1, 2, 2, 2, 2 };
+
+        CPPFImdlp original;
+        original.fit(X, y);
+        const auto expected = original.getCutPoints();
+
+        // A copy must reproduce the source's results without sharing its state.
+        CPPFImdlp copied(original);
+        EXPECT_EQ(expected, copied.getCutPoints());
+        const labels_t original_labels = original.transform(X);
+        EXPECT_EQ(original_labels, copied.transform(X));
+
+        // The moved-to object must be fully usable, cut points and transform alike.
+        CPPFImdlp moved(std::move(original));
+        EXPECT_EQ(expected, moved.getCutPoints());
+        EXPECT_EQ(original_labels, moved.transform(X));
+
+        // Refitting the copy on different data must leave the moved-to object alone.
+        samples_t other_X = { 1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f, 3.0f, 3.0f, 3.0f, 3.0f };
+        labels_t other_y = { 0, 0, 0, 1, 1, 1, 2, 2, 2, 2 };
+        copied.fit(other_X, other_y);
+        EXPECT_EQ(expected, moved.getCutPoints());
     }
 }

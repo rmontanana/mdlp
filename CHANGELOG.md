@@ -27,8 +27,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `size_t`, silently truncating interval indices. Retyped to `size_t`.
 - Fixed a signed/unsigned comparison in `BinDisc::linspace`.
 
+- `Metrics::setData()` could not replace the data it worked on. `y` and `indices`
+  were reference members, and C++ cannot rebind a reference, so `setData()`
+  assigned *through* them: it overwrote the vectors passed at construction instead
+  of switching to the new ones. `Metrics` now owns its data and the caller's
+  vectors are left untouched.
+
 ### Changed
 
+- **`Metrics` is no longer internally synchronized.** The mutex it held guarded
+  only the caches and left the data members unguarded, so it advertised a
+  thread-safety guarantee it did not deliver while adding lock traffic to every
+  lookup in what is a single-threaded recursion. `Metrics` is now documented as
+  requiring external synchronization; distinct instances remain independent.
+- **`Metrics` and `CPPFImdlp` are now copyable and movable.** The `std::mutex`
+  member had implicitly deleted both classes' copy and move constructors.
+- Removed the unused `Metrics::numClasses` member. It was written on every
+  `setData()` and never read, costing a full pass over the data each time. The
+  `computeNumClasses()` method is unchanged.
 - Tensor validation in `Discretizer` consolidated into a single helper. All
   existing exception messages are unchanged.
 
