@@ -26,12 +26,19 @@ Measured on commit `e143bbc`, branch `release/3.0.0`, before any 3.0.0 work:
 | Version in `CMakeLists.txt:4` | **2.1.3** — not yet bumped |
 | Benchmarks in repo | **none** |
 
-**Toolchain note:** `conan` (2.26.1) lives in `~/miniconda3/bin` and is *not* on the
-default `PATH`. `make debug` / `make release` fail without:
+**Toolchain note.** Neither `conan` nor the Perl `GD` module that `genhtml` needs
+is reachable from a default shell. `make debug` / `make release` / `make test` all
+need this first:
 
 ```bash
-export PATH="$HOME/miniconda3/bin:$PATH"
+export PATH="$HOME/miniconda3/bin:$PATH"       # conan 2.26.1
+export PERL5LIB="$HOME/perl5/lib/perl5:$PERL5LIB"  # GD.pm, for genhtml
+export PATH="$HOME/perl5/bin:$PATH"
 ```
+
+Without `PERL5LIB`, `make test` runs the suite and then dies at the coverage
+report with `required module GD.pm not found` — the tests themselves have already
+passed by that point. With it, `make test` completes and updates the README badge.
 
 `conanfile.py:35-40` derives the package version by regex from the
 `project(fimdlp VERSION ...)` line in `CMakeLists.txt`, so bumping `CMakeLists.txt`
