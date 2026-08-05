@@ -14,8 +14,10 @@ find_package(Torch CONFIG REQUIRED)
 
 # Options
 # -------
-option(ENABLE_TESTING OFF)
-option(COVERAGE       OFF)
+option(ENABLE_TESTING   OFF)
+option(COVERAGE         OFF)
+# Benchmarks are Release-only and off by default: they must never slow `make test`.
+option(ENABLE_BENCHMARK OFF)
 
 add_subdirectory(config)
 
@@ -43,6 +45,11 @@ endif()
 
 message(STATUS "Building sample")
 add_subdirectory(sample)
+
+if (ENABLE_BENCHMARK)
+    message(STATUS "Benchmarks are enabled")
+    add_subdirectory(bench)
+endif()
 
 include_directories(
     ${fimdlp_SOURCE_DIR}/src

@@ -2,7 +2,7 @@
 
 **Target version:** 3.0.0 (major — breaking changes)
 **Branch:** `release/3.0.0`
-**Status:** Phases 1, 2 and 3 complete; Phase 0 and 4+ pending
+**Status:** Phases 0, 1, 2 and 3 complete; Phase 4+ pending
 **Supersedes:** `RELEASE_PLAN_2.2.0.md` (see [Appendix B](#appendix-b--corrections-to-the-superseded-220-plan))
 
 > **This document is the single source of truth for the 3.0.0 release.**
@@ -239,17 +239,31 @@ Ordering is driven by dependency, not by severity alone: Phase 3 (`Metrics`)
 unblocks Phase 5 (move semantics), and Phase 0 must precede Phase 7 or the
 performance goals stay unmeasurable.
 
-### Phase 0 — Measurement baseline
+### Phase 0 — Measurement baseline ✅ COMPLETE
 
-Prerequisite for any performance claim. The prior plan asserted a "20-30%
-improvement" target with no benchmark in the repository to measure against.
+- [x] **T0.1** `bench/benchmark.cpp` covers `CPPFImdlp::fit`, `BinDisc::fit` (both
+  strategies), `PKIDisc::fit` and `transform` at n = 10², 10³, 10⁴, 10⁵, plus a
+  reference row measuring input-copy cost alone. Dependency-free; fixed seed.
+- [x] **T0.2** Results recorded in [docs/benchmarks.md](docs/benchmarks.md) with
+  machine, compiler and flags.
+- [x] **T0.3** Behind `ENABLE_BENCHMARK` (default OFF), Release-only, run via
+  `make bench` into `build_bench/`. Never part of `make test`.
 
-- **T0.1** Add `tests/Benchmark.cpp` (or a `bench/` target) covering `CPPFImdlp::fit`,
-  `BinDisc::fit` (both strategies) and `transform`, at n = 10², 10³, 10⁴, 10⁵.
-- **T0.2** Record baseline numbers for commit `e143bbc` into `docs/benchmarks.md`,
-  with machine and compiler flags stated.
-- **T0.3** Wire the benchmark into the build behind an option (default OFF) so it
-  does not slow `make test`.
+**Two findings change the rest of the plan:**
+
+1. **`CPPFImdlp::fit` is O(n²), not O(n log n).** Ten times the data costs ~100×
+   the work; n = 100 000 takes **8.2 seconds per feature**. Confirmed by
+   instrumenting `Metrics::entropy`: elements scanned quadruples per doubling of n
+   and `scanned / n²` converges to ≈0.8. The cost is `getCandidate()` rescanning
+   the interval for every boundary point. Memoization is working (~40% hit rate)
+   and cannot help, because the misses are the full-interval scans. **This
+   retargets Phase 7** and is worth orders of magnitude, not the 20-30% originally
+   hoped for.
+
+2. **Input copying is negligible.** Copying X and y costs 0.0095 ms against
+   8 248 ms of `fit` at n = 100 000 — 0.0001%. **Phase 5 must be justified on
+   memory and ergonomics, not speed**; T5.3 should report the null result honestly
+   rather than hunt for a delta that is not there.
 
 ### Phase 1 — Documentation & interface clarity ✅ COMPLETE
 

@@ -1,10 +1,11 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: debug release install test conan-create viewcoverage
+.PHONY: debug release install test bench conan-create viewcoverage
 lcov := lcov
 
 f_debug = build_debug
 f_release = build_release
+f_bench = build_bench
 genhtml = genhtml
 docscdir = docs
 
@@ -78,6 +79,15 @@ test: ## Build Debug version and run tests
 	@echo ">>> Updating coverage badge..."
 	@env python update_coverage.py $(f_debug)/tests
 	@echo ">>> Done"
+
+bench: ## Build and run the performance benchmarks (Release, -O3)
+	@echo ">>> Building benchmarks (Release)..."
+	@if [ -d $(f_bench) ]; then rm -fr $(f_bench); fi
+	@conan install . --build=missing -of $(f_bench) -s build_type=Release -o enable_testing=False
+	@cmake -S . -B $(f_bench) -DCMAKE_TOOLCHAIN_FILE=$(f_bench)/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BENCHMARK=ON
+	@cmake --build $(f_bench) --config Release -j $(JOBS)
+	@echo ">>> Running benchmarks..."
+	@$(f_bench)/bench/benchmark
 
 viewcoverage: ## View the html coverage report
 	@which $(genhtml) >/dev/null || (echo ">>> Please install lcov (genhtml not found)"; exit 1)
