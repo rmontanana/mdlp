@@ -10,18 +10,64 @@ Corresponds to Phase 0 of [RELEASE_PLAN_V3.md](../RELEASE_PLAN_V3.md).
 
 ```bash
 export PATH="$HOME/miniconda3/bin:$PATH"   # conan
-make bench
+make bench                                 # full run, ~4 minutes
+make bench LEVEL=quick                     # stops at n=10,000, ~seconds
 ```
 
 `make bench` forces a Release build (`-O3`) into `build_bench/` with
 `-DENABLE_BENCHMARK=ON`. The benchmark target is off by default and is never part
-of `make test`. A full run takes roughly two minutes, almost all of it in the
-largest `CPPFImdlp::fit` cell — see the scaling note below.
+of `make test`. Almost all of a full run is the two largest `CPPFImdlp::fit`
+cells — see the scaling note below.
 
 The harness has no external dependencies. Data is generated from class-conditional
 normal distributions with a fixed seed (42), so every run measures identical work.
-Timings are min / median / mean over repetitions after warmup; **compare the
-minimum across runs**, as it is the most stable figure on a loaded machine.
+
+`make bench` also stores a machine-readable result under
+`docs/benchmarks/results/`, fingerprinted with the CPU, core topology, RAM, OS,
+compiler and git commit. `LABEL=name` disambiguates two machines with the same CPU.
+
+### Which statistic to use
+
+Repetition counts are **fixed** and identical on every platform, deliberately. The
+minimum of a sample shrinks as the sample grows, so comparing minima taken with
+different rep counts would systematically favour whichever machine ran more of
+them.
+
+- **Minimum** — for before/after comparisons on *one* machine. Most stable figure
+  under load.
+- **Median** — for comparisons *across* machines. This is what
+  `docs/benchmarks-platforms.md` reports.
+
+## Comparing across platforms
+
+```bash
+# on each machine
+make bench
+git add docs/benchmarks/results && git commit -m "bench: <machine>" && git push
+
+# anywhere, once the results are gathered
+git pull
+make bench-report        # regenerates docs/benchmarks-platforms.md
+```
+
+Results are versioned in git, so they accumulate through the normal workflow. Run
+on a **clean working tree** — the driver records whether the tree was dirty and the
+report flags such results as not reproducible from the recorded commit.
+
+The generated comparison reports scaling exponents per platform, median times,
+relative speed against a reference platform, and a per-platform noise fingerprint.
+It warns loudly when results span different commits, `--level` settings or library
+versions instead of averaging incomparable numbers.
+
+Two limits are stated there and repeated here because they are easy to forget:
+
+- **The compiler is not unified.** AppleClang on macOS, GCC on Linux. Every
+  cross-platform difference is hardware *and* toolchain; none of it is a clean CPU
+  comparison.
+- **Anything smaller than a platform's noise figure is not a real difference.**
+
+No benchmarking runs in CI: GitHub's shared runners vary by more than the effects
+being measured.
 
 ## Environment
 
@@ -107,7 +153,9 @@ and elements actually scanned, rather than inferred from the timings:
 | 16 000 | 46 472 | 18 570 | 206 624 902 | 0.807 |
 
 Elements scanned **quadruples on every doubling of n**, and `scanned / n²`
-converges to a constant ≈0.8 — the definition of Θ(n²). Note the shape of it: the
+converges to a constant ≈0.8 — the definition of Θ(n²). The timing side agrees
+independently: the log-log fit over the largest three sizes gives an exponent of
+**2.03 with R² = 1.000** (see `docs/benchmarks-platforms.md`). Note the shape of it: the
 *number* of entropy calls only doubles per doubling (so it is O(n)), but each call
 rescans a large interval. Memoization is working — about 40% of calls hit the cache
 — and is still powerless against this, because the misses are precisely the
