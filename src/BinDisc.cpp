@@ -20,23 +20,35 @@ namespace mdlp {
         }
     }
     BinDisc::~BinDisc() = default;
-    void BinDisc::fit(samples_t& X)
+    void BinDisc::validate_input(const samples_t& X) const
     {
-        // Input validation
         if (X.empty()) {
             throw std::invalid_argument("Input data X cannot be empty");
         }
         if (X.size() < static_cast<size_t>(n_bins)) {
             throw std::invalid_argument("Input data size must be at least equal to n_bins");
         }
-
+    }
+    void BinDisc::fit(samples_t& X)
+    {
+        validate_input(X);
         cutPoints.clear();
+        direction = bound_dir_t::RIGHT;
         if (strategy == strategy_t::QUANTILE) {
-            direction = bound_dir_t::RIGHT;
-            fit_quantile(X);
+            fit_quantile(X);  // copies into fit_quantile's by-value parameter
         } else if (strategy == strategy_t::UNIFORM) {
-            direction = bound_dir_t::RIGHT;
             fit_uniform(X);
+        }
+    }
+    void BinDisc::fit(samples_t&& X)
+    {
+        validate_input(X);
+        cutPoints.clear();
+        direction = bound_dir_t::RIGHT;
+        if (strategy == strategy_t::QUANTILE) {
+            fit_quantile(std::move(X));  // adopts the caller's buffer and sorts it
+        } else if (strategy == strategy_t::UNIFORM) {
+            fit_uniform(X);  // reads only; nothing to adopt
         }
     }
     void BinDisc::fit(samples_t& X, labels_t& y)
@@ -48,6 +60,13 @@ namespace mdlp {
         // BinDisc is inherently unsupervised, but we validate inputs for consistency
         // Note: y parameter is validated but not used in binning strategy
         fit(X);
+    }
+    void BinDisc::fit(samples_t&& X, labels_t&& y)
+    {
+        if (X.empty()) {
+            throw std::invalid_argument("X cannot be empty");
+        }
+        fit(std::move(X));
     }
     std::vector<precision_t> BinDisc::linspace(precision_t start, precision_t end, int num)
     {
@@ -104,10 +123,9 @@ namespace mdlp {
         }
         return results;
     }
-    void BinDisc::fit_quantile(const samples_t& X)
+    void BinDisc::fit_quantile(samples_t data)
     {
         auto quantiles = linspace(0.0, 100.0, n_bins + 1);
-        auto data = X;
         std::sort(data.begin(), data.end());
         if (data.front() == data.back() || data.size() == 1) {
             // if X is constant, pass any two given points that shall be ignored in transform

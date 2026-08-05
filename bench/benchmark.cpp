@@ -24,6 +24,7 @@
 #include <numeric>
 #include <random>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "BinDisc.h"
@@ -53,6 +54,32 @@ namespace {
         for (int i = 0; i < reps; ++i) {
             const auto t0 = clock_type::now();
             body();
+            const auto t1 = clock_type::now();
+            samples.push_back(std::chrono::duration<double, std::milli>(t1 - t0).count());
+        }
+        std::sort(samples.begin(), samples.end());
+        Stats s;
+        s.reps = reps;
+        s.min_ms = samples.front();
+        s.median_ms = samples[samples.size() / 2];
+        s.mean_ms = std::accumulate(samples.begin(), samples.end(), 0.0) / static_cast<double>(samples.size());
+        return s;
+    }
+
+    // For benchmarks whose body consumes its input, the replacement inputs must be
+    // built outside the timed region. The body receives an index into a pool of
+    // pre-made copies sized warmup + reps.
+    Stats measure_indexed(const std::function<void(int)>& body, int reps, int warmup)
+    {
+        int k = 0;
+        for (int i = 0; i < warmup; ++i) {
+            body(k++);
+        }
+        std::vector<double> samples;
+        samples.reserve(static_cast<size_t>(reps));
+        for (int i = 0; i < reps; ++i) {
+            const auto t0 = clock_type::now();
+            body(k++);
             const auto t1 = clock_type::now();
             samples.push_back(std::chrono::duration<double, std::milli>(t1 - t0).count());
         }
@@ -102,7 +129,7 @@ namespace {
 
     void print_header()
     {
-        std::cout << std::left << std::setw(34) << "benchmark"
+        std::cout << std::left << std::setw(36) << "benchmark"
             << std::right << std::setw(10) << "n"
             << std::setw(7) << "reps"
             << std::setw(13) << "min (ms)"
@@ -114,7 +141,7 @@ namespace {
 
     void print_row(const std::string& name, size_t n, const Stats& s)
     {
-        std::cout << std::left << std::setw(34) << name
+        std::cout << std::left << std::setw(36) << name
             << std::right << std::setw(10) << n
             << std::setw(7) << s.reps
             << std::fixed
@@ -190,6 +217,49 @@ int main()
             samples_t X_copy = data.X;
             labels_t y_copy = data.y;
             sink += X_copy.size() + y_copy.size();
+            }, reps, warmup));
+
+        // --- T5.1: rvalue fit(), against the copying rows above ---
+        {
+            const int pool_size = reps + warmup;
+            std::vector<samples_t> X_pool(static_cast<size_t>(pool_size), data.X);
+            std::vector<labels_t> y_pool(static_cast<size_t>(pool_size), data.y);
+            print_row("CPPFImdlp::fit (move)", n, measure_indexed([&](int i) {
+                mdlp::CPPFImdlp disc;
+                disc.fit(std::move(X_pool[static_cast<size_t>(i)]), std::move(y_pool[static_cast<size_t>(i)]));
+                sink += disc.getCutPoints().size();
+                }, reps, warmup));
+        }
+        // Control row: same pool, same access pattern, but copying. Reading a
+        // different pool slot each rep costs cache locality that the plain
+        // "BinDisc::fit (quantile)" row above does not pay, so only this row is a
+        // fair baseline for the move row that follows.
+        {
+            const int pool_size = reps + warmup;
+            std::vector<samples_t> X_pool(static_cast<size_t>(pool_size), data.X);
+            std::vector<labels_t> y_pool(static_cast<size_t>(pool_size), data.y);
+            print_row("BinDisc::fit (quantile, pool copy)", n, measure_indexed([&](int i) {
+                mdlp::BinDisc disc(5, mdlp::strategy_t::QUANTILE);
+                disc.fit(X_pool[static_cast<size_t>(i)], y_pool[static_cast<size_t>(i)]);
+                sink += disc.getCutPoints().size();
+                }, reps, warmup));
+        }
+        {
+            const int pool_size = reps + warmup;
+            std::vector<samples_t> X_pool(static_cast<size_t>(pool_size), data.X);
+            std::vector<labels_t> y_pool(static_cast<size_t>(pool_size), data.y);
+            print_row("BinDisc::fit (quantile, move)", n, measure_indexed([&](int i) {
+                mdlp::BinDisc disc(5, mdlp::strategy_t::QUANTILE);
+                disc.fit(std::move(X_pool[static_cast<size_t>(i)]), std::move(y_pool[static_cast<size_t>(i)]));
+                sink += disc.getCutPoints().size();
+                }, reps, warmup));
+        }
+
+        // --- T5.2: transform into a reused caller buffer ---
+        labels_t out_buffer;
+        print_row("CPPFImdlp::transform (buffer)", n, measure([&] {
+            fitted_mdlp.transform(data.X, out_buffer);
+            sink += out_buffer.size();
             }, reps, warmup));
 
         std::cout << "\n";

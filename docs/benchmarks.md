@@ -159,6 +159,87 @@ needs attention.
 | 7 — performance | Retarget onto `getCandidate`'s quadratic entropy recomputation. This is the only finding of real magnitude, and it dwarfs everything else in the plan. |
 | 8 — docs | Any complexity claim written into `ARCHITECTURE.md` must match this table. MDLP is O(n²) today. |
 
+## Phase 5 — measured impact of move semantics
+
+Measured after T5.1 and T5.2 landed, on the same machine. The Phase 0 table above
+stays frozen as the reference; these are the new rows.
+
+### Run-to-run variance comes first
+
+Before reading any delta, note how noisy this machine is at the largest size. The
+same unchanged benchmark, `BinDisc::fit (quantile)` at n = 100 000, measured across
+three runs:
+
+| run | min (ms) |
+|---|---:|
+| 1 (Phase 0) | 1.4817 |
+| 2 | 1.4347 |
+| 3 | 1.5086 |
+
+That is a **~5% spread with nothing changed**. Any effect smaller than that cannot
+be claimed from these measurements. `CPPFImdlp::fit` at the same size is steadier
+(8248.06 / 8343.75 / 8349.55, ~1.2% spread) because each rep is so long.
+
+### T5.1 — `fit()` with rvalues: no measurable change
+
+| n | fit (copy) | fit (move) | delta |
+|---:|---:|---:|---:|
+| 100 | 0.0145 | 0.0145 | 0.0% |
+| 1 000 | 0.7114 | 0.7080 | −0.5% |
+| 10 000 | 79.29 | 79.84 | +0.7% |
+| 100 000 | 8 349.55 | 8 410.30 | +0.7% |
+
+Exactly the null result Phase 0 predicted: the copies removed were 0.0001% of the
+call, so no delta was available to find. The two directions of the sign here are
+noise, not a regression.
+
+For `BinDisc` QUANTILE, where the copy is a real share of a much cheaper operation,
+the comparison needs the pool-copy control row — the plain row reuses one hot
+buffer, while the move row must touch a fresh pool slot each rep, and that
+difference in cache locality is larger than the effect being measured:
+
+| n | quantile (pool copy) | quantile (move) | delta |
+|---:|---:|---:|---:|
+| 100 | 0.0004 | 0.0004 | 0.0% |
+| 1 000 | 0.0047 | 0.0047 | 0.0% |
+| 10 000 | 0.0606 | 0.0605 | −0.2% |
+| 100 000 | 1.4568 | 1.4328 | −1.6% |
+
+The move version is consistently equal or slightly faster, and at n = 100 000 it
+avoids a 400 KB copy. But −1.6% sits well inside the ~5% run-to-run variance, so
+**this is a memory result, not a speed result.**
+
+An earlier run without the control row showed the move version 8.5% *slower*,
+which is what prompted adding the control. That figure was run-to-run noise
+compounded by the pool-locality difference; it did not survive a fair comparison.
+
+### T5.2 — `transform()` into a caller buffer: no measurable change
+
+| n | transform (returns ref) | transform (caller buffer) |
+|---:|---:|---:|
+| 100 | 0.0001 | 0.0001 |
+| 1 000 | 0.0018 | 0.0019 |
+| 10 000 | 0.0351 | 0.0350 |
+| 100 000 | 0.5547 | 0.5666 |
+
+Also null, and for a reason worth recording: the returning overload already calls
+`clear()` rather than reallocating, so repeated calls at the same size reuse the
+existing capacity. There was never a per-call allocation to remove.
+
+The real benefit is one this benchmark cannot show — a caller who needs to *own*
+the result currently has to copy out of the internal buffer, because the returned
+reference is invalidated by the next `transform()`. The two-argument overload
+removes that copy and lets the caller keep one buffer across calls.
+
+### Verdict
+
+Phase 5 delivered what Phase 0 said was available: **memory and ergonomics, no
+throughput**. All rows sit within the ≤5% regression ceiling. The plan's original
+"20-30% performance improvement" would not have come from here, and the honest
+report is that it did not come from here.
+
+The performance work that matters is still Phase 7 — the quadratic `getCandidate`.
+
 ## Regression policy
 
 The success criteria in the release plan allow at most a **5% regression** against

@@ -438,6 +438,95 @@ namespace mdlp {
         EXPECT_TRUE(torch::equal(transformed, contiguous_result));
     }
 
+    // A discretizer that implements only the pure-virtual lvalue fit(). Every
+    // discretizer shipped with the library overrides the rvalue overload, so this
+    // is what exercises the base class's forwarding default.
+    //
+    // Note the `using`: declaring any fit() here would otherwise hide every fit()
+    // inherited from Discretizer, rvalue overload included. Third-party subclasses
+    // hit the same trap.
+    class MinimalDiscretizer : public Discretizer {
+    public:
+        using Discretizer::fit;
+        void fit(samples_t& X_, labels_t& y_) override
+        {
+            cutPoints = { X_.front(), X_.back() };
+            fit_calls++;
+        }
+        int fit_calls = 0;
+    };
+
+    TEST(Discretizer, BaseRvalueFitForwardsToTheLvalueOverload)
+    {
+        MinimalDiscretizer disc;
+        samples_t X = { 1.0f, 2.0f, 3.0f, 4.0f };
+        labels_t y = { 0, 0, 1, 1 };
+
+        disc.fit(std::move(X), std::move(y));
+
+        EXPECT_EQ(1, disc.fit_calls) << "the subclass's lvalue fit() should have run";
+        const auto cuts = disc.getCutPoints();
+        ASSERT_EQ(2u, cuts.size());
+        EXPECT_NEAR(1.0f, cuts.front(), margin);
+        EXPECT_NEAR(4.0f, cuts.back(), margin);
+    }
+
+    // T5.2: transform() into a caller-owned buffer.
+    TEST(Discretizer, TransformIntoCallerBuffer)
+    {
+        samples_t X = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f };
+        labels_t y = { 0, 0, 0, 0, 1, 1, 1, 1 };
+
+        BinDisc disc(4, strategy_t::UNIFORM);
+        disc.fit(X, y);
+
+        const labels_t expected = disc.transform(X);
+
+        labels_t out;
+        disc.transform(X, out);
+        EXPECT_EQ(expected, out);
+
+        // The buffer is reusable: a second call must not append to the first.
+        disc.transform(X, out);
+        EXPECT_EQ(expected, out);
+        EXPECT_EQ(X.size(), out.size());
+
+        // Writing into a caller buffer does not disturb the internal one.
+        EXPECT_EQ(expected, disc.transform(X));
+    }
+
+    TEST(Discretizer, TransformIntoCallerBufferIsConst)
+    {
+        samples_t X = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f };
+        labels_t y = { 0, 0, 0, 0, 1, 1, 1, 1 };
+
+        BinDisc disc(4, strategy_t::UNIFORM);
+        disc.fit(X, y);
+        const labels_t expected = disc.transform(X);
+
+        const BinDisc& immutable = disc;
+        labels_t out;
+        immutable.transform(X, out);  // only compiles if the overload is const
+        EXPECT_EQ(expected, out);
+    }
+
+    TEST(Discretizer, TransformIntoCallerBufferValidatesInput)
+    {
+        samples_t X = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f };
+        labels_t y = { 0, 0, 0, 0, 1, 1, 1, 1 };
+        labels_t out;
+
+        BinDisc unfitted(4, strategy_t::UNIFORM);
+        EXPECT_THROW_WITH_MESSAGE(unfitted.transform(X, out), std::runtime_error,
+            "Discretizer not fitted yet or no valid cut points found");
+
+        BinDisc disc(4, strategy_t::UNIFORM);
+        disc.fit(X, y);
+        samples_t empty_data = {};
+        EXPECT_THROW_WITH_MESSAGE(disc.transform(empty_data, out), std::invalid_argument,
+            "Data for transformation cannot be empty");
+    }
+
     TEST(Discretizer, NonContiguousTensorFitTransform)
     {
         auto base = torch::empty({ 6, 2 }, torch::kFloat32);

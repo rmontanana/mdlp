@@ -2,7 +2,7 @@
 
 **Target version:** 3.0.0 (major — breaking changes)
 **Branch:** `release/3.0.0`
-**Status:** Phases 0, 1, 2 and 3 complete; Phase 4+ pending
+**Status:** Phases 0, 1, 2, 3 and 5 complete; Phases 4, 6, 7, 8 pending
 **Supersedes:** `RELEASE_PLAN_2.2.0.md` (see [Appendix B](#appendix-b--corrections-to-the-superseded-220-plan))
 
 > **This document is the single source of truth for the 3.0.0 release.**
@@ -360,15 +360,39 @@ compiles, since `is_copy_assignable_v<Metrics>` becomes false.
 - **T4.4** Update the tests that assert on exception type and message text —
   several use `EXPECT_THROW_WITH_MESSAGE` and will need revisiting.
 
-### Phase 5 — Move semantics and buffer reuse
+### Phase 5 — Move semantics and buffer reuse ✅ COMPLETE
 
-Unblocked: Phase 3 made `CPPFImdlp` movable, which D4 had prevented.
+Unblocked by Phase 3, which made `CPPFImdlp` movable.
 
-- **T5.1** Add `fit(samples_t&&, labels_t&&)` overloads; `CPPFImdlp::fit` currently
-  copies both inputs (`CPPFImdlp.cpp:52-53`).
-- **T5.2** Add `transform(const samples_t&, labels_t& out)` for caller-supplied
-  buffers, keeping the current returning form.
-- **T5.3** Verify against the Phase 0 baseline; report the measured delta.
+- [x] **T5.1** `fit(samples_t&&, labels_t&&)` added as a **virtual** overload on
+  `Discretizer`, so moving works through a `Discretizer&` and the uniform-interface
+  philosophy is preserved. The base provides a default that forwards to the copying
+  overload, so any subclass behaves correctly without overriding. `CPPFImdlp`,
+  `BinDisc` and `PKIDisc` override it to actually adopt the buffers.
+  `BinDisc::fit_quantile` now takes its data **by value**, so one body serves both
+  the copying and moving paths.
+- [x] **T5.2** `transform(const samples_t&, labels_t& out) const` added; the
+  returning overload now delegates to it. Being `const` is a bonus: it touches no
+  internal storage.
+- [x] **T5.3** Measured against the Phase 0 baseline. See
+  [docs/benchmarks.md](docs/benchmarks.md#phase-5--measured-impact-of-move-semantics).
+
+**Also fixed:** `BinDisc::min_bins` was a `const` non-static member, which deletes
+the copy and move *assignment* operators for `BinDisc` and `PKIDisc`. Changed to
+`static constexpr`. This was the same class of defect as D4 and had gone unnoticed.
+
+**Result: the null result Phase 0 predicted.** `fit` with rvalues is within noise
+of `fit` with lvalues at every size (the copies removed were 0.0001% of the call).
+`BinDisc` QUANTILE shows −1.6% at n = 100 000 against a fair pool-copy control,
+which is inside the ~5% run-to-run variance of this machine and is therefore not
+claimable as a speed-up. `transform` into a caller buffer is likewise flat, because
+the returning overload already reuses its capacity via `clear()`.
+
+Phase 5 is justified on **memory and ergonomics**, as Phase 0 said it would have to
+be. No throughput claim is made.
+
+**Verification.** 102/102 tests pass. Debug and release builds are warning-free.
+All rows sit within the ≤5% regression ceiling.
 
 ### Phase 6 — API improvements
 

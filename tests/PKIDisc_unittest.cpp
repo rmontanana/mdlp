@@ -9,6 +9,7 @@
 #include "typesFImdlp.h"
 #include <vector>
 #include <cmath>
+#include <utility>
 
 TEST(PKIDisc, fit)
 {
@@ -98,3 +99,47 @@ TEST(PKIDisc, log_strategy)
     EXPECT_NEAR(cut_points[3], 16.0, 0.001);
 }
 
+
+// T5.1: the rvalue fit() must read y's size for the bin count before moving from
+// it, and produce the same result as the copying overload.
+TEST(PKIDisc, fit_move_matches_fit_copy)
+{
+    const mdlp::labels_t y_source = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3 };
+    const mdlp::samples_t X_source = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+
+    mdlp::samples_t X_copy = X_source;
+    mdlp::labels_t y_copy = y_source;
+    mdlp::PKIDisc by_copy;
+    by_copy.fit(X_copy, y_copy);
+
+    mdlp::samples_t X_moved = X_source;
+    mdlp::labels_t y_moved = y_source;
+    mdlp::PKIDisc by_move;
+    by_move.fit(std::move(X_moved), std::move(y_moved));
+
+    EXPECT_EQ(by_copy.getCutPoints(), by_move.getCutPoints());
+
+    mdlp::samples_t probe = X_source;
+    EXPECT_EQ(by_copy.transform(probe), by_move.transform(probe));
+}
+
+TEST(PKIDisc, fit_move_log_strategy_matches_fit_copy)
+{
+    const mdlp::labels_t y_source(1000, 1);
+    mdlp::samples_t X_source(1000);
+    for (size_t i = 0; i < X_source.size(); ++i) {
+        X_source[i] = static_cast<mdlp::precision_t>(i);
+    }
+
+    mdlp::samples_t X_copy = X_source;
+    mdlp::labels_t y_copy = y_source;
+    mdlp::PKIDisc by_copy(mdlp::compute_strategy_t::LOG);
+    by_copy.fit(X_copy, y_copy);
+
+    mdlp::samples_t X_moved = X_source;
+    mdlp::labels_t y_moved = y_source;
+    mdlp::PKIDisc by_move(mdlp::compute_strategy_t::LOG);
+    by_move.fit(std::move(X_moved), std::move(y_moved));
+
+    EXPECT_EQ(by_copy.getCutPoints(), by_move.getCutPoints());
+}
