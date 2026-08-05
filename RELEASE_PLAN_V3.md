@@ -248,6 +248,32 @@ performance goals stay unmeasurable.
   machine, compiler and flags.
 - [x] **T0.3** Behind `ENABLE_BENCHMARK` (default OFF), Release-only, run via
   `make bench` into `build_bench/`. Never part of `make test`.
+- [x] **T0.4** The benchmark emits JSON (`--json`, `--level quick|full`) and
+  `scripts/benchmarks.py run` fingerprints the machine — CPU, cores, RAM, OS,
+  kernel, compiler, git commit — storing the result under
+  `docs/benchmarks/results/<slug>__<sha>.json`, versioned in git.
+- [x] **T0.5** `make bench-report` merges every stored result into
+  [docs/benchmarks-platforms.md](docs/benchmarks-platforms.md): scaling exponents
+  per platform, median times, relative speed, and a per-platform noise fingerprint.
+
+**Methodology, decided deliberately:**
+
+- **Fixed repetition counts on every platform, and the median for cross-platform
+  comparison.** The minimum of a sample shrinks as the sample grows, so comparing
+  minima taken with different rep counts would favour whichever machine ran more
+  of them. The minimum stays the statistic for before/after checks on one machine.
+- **The compiler is not unified** (AppleClang on macOS, GCC on Linux). Every
+  cross-platform difference is hardware *and* toolchain, and the report says so
+  rather than pretending to compare CPUs.
+- **Scaling exponents are fitted over the largest three sizes only.** Small-n
+  points sit on the flat, overhead-dominated part of the curve and bias the
+  exponent downwards — `CPPFImdlp::fit` fits 1.86 over all four sizes but 2.04
+  over the largest three, and the latter is the real complexity. Fits whose own
+  points are still under 0.01 ms are flagged as indicative.
+- **The report refuses to hide inhomogeneity:** it warns when results span
+  different commits, `--level` settings, library versions, or a dirty tree.
+- **No CI benchmarking.** GitHub's shared runners vary by more than the effects
+  being measured; recording those numbers would manufacture false confidence.
 
 **Two findings change the rest of the plan:**
 
