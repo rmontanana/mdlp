@@ -32,6 +32,32 @@ namespace mdlp {
         EXPECT_EQ(2, computeNumClasses(8, 10));
     }
 
+    // entropyFromCounts is the single implementation shared by entropy() and by
+    // CPPFImdlp::getCandidate()'s incremental scan. That sharing is what keeps the
+    // batch and incremental paths bit-identical, so its contract is worth pinning.
+    TEST(Metrics, EntropyFromCounts)
+    {
+        // Two equally likely classes carry exactly one bit.
+        EXPECT_NEAR(1.0f, Metrics::entropyFromCounts(labels_t{ 5, 5 }, 10), 1e-6);
+        // Four equally likely classes carry two.
+        EXPECT_NEAR(2.0f, Metrics::entropyFromCounts(labels_t{ 1, 1, 1, 1 }, 4), 1e-6);
+        // A single class carries none, wherever it sits.
+        EXPECT_NEAR(0.0f, Metrics::entropyFromCounts(labels_t{ 10 }, 10), 1e-6);
+        EXPECT_NEAR(0.0f, Metrics::entropyFromCounts(labels_t{ 0, 10, 0 }, 10), 1e-6);
+
+        // Trailing zeros must not change the result. getCandidate sizes both of
+        // its count arrays to the widest label in the containing interval, so each
+        // side routinely carries zeros where the other side's labels live. The
+        // equivalence with entropy() depends on this being exact, not close.
+        EXPECT_EQ(Metrics::entropyFromCounts(labels_t{ 3, 1 }, 4),
+            Metrics::entropyFromCounts(labels_t{ 3, 1, 0, 0, 0 }, 4));
+
+        // Degenerate input: guards the division that would otherwise yield inf
+        // and then NaN.
+        EXPECT_EQ(0.0f, Metrics::entropyFromCounts(labels_t{}, 0));
+        EXPECT_EQ(0.0f, Metrics::entropyFromCounts(labels_t{ 0, 0 }, 0));
+    }
+
     TEST_F(TestMetrics, NumClassesOutOfRange)
     {
         EXPECT_EQ(0, computeNumClasses(0, 20)) << "end beyond indices.size()";
