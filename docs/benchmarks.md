@@ -303,11 +303,42 @@ the single implementation shared by the batch and incremental paths, so the two
 cannot drift: same iteration order over labels, same types, same skipping of zero
 counts, therefore bit-identical floating point.
 
-Verified two ways: the full 104-test suite passes unchanged, including the tests
-that assert exact cut points on iris; and a differential harness compared the old
-and new implementations across 180 configurations — n from 50 to 4 000, 2 to 6
-classes, seven duplicate densities, three parameter sets — producing byte-identical
-cut points, recursion depths and transform outputs.
+Verified four ways. The full test suite passes unchanged, including the tests
+that assert exact cut points on iris. A differential harness compared the old and
+new implementations across 180 synthetic configurations — n from 50 to 4 000, 2 to
+6 classes, seven duplicate densities, three parameter sets. The same harness then
+ran both implementations over two real datasets and compared every feature:
+
+| dataset | samples | features | classes | result |
+|---|---:|---:|---:|---|
+| mfeat-factors | 2 000 | 216 | 10 | identical on all 216 |
+| miniboone | 130 064 | 50 | 2 | identical on all 50 |
+
+Byte-identical cut points, recursion depths and transform outputs throughout.
+
+### On real data the speedup is larger still
+
+miniboone has 130 064 rows, so the quadratic term bit harder there than anywhere
+in the synthetic benchmark:
+
+| | per feature | all 50 features |
+|---|---:|---:|
+| before | 12.6-17.4 s | ~12.5 min |
+| after | ~21 ms | **1.08 s** |
+
+That is **600-770× per feature**, against 515× at n = 100 000 in the synthetic
+benchmark — the gap widens with n, as an O(n²) → O(n·k) change should.
+
+The per-feature figures were measured with nothing else running. The full 50-feature
+old-implementation pass was measured at 17.3 minutes, but it ran in the background
+while builds and tests competed for the machine, so ~12.5 min is the honest
+projection from the uncontended per-feature times. It was run to completion for the
+equivalence check, not for its timing.
+
+On mfeat-factors, where n is only 2 000, the same change is worth 10.9×
+(762 ms → 70 ms for all 216 features) — consistent with the 13× measured at
+n = 1 000 synthetically, and confirmation that the O(k) cost the fix introduces is
+not a problem at 10 classes.
 
 ### What this changes downstream
 
