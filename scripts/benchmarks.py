@@ -681,16 +681,40 @@ def diagnose_shape(run, shape, n):
         return None
     compiler = 1.0 - same_lib / base
     stdlib = 1.0 - other_lib / same_lib
-    if compiler > TOOLCHAIN_MARGIN and stdlib > TOOLCHAIN_MARGIN:
+
+    # If GCC tuned for the actual CPU catches up with clang, the gap was never
+    # the compiler *vendor* — it was GCC's default generic x86-64 scheduling.
+    # Measured on Zen 5: -march=native moves GCC to within 1% of clang, while a
+    # GCC 15 -> 16 upgrade moved it 0.4%.
+    native = sortbench_median(run, "gcc_native", shape, n)
+    tuning = (1.0 - native / base) if (native and base) else None
+    tuned_matches_clang = (
+        native is not None and same_lib
+        and abs(native - same_lib) / same_lib < 0.10
+    )
+
+    # Tuning explains the *compiler* half only. The library effect is independent
+    # and must not be swallowed by it: on sort<float>, -march=native brings GCC to
+    # clang's level while libc++ remains 2.9x faster than libstdc++ on top of that.
+    compiler_is_tuning = bool(
+        compiler > TOOLCHAIN_MARGIN and tuning and tuning > TOOLCHAIN_MARGIN
+        and tuned_matches_clang)
+    stdlib_matters = stdlib > TOOLCHAIN_MARGIN
+
+    if compiler_is_tuning and stdlib_matters:
+        verdict = "tuning+stdlib"
+    elif compiler_is_tuning:
+        verdict = "tuning"
+    elif compiler > TOOLCHAIN_MARGIN and stdlib_matters:
         verdict = "both"
     elif compiler > TOOLCHAIN_MARGIN:
         verdict = "compiler"
-    elif stdlib > TOOLCHAIN_MARGIN:
+    elif stdlib_matters:
         verdict = "stdlib"
     else:
         verdict = "neither"
-    return {"shape": shape, "n": n, "compiler": compiler,
-            "stdlib": stdlib, "verdict": verdict}
+    return {"shape": shape, "n": n, "compiler": compiler, "stdlib": stdlib,
+            "tuning": tuning, "verdict": verdict}
 
 
 def diagnose(run):
@@ -787,10 +811,13 @@ def render_sortbench(runs):
 
     add("## Verdict, per shape")
     add("")
-    add("`compiler` = clang beats GCC on the same standard library. `stdlib` = "
-        "libc++ beats libstdc++ under the same compiler. `both` = each swap helps "
-        "independently. `neither` = the cause is elsewhere, and the obvious "
-        "suspects are ruled out.")
+    add("`tuning` = GCC catches clang once built with `-march=native`, so the gap "
+        "was its default generic x86-64 scheduling, not the compiler. "
+        "`tuning+stdlib` = that, **and** libc++ is faster still on top of it — the "
+        "two are independent. `compiler` = "
+        "clang beats GCC and tuning does not explain it. `stdlib` = libc++ beats "
+        "libstdc++ under the same compiler. `both` = compiler and library each help "
+        "independently. `neither` = the obvious suspects are ruled out.")
     add("")
     add(f"A swap has to beat {TOOLCHAIN_MARGIN * 100:.0f}% to count. Percentages "
         "are the time saved by making that one swap.")
@@ -803,11 +830,12 @@ def render_sortbench(runs):
             add(f"- Inconclusive: {why}.")
             add("")
             continue
-        add("| Shape | n | compiler | stdlib | reading |")
-        add("|---|---:|---:|---:|---|")
+        add("| Shape | n | compiler | stdlib | -march=native | reading |")
+        add("|---|---:|---:|---:|---:|---|")
         for d in diags:
+            tune = f"{d['tuning'] * 100:+.0f}%" if d.get("tuning") is not None else "—"
             add(f"| {d['shape']} | {d['n']:,} | {d['compiler'] * 100:+.0f}% | "
-                f"{d['stdlib'] * 100:+.0f}% | **{d['verdict']}** |")
+                f"{d['stdlib'] * 100:+.0f}% | {tune} | **{d['verdict']}** |")
         add("")
 
     # ---- same build, different machines ----------------------------------- #

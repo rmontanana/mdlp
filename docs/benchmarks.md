@@ -556,10 +556,46 @@ reports. `SORTBENCH_STORE=0 make sortbench` runs without writing anything.
 library. A result is a strong hypothesis about the cause, not a measurement of
 mdlp.
 
-### GCC's version was the wrong answer — it is machine-specific
+### Answer: GCC's default target, not the compiler and not its version
+
+`-march=native` settles it. On the Strix Halo at n = 100 000:
+
+| Shape | GCC generic | **GCC `-march=native`** | Clang | libc++ |
+|---|---:|---:|---:|---:|
+| `sort<float>` | 7.229 | **4.788** | 4.795 | 1.672 |
+| `stable_sort<index>` | 9.779 | **6.769** | 6.710 | 7.035 |
+| `transform(fnptr)` | 1.804 | **1.251** | 1.161 | 1.181 |
+| `transform(direct)` | 1.756 | **1.171** | 1.169 | 1.180 |
+
+GCC tuned for the actual CPU lands within **0.1-0.9%** of clang on three of four
+shapes. The gap was never the compiler vendor and never its version: it is GCC's
+default generic x86-64 scheduling, which suits Zen 4 (the 7950X3D, where no gap
+appeared) and does not suit Zen 5.
+
+For comparison, the GCC 15 → 16 upgrade moved the same number by 0.4%.
+
+**Actionable:** build with `-march=native` on that machine. It recovers 30-35%
+across the board without changing toolchain, and needs no ABI compatibility
+gymnastics. The usual caveat applies — the binary stops being portable to other
+CPUs, which is fine for a fixed research machine.
+
+The report encodes this as a `tuning` verdict, distinct from `compiler`.
+
+### The library effect is independent and survives
+
+`sort<float>` reads `tuning+stdlib`, not `tuning`: after `-march=native` brings GCC
+to 4.788 ms, libc++ still does the same work in 1.672 ms. **2.9× on top of the
+tuning fix**, unchanged by it.
+
+That remains the only finding with no easy remedy, since libtorch's ABI rules out
+libc++, and it is what makes `BinDisc::fit (quantile)` — and `PKIDisc`, which
+always selects QUANTILE — around 3× slower on Linux than on macOS.
+
+### Superseded: the GCC-version conclusion was wrong
 
 An earlier revision of this document concluded that GCC 16 fixed what GCC 15 did
-badly. **That was wrong**, and upgrading the Strix Halo refuted it.
+badly. **That was wrong**, and upgrading the Strix Halo refuted it. Kept here
+because the reasoning error is worth not repeating.
 
 The reasoning that produced it: the two Linux machines differed in verdicts, and
 they differed in both hardware and compiler release. Clang measured within 4-13%
@@ -587,9 +623,7 @@ this diagnostic has not yet distinguished them. A `gcc_native` build
 x86-64, so if its scheduling is what hurts on Zen 5, tuning for the real CPU should
 close the gap. If it does not, codegen is not the variable either.
 
-**No conclusion is offered here until that runs.** The honest state is: the
-`compiler` verdict on the Strix Halo is real and reproducible across four runs, and
-its cause is not the compiler release.
+That run has since happened, and the answer is above: GCC's default target.
 
 ### The one finding that holds everywhere: libstdc++'s `std::sort`
 
