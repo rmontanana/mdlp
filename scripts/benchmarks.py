@@ -668,52 +668,61 @@ def sortbench_median(run, label, shape, n):
     return None
 
 
+def diagnose_shape(run, shape, n):
+    """Compiler and standard-library effect for one shape, at one size.
+
+    clang+libstdc++ against gcc+libstdc++ isolates the compiler; clang+libc++
+    against clang+libstdc++ isolates the library.
+    """
+    base = sortbench_median(run, "gcc_libstdcxx", shape, n)
+    same_lib = sortbench_median(run, "clang_libstdcxx", shape, n)
+    other_lib = sortbench_median(run, "clang_libcxx", shape, n)
+    if not base or not same_lib or not other_lib:
+        return None
+    compiler = 1.0 - same_lib / base
+    stdlib = 1.0 - other_lib / same_lib
+    if compiler > TOOLCHAIN_MARGIN and stdlib > TOOLCHAIN_MARGIN:
+        verdict = "both"
+    elif compiler > TOOLCHAIN_MARGIN:
+        verdict = "compiler"
+    elif stdlib > TOOLCHAIN_MARGIN:
+        verdict = "stdlib"
+    else:
+        verdict = "neither"
+    return {"shape": shape, "n": n, "compiler": compiler,
+            "stdlib": stdlib, "verdict": verdict}
+
+
 def diagnose(run):
-    """Read the three builds and say what the pattern points at."""
+    """Per-shape readings, plus why the run may not support any.
+
+    Deliberately not a single verdict. The first version of this judged only
+    stable_sort<index> and reported "compiler", which was true for that shape and
+    hid that sort<float> is dominated by the standard library instead. Different
+    hot loops have different answers and collapsing them loses the finding.
+    """
     labels = [b["label"] for b in run["builds"]]
     resolved = {b["label"]: b["toolchain"] for b in run["builds"]}
     if len({resolved[x] for x in labels}) < 2:
-        return ("inconclusive",
-                "every build resolved to the same toolchain, so this machine "
-                "cannot separate compiler from standard library")
-
+        return [], ("every build resolved to the same toolchain, so this machine "
+                    "cannot separate compiler from standard library")
     needed = ["gcc_libstdcxx", "clang_libstdcxx", "clang_libcxx"]
-    if not all(x in labels for x in needed):
-        missing = [x for x in needed if x not in labels]
-        return ("inconclusive",
-                f"missing build(s): {', '.join(missing)}; all three are required "
-                "to separate the two variables")
+    missing = [x for x in needed if x not in labels]
+    if missing:
+        return [], (f"missing build(s): {', '.join(missing)}; all three are "
+                    "required to separate the two variables")
 
-    sizes = sorted({r["n"] for r in run["results"] if r["shape"] == KEY_SHAPE})
-    if not sizes:
-        return ("inconclusive", f"no {KEY_SHAPE} measurements")
-    n = sizes[-1]
-    base = sortbench_median(run, "gcc_libstdcxx", KEY_SHAPE, n)
-    same_lib = sortbench_median(run, "clang_libstdcxx", KEY_SHAPE, n)
-    other_lib = sortbench_median(run, "clang_libcxx", KEY_SHAPE, n)
-    if not base or not same_lib or not other_lib:
-        return ("inconclusive", "incomplete measurements")
-
-    compiler_gain = 1.0 - same_lib / base      # clang vs gcc, same library
-    stdlib_gain = 1.0 - other_lib / same_lib   # libc++ vs libstdc++, same compiler
-
-    if stdlib_gain > TOOLCHAIN_MARGIN and compiler_gain <= TOOLCHAIN_MARGIN:
-        return ("stdlib",
-                f"swapping the standard library is worth {stdlib_gain * 100:.0f}% on "
-                f"{KEY_SHAPE} at n={n:,}, swapping the compiler only "
-                f"{compiler_gain * 100:.0f}%")
-    if compiler_gain > TOOLCHAIN_MARGIN and stdlib_gain <= TOOLCHAIN_MARGIN:
-        return ("compiler",
-                f"swapping the compiler is worth {compiler_gain * 100:.0f}% on "
-                f"{KEY_SHAPE} at n={n:,}, swapping the standard library only "
-                f"{stdlib_gain * 100:.0f}%")
-    if compiler_gain > TOOLCHAIN_MARGIN and stdlib_gain > TOOLCHAIN_MARGIN:
-        return ("both",
-                f"both matter: compiler {compiler_gain * 100:.0f}%, standard library "
-                f"{stdlib_gain * 100:.0f}%")
-    return ("neither",
-            f"neither swap exceeds {TOOLCHAIN_MARGIN * 100:.0f}% on {KEY_SHAPE} at "
-            f"n={n:,}; the difference lies elsewhere")
+    shapes = []
+    for r in run["results"]:
+        if r["shape"] not in shapes:
+            shapes.append(r["shape"])
+    largest = max(r["n"] for r in run["results"])
+    out = []
+    for shape in shapes:
+        d = diagnose_shape(run, shape, largest)
+        if d:
+            out.append(d)
+    return out, None
 
 
 def render_sortbench(runs):
@@ -736,19 +745,30 @@ def render_sortbench(runs):
         f"Generated {datetime.now(timezone.utc).isoformat(timespec='seconds')}.")
     add("")
 
-    add("## Verdict")
+    add("## Verdict, per shape")
     add("")
-    add("| Machine | Reading | Why |")
-    add("|---|---|---|")
+    add("`compiler` = clang beats GCC on the same standard library. `stdlib` = "
+        "libc++ beats libstdc++ under the same compiler. `both` = each swap helps "
+        "independently. `neither` = the cause is elsewhere, and the obvious "
+        "suspects are ruled out.")
+    add("")
+    add(f"A swap has to beat {TOOLCHAIN_MARGIN * 100:.0f}% to count. Percentages "
+        "are the time saved by making that one swap.")
+    add("")
     for r in runs:
-        verdict, why = diagnose(r)
-        add(f"| {r['platform']['cpu']} | **{verdict}** | {why} |")
-    add("")
-    add("`stdlib` means the answer is to change standard library — or better, to "
-        "replace the call, which helps every platform. `compiler` means the answer "
-        "is the compiler. `neither` means the cause is elsewhere and this "
-        "diagnostic has ruled out the obvious suspects.")
-    add("")
+        diags, why = diagnose(r)
+        add(f"**{r['platform']['cpu']}**")
+        add("")
+        if why:
+            add(f"- Inconclusive: {why}.")
+            add("")
+            continue
+        add("| Shape | n | compiler | stdlib | reading |")
+        add("|---|---:|---:|---:|---|")
+        for d in diags:
+            add(f"| {d['shape']} | {d['n']:,} | {d['compiler'] * 100:+.0f}% | "
+                f"{d['stdlib'] * 100:+.0f}% | **{d['verdict']}** |")
+        add("")
 
     for r in runs:
         p = r["platform"]
@@ -803,8 +823,12 @@ def cmd_sortbench_report(args):
     SORTBENCH_REPORT.write_text(render_sortbench(runs))
     print(f">>> wrote {SORTBENCH_REPORT.relative_to(REPO_ROOT)} from {len(runs)} run(s)")
     for r in runs:
-        verdict, _ = diagnose(r)
-        print(f"    - {r['platform']['cpu']}: {verdict}")
+        diags, why = diagnose(r)
+        if why:
+            print(f"    - {r['platform']['cpu']}: inconclusive ({why})")
+        else:
+            summary = ", ".join(f"{d['shape']}={d['verdict']}" for d in diags)
+            print(f"    - {r['platform']['cpu']}: {summary}")
 
 
 def main():

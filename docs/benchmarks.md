@@ -556,7 +556,57 @@ reports. `SORTBENCH_STORE=0 make sortbench` runs without writing anything.
 library. A result is a strong hypothesis about the cause, not a measurement of
 mdlp.
 
-### What the macOS run already established
+### What the Strix Halo run established
+
+Run on Fedora 43 with GCC 15 / libstdc++, Clang 21 / libstdc++ and Clang 21 /
+libc++. Full tables in [benchmarks-sortbench.md](benchmarks-sortbench.md).
+
+**Each hot loop has a different answer**, which a single verdict would have hidden:
+
+| Shape | compiler | stdlib | reading |
+|---|---:|---:|---|
+| `sort<float>` | +31% | **+66%** | both, library dominant |
+| `stable_sort<index>` | **+32%** | −5% | compiler |
+| `transform` | **+38-40%** | ±5% | compiler |
+
+Three findings follow.
+
+**The bizarre `BinDisc::fit (quantile)` jump is libstdc++'s `std::sort`.** The
+library benchmark showed 64-121× when n grew 10× from 1 000 to 10 000 on Linux
+against 12× on macOS. The standalone test reproduces it exactly, and pins it:
+
+| build | n = 1 000 → 10 000 |
+|---|---:|
+| GCC + libstdc++ | **122×** |
+| Clang + libstdc++ | **106×** |
+| Clang + libc++ | 13× |
+| AppleClang + libc++ (macOS) | 13× |
+
+Both libstdc++ builds blow up regardless of compiler; both libc++ builds behave
+normally. This is a standard-library property, not a compiler or hardware one.
+
+**`stable_sort<index>` — the ~39% of `fit` — is the *compiler*, not the library.**
+Clang is 32% faster than GCC on the same libstdc++, and libc++ is marginally
+*worse*. So the earlier plan of replacing `std::stable_sort` with a hand-written
+sort was aimed at the wrong target: there is no standard-library penalty to
+recover on that path.
+
+**`transform`'s cross-platform gap is not the toolchain at all.** Clang buys 38-40%
+on Linux, but even the fastest Linux build takes 1.11 ms at n = 100 000 against
+macOS's 0.22 ms — 5× apart with the same compiler family and the same library.
+Whatever explains that is microarchitectural, and this diagnostic has ruled the
+toolchain out rather than confirming it.
+
+The function-pointer hypothesis is also dead: `transform(fnptr)` and
+`transform(direct)` measure within noise of each other on every build at
+n = 100 000. Hoisting that branch would buy nothing.
+
+**Caveat:** one run per build, and one cell is visibly noisy —
+`transform(direct)` at n = 10 000 under Clang + libstdc++ reads 0.1003 ms against
+0.0238 ms for `fnptr`, while at n = 100 000 the two are equal. Treat single cells
+with suspicion; the patterns above hold across sizes.
+
+### What the macOS run established
 
 macOS cannot answer the toolchain question at all — `g++` is a symlink to clang and
 libstdc++ is unavailable, so all three builds resolve to AppleClang + libc++ and
