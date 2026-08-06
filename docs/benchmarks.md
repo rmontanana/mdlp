@@ -556,55 +556,77 @@ reports. `SORTBENCH_STORE=0 make sortbench` runs without writing anything.
 library. A result is a strong hypothesis about the cause, not a measurement of
 mdlp.
 
-### What the Strix Halo run established
+### Both Linux machines: the answer is GCC's *version*, not clang
 
-Run on Fedora 43 with GCC 15 / libstdc++, Clang 21 / libstdc++ and Clang 21 /
-libc++. Full tables in [benchmarks-sortbench.md](benchmarks-sortbench.md).
+The two Linux runs disagreed, and the disagreement is the finding.
 
-**Each hot loop has a different answer**, which a single verdict would have hidden:
+| Machine | GCC | Clang | verdicts |
+|---|---|---|---|
+| Ryzen 9 7950X3D | **16** | 22 | `sort<float>`=stdlib, everything else `neither` |
+| Ryzen AI Max+ 395 | **15** | 21 | `sort<float>`=both, everything else `compiler` |
 
-| Shape | compiler | stdlib | reading |
-|---|---:|---:|---|
-| `sort<float>` | +31% | **+66%** | both, library dominant |
-| `stable_sort<index>` | **+32%** | −5% | compiler |
-| `transform` | **+38-40%** | ±5% | compiler |
+Comparing one build label across machines separates compiler *vendor* from
+compiler *version*. The clang columns agree between the two machines to within
+4-13%, so the hardware is comparable. The GCC columns do not:
 
-Three findings follow.
+| Shape (n = 100 000) | GCC 15 vs GCC 16 | Clang 21 vs Clang 22 |
+|---|---:|---:|
+| `sort<float>` | **+57%** | +9% |
+| `stable_sort<index>` | **+58%** | +13% |
+| `transform` | **+68%** | +4% |
 
-**The bizarre `BinDisc::fit (quantile)` jump is libstdc++'s `std::sort`.** The
-library benchmark showed 64-121× when n grew 10× from 1 000 to 10 000 on Linux
-against 12× on macOS. The standalone test reproduces it exactly, and pins it:
+**GCC 16 produces code as good as clang; GCC 15 does not.** The `compiler` verdict
+on the Strix Halo is really a GCC 15 problem, and on the machine already running
+GCC 16 there is no compiler penalty left to recover.
+
+This is a limitation of the diagnostic worth stating: it reports `compiler` when
+clang beats GCC, and cannot tell on its own whether the cause is the vendor or the
+release. The cross-machine table exists to answer that.
+
+### The one finding that holds everywhere: libstdc++'s `std::sort`
+
+Independent of machine, compiler and compiler version:
+
+| Machine | libc++ vs libstdc++ on `sort<float>` |
+|---|---:|
+| Ryzen 9 7950X3D (Clang 22) | **2.65× faster** |
+| Ryzen AI Max+ 395 (Clang 21) | **2.91× faster** |
+
+And the superlinear jump the library benchmark showed for `BinDisc::fit (quantile)`
+tracks the same library:
 
 | build | n = 1 000 → 10 000 |
 |---|---:|
-| GCC + libstdc++ | **122×** |
-| Clang + libstdc++ | **106×** |
-| Clang + libc++ | 13× |
-| AppleClang + libc++ (macOS) | 13× |
+| GCC 15 + libstdc++ | 122× |
+| Clang 21 + libstdc++ | 106× |
+| GCC 16 + libstdc++ | 65× |
+| Clang 22 + libstdc++ | 59× |
+| any + libc++ | **13×** |
 
-Both libstdc++ builds blow up regardless of compiler; both libc++ builds behave
-normally. This is a standard-library property, not a compiler or hardware one.
+Every libstdc++ build blows up; no libc++ build does. GCC 16 halves the magnitude
+but does not remove it. This is a property of libstdc++'s `std::sort`, and it is
+what makes `BinDisc::fit (quantile)` — and therefore `PKIDisc`, which always
+selects the QUANTILE strategy — 3× slower on Linux.
 
-**`stable_sort<index>` — the ~39% of `fit` — is the *compiler*, not the library.**
-Clang is 32% faster than GCC on the same libstdc++, and libc++ is marginally
-*worse*. So the earlier plan of replacing `std::stable_sort` with a hand-written
-sort was aimed at the wrong target: there is no standard-library penalty to
-recover on that path.
+Note the scope: `BinDisc` with `strategy_t::UNIFORM` does **not** sort
+(`fit_uniform` only calls `minmax_element`), so it is unaffected. `CPPFImdlp` sorts
+twice, but only `sortIndices` matters; the `sort` over `cutPoints` handles a few
+dozen elements.
 
-**`transform`'s cross-platform gap is not the toolchain at all.** Clang buys 38-40%
-on Linux, but even the fastest Linux build takes 1.11 ms at n = 100 000 against
-macOS's 0.22 ms — 5× apart with the same compiler family and the same library.
-Whatever explains that is microarchitectural, and this diagnostic has ruled the
-toolchain out rather than confirming it.
+### `transform` is still unexplained
 
-The function-pointer hypothesis is also dead: `transform(fnptr)` and
-`transform(direct)` measure within noise of each other on every build at
-n = 100 000. Hoisting that branch would buy nothing.
+Clang buys 38-40% on GCC 15 and nothing on GCC 16, yet **every** Linux build sits
+at 1.04-1.19 ms at n = 100 000 against macOS's 0.22 ms. A 5× gap survives holding
+compiler family and standard library constant, so it is microarchitectural. The
+toolchain is ruled out rather than implicated, and the function-pointer hypothesis
+is dead: `transform(fnptr)` and `transform(direct)` measure within noise on every
+build on every machine.
 
-**Caveat:** one run per build, and one cell is visibly noisy —
-`transform(direct)` at n = 10 000 under Clang + libstdc++ reads 0.1003 ms against
-0.0238 ms for `fnptr`, while at n = 100 000 the two are equal. Treat single cells
-with suspicion; the patterns above hold across sizes.
+**Caveat throughout:** one run per build per machine, and one cell is visibly
+noisy — `transform(direct)` at n = 10 000 under Clang 21 + libstdc++ reads
+0.1003 ms against 0.0238 ms for `fnptr`, while at n = 100 000 the two are equal.
+Treat single cells with suspicion; the patterns above hold across sizes and across
+machines.
 
 ### What the macOS run established
 

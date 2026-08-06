@@ -770,6 +770,47 @@ def render_sortbench(runs):
                 f"{d['stdlib'] * 100:+.0f}% | **{d['verdict']}** |")
         add("")
 
+    # ---- same build, different machines ----------------------------------- #
+    # The per-machine tables cannot show this, and it is where a compiler *version*
+    # difference reveals itself: a verdict of "compiler" may really mean "this
+    # particular release of that compiler".
+    if len(runs) > 1:
+        add("## Same build, across machines")
+        add("")
+        add("A verdict of `compiler` above says clang beat GCC on that machine. It "
+            "cannot say whether the cause is the vendor or the *version*, because "
+            "each machine has whatever versions it has. Comparing one build label "
+            "across machines separates them: if the clang columns agree while the "
+            "GCC columns do not, the GCC release is the variable, not the vendor.")
+        add("")
+        largest = max(x["n"] for r in runs for x in r["results"])
+        labels = []
+        for r in runs:
+            for b in r["builds"]:
+                if b["label"] not in labels:
+                    labels.append(b["label"])
+        shapes = []
+        for r in runs:
+            for x in r["results"]:
+                if x["shape"] not in shapes:
+                    shapes.append(x["shape"])
+        for label in labels:
+            present = [r for r in runs if any(b["label"] == label for b in r["builds"])]
+            if len(present) < 2:
+                continue
+            add(f"### `{label}` at n = {largest:,}")
+            add("")
+            add("| Machine | Toolchain | " + " | ".join(shapes) + " |")
+            add("|---|---|" + "---:|" * len(shapes))
+            for r in present:
+                tc = next(b["toolchain"] for b in r["builds"] if b["label"] == label)
+                cells = []
+                for shape in shapes:
+                    v = sortbench_median(r, label, shape, largest)
+                    cells.append(f"{v:.3f}" if v is not None else "—")
+                add(f"| {r['platform']['cpu']} | {tc} | " + " | ".join(cells) + " |")
+            add("")
+
     for r in runs:
         p = r["platform"]
         add(f"## {p['cpu']}")
