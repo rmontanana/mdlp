@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(fimdlp
-    VERSION 2.1.3
+    VERSION 3.0.0
     LANGUAGES CXX
     DESCRIPTION "Discretization algorithm based on the paper by Fayyad & Irani Multi-Interval Discretization of Continuous-Valued Attributes for Classification Learning."
     HOMEPAGE_URL "https://github.com/rmontanana/mdlp"
@@ -58,6 +58,8 @@ include_directories(
 
 add_library(fimdlp src/CPPFImdlp.cpp src/Metrics.cpp src/BinDisc.cpp src/Discretizer.cpp src/PKIDisc.cpp)
 target_link_libraries(fimdlp PRIVATE torch::torch)
+# The library's own sources build warning-clean; dependencies are not held to it.
+target_compile_options(fimdlp PRIVATE -Wall -Wextra)
 
 # Installation
 # ------------

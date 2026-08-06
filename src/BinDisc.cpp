@@ -68,17 +68,17 @@ namespace mdlp {
             fit_uniform(X);  // reads only; nothing to adopt
         }
     }
-    void BinDisc::fit(samples_t& X, labels_t& y)
+    // y is accepted and ignored on purpose: every discretizer takes fit(X, y) so
+    // an experimentation platform can drive them all through one code path. The
+    // attribute says "unused deliberately" rather than silencing the warning.
+    void BinDisc::fit(samples_t& X, [[maybe_unused]] labels_t& y)
     {
         if (X.empty()) {
             throw ValidationError("X cannot be empty");
         }
-
-        // BinDisc is inherently unsupervised, but we validate inputs for consistency
-        // Note: y parameter is validated but not used in binning strategy
         fit(X);
     }
-    void BinDisc::fit(samples_t&& X, labels_t&& y)
+    void BinDisc::fit(samples_t&& X, [[maybe_unused]] labels_t&& y)
     {
         if (X.empty()) {
             throw ValidationError("X cannot be empty");

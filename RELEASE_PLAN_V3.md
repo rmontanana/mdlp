@@ -2,7 +2,7 @@
 
 **Target version:** 3.0.0 (major — breaking changes)
 **Branch:** `release/3.0.0`
-**Status:** Phases 0-7 complete (T6.1 deferred to 3.1.0); Phase 8 pending
+**Status:** All phases complete except tagging (T8.7). T6.1 deferred to 3.1.0.
 **Supersedes:** `RELEASE_PLAN_2.2.0.md` (see [Appendix B](#appendix-b--corrections-to-the-superseded-220-plan))
 
 > **This document is the single source of truth for the 3.0.0 release.**
@@ -546,17 +546,39 @@ everything. At n = 100 000 it is 16.5 ms against `transform`'s 0.63 ms, so
 comparison is worthwhile and the libstdc++/libc++ question matters more than
 before.
 
-### Phase 8 — Testing, docs, release
+### Phase 8 — Testing, docs, release ✅ COMPLETE (T8.7 awaiting authorization)
 
-- **T8.1** `tests/Security_unittest.cpp` — tensor validation (including the D1
-  non-contiguous case), bounds checking, large inputs, deep recursion.
-- **T8.2** Restore 100% coverage; verify with `make test`.
-- **T8.3** Enable `-Wall -Wextra` and clear the resulting warnings.
-- **T8.4** Write `SECURITY.md` and `ARCHITECTURE.md`. Both were specified in the
-  2.2.0 plan and neither exists.
-- **T8.5** Write `MIGRATION.md` covering every breaking change in §6.
-- **T8.6** Bump `CMakeLists.txt:4` to `VERSION 3.0.0` and update `CHANGELOG.md`.
-- **T8.7** Tag and release.
+- [x] **T8.1** `tests/Security_unittest.cpp` with 9 tests. It holds what was *not*
+  already covered rather than restating it: tensor validation and the
+  non-contiguous case live in `Discretizer_unittest`, index bounds in
+  `FImdlp_unittest`. What was missing — recursion depth, scale, degenerate
+  distributions, extreme magnitudes — is here.
+- [x] **T8.2** Coverage is 100% lines and functions, enforced by `make test`.
+- [x] **T8.3** `-Wall -Wextra` on the library target; **zero warnings**. The only
+  two were `BinDisc`'s deliberately ignored `y`, now `[[maybe_unused]]`.
+- [x] **T8.4** `SECURITY.md` and `ARCHITECTURE.md` written.
+- [x] **T8.5** `MIGRATION.md` written.
+- [x] **T8.6** `CMakeLists.txt` at `VERSION 3.0.0`; `CHANGELOG.md` dated.
+- [ ] **T8.7 Tag and release — not done.** Tagging and publishing are
+  outward-facing and hard to reverse, so they wait for explicit authorization.
+
+**Three limitations found while writing SECURITY.md, documented rather than
+fixed:**
+
+1. **NaN in the input is undefined behaviour.** Both sorts require a strict weak
+   ordering, which NaN comparisons do not provide. It currently returns nonsense
+   rather than crashing, which is not a guarantee. Rejecting NaN would cost an
+   O(n) scan — negligible against `CPPFImdlp::fit` but a meaningful share of
+   `BinDisc::fit (uniform)`, which is 0.15 ms at n = 100 000 — so it is a decision
+   with a real trade-off rather than an obvious fix.
+2. **Infinities are handled inconsistently**: rejected by `BinDisc` UNIFORM via
+   `linspace`, accepted everywhere else.
+3. **Recursion depth is unbounded by default.** Measured 6 671 frames at
+   n = 400 000 on structured data, growing roughly linearly with n. `max_depth`
+   bounds it and a test proves so, but the default is `INT_MAX`.
+
+**Verification.** 142 tests pass. Coverage 100%. Debug and release warning-free.
+The sample program runs.
 
 ---
 
