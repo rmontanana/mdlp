@@ -113,23 +113,91 @@ namespace {
         labels_t y;
     };
 
+    // ---- portable pseudo-random data ---------------------------------------
+    //
+    // std::mt19937 is specified down to the bit, but the *distributions* are not:
+    // std::uniform_int_distribution and std::normal_distribution may produce
+    // different sequences on libc++ and libstdc++ from the same engine state. A
+    // shared seed therefore does NOT give shared data, and dataset_version 1
+    // results were comparing platforms that had each discretized a different
+    // dataset — which makes cross-platform timings uninterpretable.
+    //
+    // Everything below uses only integer operations and IEEE-754 addition, both
+    // of which are exactly specified, so the dataset is bit-identical everywhere.
+    constexpr int DATASET_VERSION = 2;
+
+    // Uniform in [0,1), 24 bits of precision. Exact: the divisor is a power of two.
+    double u01(std::mt19937& rng)
+    {
+        return static_cast<double>(rng() >> 8) * (1.0 / 16777216.0);
+    }
+
+    int bounded(std::mt19937& rng, int k)
+    {
+        const int v = static_cast<int>(u01(rng) * static_cast<double>(k));
+        return v < k ? v : k - 1;
+    }
+
+    // Irwin-Hall approximation to N(0,1): twelve uniforms minus six. Addition
+    // only. Box-Muller would pull in std::log and std::cos, whose last-ulp
+    // results are not guaranteed to agree across platforms.
+    double normal01(std::mt19937& rng)
+    {
+        double s = 0.0;
+        for (int i = 0; i < 12; ++i) {
+            s += u01(rng);
+        }
+        return s - 6.0;
+    }
+
+    uint64_t fnv1a(const void* data, size_t bytes, uint64_t h)
+    {
+        const auto* p = static_cast<const unsigned char*>(data);
+        for (size_t i = 0; i < bytes; ++i) {
+            h ^= p[i];
+            h *= 0x100000001b3ull;
+        }
+        return h;
+    }
+
+    // Fingerprint of the exact bytes fed to the library, so the report can state
+    // whether two platforms really measured the same work instead of assuming it.
+    std::string dataset_checksum(const Dataset& d)
+    {
+        uint64_t h = 0xcbf29ce484222325ull;
+        h = fnv1a(d.X.data(), d.X.size() * sizeof(mdlp::precision_t), h);
+        h = fnv1a(d.y.data(), d.y.size() * sizeof(mdlp::label_t), h);
+        std::ostringstream os;
+        os << std::hex << std::setw(16) << std::setfill('0') << h;
+        return os.str();
+    }
+
     // Class-conditional normals: overlapping but separable, so MDLP has real
     // structure to find rather than degenerating to "no cut points".
-    // Fixed seed, so every run on every platform measures identical work.
     Dataset make_dataset(size_t n, int n_classes, unsigned seed = 42u)
     {
         std::mt19937 rng(seed);
-        std::uniform_int_distribution<int> label_dist(0, n_classes - 1);
         Dataset d;
         d.X.reserve(n);
         d.y.reserve(n);
         for (size_t i = 0; i < n; ++i) {
-            const int label = label_dist(rng);
-            std::normal_distribution<float> value_dist(static_cast<float>(label) * 2.0f, 1.0f);
-            d.X.push_back(value_dist(rng));
-            d.y.push_back(label);
+            const int label = bounded(rng, n_classes);
+            const double value = static_cast<double>(label) * 2.0 + normal01(rng);
+            d.X.push_back(static_cast<mdlp::precision_t>(value));
+            d.y.push_back(static_cast<mdlp::label_t>(label));
         }
         return d;
+    }
+
+    // Lets the CPU governor ramp before anything is timed. Without it the first
+    // cells measured — the small-n ones — are taken at idle clocks: the Strix
+    // Halo dataset_version 1 run finished 21.7% FASTER than it started.
+    void warm_up(const std::function<void()>& body, double seconds)
+    {
+        const auto deadline = clock_type::now() + std::chrono::duration<double>(seconds);
+        while (clock_type::now() < deadline) {
+            body();
+        }
     }
 
     // FIXED across platforms. Do not make these adaptive: see the header comment.
@@ -203,7 +271,8 @@ namespace {
         const std::string& level,
         int n_classes,
         const Stats& drift_before,
-        const Stats& drift_after)
+        const Stats& drift_after,
+        const std::vector<std::pair<size_t, std::string>>& checksums)
     {
         std::ofstream f(path);
         if (!f) {
@@ -212,7 +281,8 @@ namespace {
         }
         f << std::fixed << std::setprecision(6);
         f << "{\n";
-        f << "  \"schema\": 1,\n";
+        f << "  \"schema\": 2,\n";
+        f << "  \"dataset_version\": " << DATASET_VERSION << ",\n";
         f << "  \"library_version\": \"" << json_escape(mdlp::Discretizer::version()) << "\",\n";
         f << "  \"level\": \"" << json_escape(level) << "\",\n";
         f << "  \"n_classes\": " << n_classes << ",\n";
@@ -228,6 +298,14 @@ namespace {
         f << "    \"before_median_ms\": " << drift_before.median_ms << ",\n";
         f << "    \"after_median_ms\": " << drift_after.median_ms << "\n";
         f << "  },\n";
+        f << "  \"datasets\": [\n";
+        for (size_t i = 0; i < checksums.size(); ++i) {
+            f << "    {\"n\": " << checksums[i].first
+                << ", \"checksum\": \"" << checksums[i].second << "\"}";
+            if (i + 1 < checksums.size()) f << ",";
+            f << "\n";
+        }
+        f << "  ],\n";
         f << "  \"results\": [\n";
         for (size_t i = 0; i < results.size(); ++i) {
             const auto& r = results[i];
@@ -285,6 +363,8 @@ int main(int argc, char** argv)
         disc.fit(X, y);
         sink += disc.getCutPoints().size();
         };
+    std::cout << "warming up the CPU governor...\n";
+    warm_up(drift_body, 1.5);
     const Stats drift_before = measure(drift_body, 50, 10);
 
     std::cout << "mdlp benchmark (RELEASE_PLAN_V3.md Phase 0)\n"
@@ -296,6 +376,7 @@ int main(int argc, char** argv)
     print_header();
 
     std::vector<Result> results;
+    std::vector<std::pair<size_t, std::string>> checksums;
     const auto record = [&](const std::string& name, size_t n, const Stats& s) {
         Result r{ name, n, s };
         results.push_back(r);
@@ -304,6 +385,7 @@ int main(int argc, char** argv)
 
     for (const auto n : sizes) {
         auto data = make_dataset(n, n_classes);
+        checksums.emplace_back(n, dataset_checksum(data));
         const int reps = reps_for(n);
         const int warmup = warmup_for(n);
 
@@ -407,11 +489,14 @@ int main(int argc, char** argv)
         << drift_after.median_ms << " ms after ("
         << std::showpos << std::setprecision(1) << drift_pct << "%" << std::noshowpos << ")\n";
     if (drift_pct > 10.0) {
-        std::cout << "  WARNING: the machine slowed down over the run; results may be throttled.\n";
+        std::cout << "  WARNING: the machine slowed down over the run; it likely throttled.\n";
+    } else if (drift_pct < -10.0) {
+        std::cout << "  WARNING: the machine sped up over the run, i.e. it started cold.\n"
+            << "  The cells measured first (the small-n ones) are at reduced clocks.\n";
     }
 
     if (!json_path.empty()) {
-        write_json(json_path, results, level, n_classes, drift_before, drift_after);
+        write_json(json_path, results, level, n_classes, drift_before, drift_after, checksums);
         std::cout << "wrote " << json_path << "\n";
     }
 

@@ -24,6 +24,7 @@ Methodology (see docs/benchmarks.md):
 """
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -126,6 +127,26 @@ def slugify(text):
     return re.sub(r"-+", "-", text).strip("-")
 
 
+def source_hash():
+    """Hash of the code that is actually measured: src/ and bench/.
+
+    Comparing full commit SHAs flags results as incomparable whenever anything in
+    the repository changed — including docs and previous benchmark results, which
+    cannot affect a timing. Hashing only the measured sources says whether the
+    runs really executed the same code.
+    """
+    h = hashlib.sha256()
+    for base in ("src", "bench"):
+        root = REPO_ROOT / base
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob("*")):
+            if path.is_file():
+                h.update(path.relative_to(REPO_ROOT).as_posix().encode())
+                h.update(path.read_bytes())
+    return h.hexdigest()[:12]
+
+
 def git_state():
     sha = _run(["git", "-C", str(REPO_ROOT), "rev-parse", "--short", "HEAD"]) or "unknown"
     status = _run(["git", "-C", str(REPO_ROOT), "status", "--porcelain"])
@@ -183,6 +204,7 @@ def cmd_run(args):
     tmp_json.unlink()
     payload["platform"] = fp
     payload["git"] = git
+    payload["source_hash"] = source_hash()
     payload["recorded_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     out = RESULTS_DIR / f"{fp['slug']}__{git['commit']}.json"
@@ -212,6 +234,16 @@ def median_of(run, benchmark, n):
         if r["benchmark"] == benchmark and r["n"] == n:
             return r["median_ms"]
     return None
+
+
+def dataset_version_of(run):
+    # Files written before checksums existed used the stdlib distributions, whose
+    # sequences are not portable across standard libraries.
+    return run.get("dataset_version", 1)
+
+
+def checksums_of(run):
+    return {d["n"]: d["checksum"] for d in run.get("datasets", [])}
 
 
 def sizes_of(run):
@@ -268,13 +300,51 @@ def loglog_slope(points):
 
 def homogeneity_notes(runs):
     notes = []
-    commits = {r["git"]["commit"] for r in runs}
-    if len(commits) > 1:
+
+    # Compare the measured sources, not the whole repository: a docs-only commit
+    # cannot change a timing. Legacy results carry no source_hash, so fall back to
+    # the commit SHA for those.
+    hashes = {r.get("source_hash") for r in runs}
+    if None in hashes:
+        commits = {r["git"]["commit"] for r in runs}
+        if len(commits) > 1:
+            notes.append(
+                f"**Some results predate source hashing, and they span "
+                f"{len(commits)} commits ({', '.join(sorted(commits))}).** Whether "
+                "the measured code was identical cannot be verified for those; "
+                "re-run them to find out.")
+        hashes.discard(None)
+    if len(hashes) > 1:
         notes.append(
-            f"**Results span {len(commits)} different commits "
-            f"({', '.join(sorted(commits))}).** Timings are only comparable when the "
-            "measured code is identical — re-run the outdated platforms before "
-            "drawing conclusions.")
+            f"**The measured sources differ between runs ({', '.join(sorted(hashes))}).** "
+            "`src/` and `bench/` were not identical, so these timings measure "
+            "different code and cannot be compared.")
+
+    # The datasets themselves must match, otherwise a platform may simply have
+    # been given less work to do.
+    by_n = {}
+    for r in runs:
+        for n, c in checksums_of(r).items():
+            by_n.setdefault(n, set()).add(c)
+    mismatched = sorted(n for n, cs in by_n.items() if len(cs) > 1)
+    if mismatched:
+        notes.append(
+            f"**The generated datasets differ between platforms at n = "
+            f"{', '.join(f'{n:,}' for n in mismatched)}.** The platforms did not "
+            "measure the same work, so absolute comparisons between them are "
+            "meaningless.")
+
+    legacy = [r["platform"]["slug"] for r in runs if dataset_version_of(r) < 2]
+    if legacy:
+        notes.append(
+            f"**{len(legacy)} result(s) use dataset version 1**, generated with "
+            "`std::normal_distribution` and `std::uniform_int_distribution`. Those "
+            "are not specified to produce the same sequence across standard "
+            "libraries, so a shared seed did not give shared data and each "
+            "platform very likely discretized a *different* dataset. Their "
+            "cross-platform absolute timings are not interpretable. Scaling "
+            "exponents remain valid, being computed within one platform.")
+
     levels = {r.get("level", "full") for r in runs}
     if len(levels) > 1:
         notes.append(
@@ -289,6 +359,133 @@ def homogeneity_notes(runs):
             f"**Measured with a dirty working tree: {', '.join(dirty)}.** "
             "Those results cannot be reproduced from the recorded commit.")
     return notes
+
+
+def render_comparison(runs, add):
+    """Render the comparison sections for one set of mutually comparable runs."""
+    common_sizes = sorted(set.intersection(*[set(sizes_of(r)) for r in runs]))
+    if not common_sizes:
+        add("_No size is present in every run of this group._")
+        add("")
+        return
+
+    # ---- scaling ---------------------------------------------------------- #
+    add("### Scaling behaviour")
+    add("")
+    add("Ratio of median time when n grows 10×. A ratio near **10** is linear, "
+        "near **100** is quadratic.")
+    add("")
+    add("The exponent is the log-log slope fitted over the **largest three sizes**; "
+        "R² near 1.0 means the power law fits well. Small-n points are excluded "
+        "because fixed per-iteration overhead flattens the curve there and biases "
+        "the exponent downwards.")
+    add("")
+    add(f"A **⚠** marks a fit whose own points are still under "
+        f"{OVERHEAD_FLOOR_MS} ms and therefore overhead-dominated: read those "
+        "exponents as indicative only.")
+    add("")
+    for bench in SCALING_BENCHMARKS:
+        present = [r for r in runs if any(x["benchmark"] == bench for x in r["results"])]
+        if not present:
+            continue
+        add(f"#### {bench}")
+        add("")
+        add("| Platform | " + " | ".join(
+            f"{a:,}→{b:,}" for a, b in zip(common_sizes, common_sizes[1:]))
+            + " | exponent | R² |")
+        add("|---|" + "---:|" * (len(common_sizes) - 1) + "---:|---:|")
+        for r in present:
+            ratios = []
+            for a, b in zip(common_sizes, common_sizes[1:]):
+                ta, tb = median_of(r, bench, a), median_of(r, bench, b)
+                ratios.append(f"{tb / ta:.1f}×" if ta and tb and ta > 0 else "—")
+            slope, r2, reliable = loglog_slope(
+                [(n, median_of(r, bench, n)) for n in common_sizes])
+            mark = "" if reliable else " ⚠"
+            add(f"| {r['platform']['cpu']} | " + " | ".join(ratios)
+                + f" | {fmt(slope, 2)}{mark} | {fmt(r2, 3)} |")
+        add("")
+
+    # ---- absolute medians ------------------------------------------------- #
+    add("### Median times")
+    add("")
+    add("All values in milliseconds. Median, not minimum — see the methodology "
+        "note at the top of `scripts/benchmarks.py`.")
+    add("")
+    all_benches = []
+    for r in runs:
+        for b in benchmarks_of(r):
+            if b not in all_benches:
+                all_benches.append(b)
+    for n in common_sizes:
+        add(f"#### n = {n:,}")
+        add("")
+        add("| Benchmark | " + " | ".join(r["platform"]["cpu"] for r in runs) + " |")
+        add("|---|" + "---:|" * len(runs))
+        for bench in all_benches:
+            add(f"| {bench} | "
+                + " | ".join(fmt(median_of(r, bench, n)) for r in runs) + " |")
+        add("")
+
+    largest = common_sizes[-1]
+
+    # ---- relative speed --------------------------------------------------- #
+    if len(runs) > 1:
+        ref = runs[0]
+        add("### Relative speed")
+        add("")
+        add(f"Median time divided by the same measurement on "
+            f"**{ref['platform']['cpu']}** (the reference). Below 1.00 is faster "
+            "than the reference.")
+        add("")
+        add(f"At n = {largest:,}:")
+        add("")
+        add("| Benchmark | " + " | ".join(r["platform"]["cpu"] for r in runs) + " |")
+        add("|---|" + "---:|" * len(runs))
+        for bench in SCALING_BENCHMARKS:
+            base = median_of(ref, bench, largest)
+            if not base:
+                continue
+            cells = []
+            for r in runs:
+                t = median_of(r, bench, largest)
+                cells.append(f"{t / base:.2f}×" if t else "—")
+            add(f"| {bench} | " + " | ".join(cells) + " |")
+        add("")
+
+    # ---- noise ------------------------------------------------------------ #
+    add("### Measurement noise")
+    add("")
+    add("`(mean − min) / min` at the largest common size, averaged over all "
+        "benchmarks. **Any cross-platform difference smaller than a platform's "
+        "noise figure is not a real difference.**")
+    add("")
+    add("| Platform | mean noise | worst benchmark | thermal drift |")
+    add("|---|---:|---|---:|")
+    for r in runs:
+        spreads = []
+        worst, worst_val = "—", -1.0
+        for x in r["results"]:
+            if x["n"] != largest or x["min_ms"] <= 0:
+                continue
+            spread = (x["mean_ms"] - x["min_ms"]) / x["min_ms"]
+            spreads.append(spread)
+            if spread > worst_val:
+                worst_val, worst = spread, x["benchmark"]
+        avg = sum(spreads) / len(spreads) if spreads else None
+        drift = r.get("thermal_drift") or {}
+        before, after = drift.get("before_median_ms"), drift.get("after_median_ms")
+        drift_txt = (f"{(after - before) / before * 100:+.1f}%"
+                     if before and after and before > 0 else "—")
+        add(f"| {r['platform']['cpu']} | "
+            f"{f'{avg * 100:.1f}%' if avg is not None else '—'} | "
+            f"{worst} ({worst_val * 100:.1f}%) | {drift_txt} |")
+    add("")
+    add("Positive thermal drift means the machine ran slower at the end than at "
+        "the start, i.e. it throttled. Large *negative* drift means it started "
+        "cold, so the cells measured first — the small-n ones — were taken at "
+        "reduced clocks.")
+    add("")
 
 
 def render_report(runs):
@@ -316,8 +513,8 @@ def render_report(runs):
     # ---- platforms -------------------------------------------------------- #
     add("## Platforms")
     add("")
-    add("| # | CPU | Arch | Cores | RAM | OS | Compiler | Commit |")
-    add("|---|---|---|---:|---:|---|---|---|")
+    add("| # | CPU | Arch | Cores | RAM | OS | Compiler | Dataset | Commit |")
+    add("|---|---|---|---:|---:|---|---|---:|---|")
     for i, r in enumerate(runs, 1):
         p = r["platform"]
         cores = str(p.get("cpu_count") or "?")
@@ -326,131 +523,41 @@ def render_report(runs):
             cores += f" ({topo['performance']}P+{topo['efficiency']}E)"
         ram = f"{p['ram_gib']} GiB" if p.get("ram_gib") else "?"
         add(f"| {i} | {p['cpu']} | {p['arch']} | {cores} | {ram} | "
-            f"{p['os_description']} | {r['build']['compiler']} | `{r['git']['commit']}` |")
+            f"{p['os_description']} | {r['build']['compiler']} | "
+            f"v{dataset_version_of(r)} | `{r['git']['commit']}` |")
     add("")
     add("> The compiler differs between platforms by design (see "
         "`scripts/benchmarks.py`). Every difference below is hardware **and** "
         "toolchain combined and must not be read as a CPU comparison alone.")
     add("")
 
-    # ---- scaling ---------------------------------------------------------- #
-    add("## Scaling behaviour")
-    add("")
-    add("Ratio of median time when n grows 10×. A ratio near **10** is linear, "
-        "near **100** is quadratic.")
-    add("")
-    add("The exponent is the log-log slope fitted over the **largest three sizes**; "
-        "R² near 1.0 means the power law fits well. Small-n points are excluded "
-        "because fixed per-iteration overhead flattens the curve there and biases "
-        "the exponent downwards.")
-    add("")
-    add(f"A **⚠** marks a fit whose own points are still under "
-        f"{OVERHEAD_FLOOR_MS} ms and therefore overhead-dominated: read those "
-        "exponents as indicative only.")
-    add("")
-    for bench in SCALING_BENCHMARKS:
-        present = [r for r in runs if any(
-            x["benchmark"] == bench for x in r["results"])]
-        if not present:
-            continue
-        add(f"### {bench}")
-        add("")
-        common = sorted(set.intersection(*[set(sizes_of(r)) for r in present]))
-        header = "| Platform | " + " | ".join(
-            f"{a:,}→{b:,}" for a, b in zip(common, common[1:])) + " | exponent | R² |"
-        add(header)
-        add("|---|" + "---:|" * (len(common) - 1) + "---:|---:|")
-        for r in present:
-            p = r["platform"]
-            ratios = []
-            for a, b in zip(common, common[1:]):
-                ta, tb = median_of(r, bench, a), median_of(r, bench, b)
-                ratios.append(f"{tb / ta:.1f}×" if ta and tb and ta > 0 else "—")
-            pts = [(n, median_of(r, bench, n)) for n in common]
-            slope, r2, reliable = loglog_slope(pts)
-            mark = "" if reliable else " ⚠"
-            add(f"| {p['cpu']} | " + " | ".join(ratios) + " | "
-                f"{fmt(slope, 2)}{mark} | {fmt(r2, 3)} |")
-        add("")
-
-    # ---- absolute medians ------------------------------------------------- #
-    add("## Median times")
-    add("")
-    add("All values in milliseconds. Median, not minimum — see the methodology "
-        "note at the top of `scripts/benchmarks.py`.")
-    add("")
-    all_benches = []
+    # ---- one comparison per dataset version ------------------------------- #
+    groups = {}
     for r in runs:
-        for b in benchmarks_of(r):
-            if b not in all_benches:
-                all_benches.append(b)
-    common_sizes = sorted(set.intersection(*[set(sizes_of(r)) for r in runs]))
-    for n in common_sizes:
-        add(f"### n = {n:,}")
-        add("")
-        add("| Benchmark | " + " | ".join(r["platform"]["cpu"] for r in runs) + " |")
-        add("|---|" + "---:|" * len(runs))
-        for bench in all_benches:
-            cells = [fmt(median_of(r, bench, n)) for r in runs]
-            add(f"| {bench} | " + " | ".join(cells) + " |")
-        add("")
+        groups.setdefault(dataset_version_of(r), []).append(r)
 
-    # ---- relative speed --------------------------------------------------- #
-    if len(runs) > 1:
-        ref = runs[0]
-        add("## Relative speed")
-        add("")
-        add(f"Median time divided by the same measurement on **{ref['platform']['cpu']}** "
-            "(the reference). Below 1.00 is faster than the reference.")
-        add("")
-        largest = common_sizes[-1]
-        add(f"At n = {largest:,}:")
-        add("")
-        add("| Benchmark | " + " | ".join(r["platform"]["cpu"] for r in runs) + " |")
-        add("|---|" + "---:|" * len(runs))
-        for bench in SCALING_BENCHMARKS:
-            base = median_of(ref, bench, largest)
-            if not base:
-                continue
-            cells = []
-            for r in runs:
-                t = median_of(r, bench, largest)
-                cells.append(f"{t / base:.2f}×" if t else "—")
-            add(f"| {bench} | " + " | ".join(cells) + " |")
-        add("")
-
-    # ---- noise ------------------------------------------------------------ #
-    add("## Measurement noise")
-    add("")
-    add("`(mean − min) / min` at the largest common size, averaged over all "
-        "benchmarks. **Any cross-platform difference smaller than a platform's "
-        "noise figure is not a real difference.**")
-    add("")
-    add("| Platform | mean noise | worst benchmark | thermal drift |")
-    add("|---|---:|---|---:|")
-    largest = common_sizes[-1]
-    for r in runs:
-        spreads = []
-        worst, worst_val = "—", -1.0
-        for x in r["results"]:
-            if x["n"] != largest or x["min_ms"] <= 0:
-                continue
-            spread = (x["mean_ms"] - x["min_ms"]) / x["min_ms"]
-            spreads.append(spread)
-            if spread > worst_val:
-                worst_val, worst = spread, x["benchmark"]
-        avg = sum(spreads) / len(spreads) if spreads else None
-        drift = r.get("thermal_drift") or {}
-        before, after = drift.get("before_median_ms"), drift.get("after_median_ms")
-        drift_txt = (f"{(after - before) / before * 100:+.1f}%"
-                     if before and after and before > 0 else "—")
-        add(f"| {r['platform']['cpu']} | "
-            f"{f'{avg * 100:.1f}%' if avg is not None else '—'} | "
-            f"{worst} ({worst_val * 100:.1f}%) | {drift_txt} |")
-    add("")
-    add("A positive thermal drift means the machine was slower at the end of the "
-        "run than at the start, i.e. it throttled.")
-    add("")
+    multi = len(groups) > 1
+    for version in sorted(groups, reverse=True):
+        group = groups[version]
+        if multi:
+            add(f"## Dataset version {version}")
+            add("")
+            add("Runs are grouped by dataset version and never compared across "
+                "groups: different versions generate different data, so their "
+                "timings measure different work.")
+            add("")
+        else:
+            add("## Comparison")
+            add("")
+        if version < 2:
+            add("> ⚠ **Dataset version 1 used the standard library's "
+                "distributions**, which are not specified to produce the same "
+                "sequence across implementations. Each platform very likely "
+                "discretized a *different* dataset, so the absolute times below "
+                "cannot be compared between platforms. The scaling exponents are "
+                "unaffected — each is computed within a single platform.")
+            add("")
+        render_comparison(group, add)
 
     return "\n".join(lines) + "\n"
 

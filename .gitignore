@@ -42,3 +42,4 @@ cmake-*
 **/CMakeFiles
 **/gcovr-report
 CMakeUserPresets.json
+scripts/__pycache__/

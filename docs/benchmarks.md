@@ -69,6 +69,40 @@ Two limits are stated there and repeated here because they are easy to forget:
 No benchmarking runs in CI: GitHub's shared runners vary by more than the effects
 being measured.
 
+### Dataset versions
+
+A shared seed is not enough to make two platforms measure the same work.
+`std::mt19937` is specified down to the bit, but `std::normal_distribution` and
+`std::uniform_int_distribution` are **not** specified to produce the same sequence
+across standard library implementations. libc++ and libstdc++ disagree, so the
+first round of results had each platform discretizing a *different* dataset.
+
+Dataset version 2 generates its data from integer operations and IEEE-754 addition
+only — a 24-bit uniform built by shifting the engine output, and an Irwin-Hall
+normal (twelve uniforms minus six, so no `libm` whose last-ulp behaviour is
+likewise unguaranteed). Each run also records an FNV-1a checksum of the exact
+bytes handed to the library, so `make bench-report` can *state* whether two
+platforms measured the same work rather than assume it.
+
+The report groups results by dataset version and never compares across groups.
+**Version 1 results are retained but their cross-platform absolute times are not
+interpretable**; their scaling exponents remain valid, being computed within a
+single platform.
+
+### Homogeneity is judged on the measured sources
+
+Runs are compared by a hash of `src/` and `bench/`, not by commit SHA. A
+docs-only commit cannot change a timing, and flagging results as incomparable
+because the README moved is noise that trains people to ignore the warning.
+
+### Clock ramp
+
+Each run now spins the CPU for 1.5 s before anything is timed. Without it the
+cells measured first — the small-n ones — are taken at idle clocks: the version 1
+Strix Halo run finished **21.7% faster than it started**, which silently depressed
+its small-n numbers and distorted its scaling ratios. The drift probe now warns in
+both directions.
+
 ## Environment
 
 | | |
@@ -170,6 +204,37 @@ the current implementation spends over eight seconds on a single feature.
 **Practical consequence today:** discretizing a 100 000-row dataset with MDLP costs
 ~8 s *per feature*. Users with large datasets should prefer `BinDisc` or `PKIDisc`,
 which are four orders of magnitude faster at that size, until Phase 7 lands.
+
+### 1b. Confirmed on three platforms
+
+The single-machine result above was reproduced on two more machines. Full tables
+in [benchmarks-platforms.md](benchmarks-platforms.md); the exponents:
+
+| Platform | ISA | Compiler | exponent | R² |
+|---|---|---|---:|---:|
+| Apple M4 Max | ARM | AppleClang 21.0.0 | **2.03** | 1.000 |
+| AMD Ryzen 9 7950X3D | x86_64 | GCC 16.1.1 | **1.97** | 1.000 |
+| AMD Ryzen AI Max+ 395 | x86_64 | GCC 15.3.1 | **1.94** | 1.000 |
+
+Three microarchitectures, two instruction sets, three compilers, R² = 1.000
+throughout. **The quadratic is a property of the algorithm, not of any machine.**
+
+This conclusion survives the dataset-portability problem described under "Dataset
+versions" above: each exponent is fitted within one platform on that platform's
+own data, so it does not depend on the platforms having received identical input.
+The absolute cross-platform comparisons in the same report *do* depend on it, and
+are therefore quarantined until every platform is re-run at dataset version 2.
+
+Two anomalies in those results are unexplained and worth chasing once the data is
+known to be identical. Both appear on **both** Linux machines and neither on
+macOS, which points at the standard library rather than at hardware:
+
+- `BinDisc::fit (quantile)` is ~3.2× slower on Linux at n = 100 000, and its
+  n = 1 000 → 10 000 ratio is 64.9× and 120.9× against 12.2× on macOS. For what is
+  essentially a `std::sort`, a 120× cost for 10× the data makes no sense.
+  `PKIDisc::fit` mirrors it exactly, as expected since it delegates.
+- `CPPFImdlp::transform` is 2.7–3.1× slower on Linux, despite being an
+  `upper_bound` over a handful of cut points plus `push_back`.
 
 ### 2. Input copying is negligible, which reframes Phase 5
 

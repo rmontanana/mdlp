@@ -274,6 +274,23 @@ performance goals stay unmeasurable.
   different commits, `--level` settings, library versions, or a dirty tree.
 - **No CI benchmarking.** GitHub's shared runners vary by more than the effects
   being measured; recording those numbers would manufacture false confidence.
+- **Portable dataset generation (version 2).** A shared seed is not enough: the
+  standard library *distributions* are not specified to produce the same sequence
+  across implementations, so the first round of results had each platform
+  discretizing different data. Generation now uses integer operations and IEEE-754
+  addition only, and each run records an FNV-1a checksum of the bytes it measured
+  so the report can state, rather than assume, that platforms did equal work.
+- **Homogeneity judged on a hash of `src/` + `bench/`**, not the commit SHA — a
+  docs-only commit cannot change a timing, and spurious warnings train people to
+  ignore real ones.
+- **A 1.5 s clock ramp before anything is timed.** Without it the first cells
+  measured are taken at idle clocks; the version 1 Strix Halo run finished 21.7%
+  *faster* than it started.
+
+**Cross-platform outcome.** `CPPFImdlp::fit` measures an exponent of 2.03 (M4 Max,
+AppleClang), 1.97 (7950X3D, GCC 16) and 1.94 (Ryzen AI Max+ 395, GCC 15), all with
+R² = 1.000. Three microarchitectures, two ISAs, three compilers: **the quadratic is
+algorithmic**, and Phase 7 is justified without qualification.
 
 **Two findings change the rest of the plan:**
 
