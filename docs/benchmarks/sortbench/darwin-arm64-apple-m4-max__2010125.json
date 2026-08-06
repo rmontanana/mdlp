@@ -1,0 +1,330 @@
+{
+  "schema": 1,
+  "kind": "sortbench",
+  "platform": {
+    "os": "Darwin",
+    "os_description": "macOS 26.5.2",
+    "kernel": "25.5.0",
+    "arch": "arm64",
+    "cpu": "Apple M4 Max",
+    "cpu_count": 14,
+    "cores": {
+      "performance": 10,
+      "efficiency": 4
+    },
+    "ram_bytes": 38654705664,
+    "ram_gib": 36,
+    "label": null,
+    "slug": "darwin-arm64-apple-m4-max"
+  },
+  "git": {
+    "commit": "2010125",
+    "dirty": true
+  },
+  "source_hash": "67353824e507",
+  "recorded_at": "2026-08-06T18:51:07+00:00",
+  "builds": [
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106"
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106"
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106"
+    }
+  ],
+  "results": [
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "sort<float>",
+      "n": 1000,
+      "min_ms": 0.0046,
+      "median_ms": 0.0048
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "stable_sort<index>",
+      "n": 1000,
+      "min_ms": 0.0147,
+      "median_ms": 0.0149
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(fnptr)",
+      "n": 1000,
+      "min_ms": 0.002,
+      "median_ms": 0.0022
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(direct)",
+      "n": 1000,
+      "min_ms": 0.002,
+      "median_ms": 0.0022
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "sort<float>",
+      "n": 10000,
+      "min_ms": 0.0593,
+      "median_ms": 0.061
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "stable_sort<index>",
+      "n": 10000,
+      "min_ms": 0.3025,
+      "median_ms": 0.3225
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(fnptr)",
+      "n": 10000,
+      "min_ms": 0.0201,
+      "median_ms": 0.0226
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(direct)",
+      "n": 10000,
+      "min_ms": 0.0201,
+      "median_ms": 0.0226
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "sort<float>",
+      "n": 100000,
+      "min_ms": 1.3681,
+      "median_ms": 1.3867
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "stable_sort<index>",
+      "n": 100000,
+      "min_ms": 5.7971,
+      "median_ms": 6.0137
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(fnptr)",
+      "n": 100000,
+      "min_ms": 0.2093,
+      "median_ms": 0.2233
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(direct)",
+      "n": 100000,
+      "min_ms": 0.204,
+      "median_ms": 0.2225
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "sort<float>",
+      "n": 1000,
+      "min_ms": 0.0047,
+      "median_ms": 0.0048
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "stable_sort<index>",
+      "n": 1000,
+      "min_ms": 0.0146,
+      "median_ms": 0.0147
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(fnptr)",
+      "n": 1000,
+      "min_ms": 0.002,
+      "median_ms": 0.0022
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(direct)",
+      "n": 1000,
+      "min_ms": 0.002,
+      "median_ms": 0.0022
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "sort<float>",
+      "n": 10000,
+      "min_ms": 0.0593,
+      "median_ms": 0.0601
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "stable_sort<index>",
+      "n": 10000,
+      "min_ms": 0.2677,
+      "median_ms": 0.3014
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(fnptr)",
+      "n": 10000,
+      "min_ms": 0.02,
+      "median_ms": 0.0226
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(direct)",
+      "n": 10000,
+      "min_ms": 0.0201,
+      "median_ms": 0.0226
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "sort<float>",
+      "n": 100000,
+      "min_ms": 1.3618,
+      "median_ms": 1.3761
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "stable_sort<index>",
+      "n": 100000,
+      "min_ms": 5.6256,
+      "median_ms": 6.0575
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(fnptr)",
+      "n": 100000,
+      "min_ms": 0.2,
+      "median_ms": 0.2178
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(direct)",
+      "n": 100000,
+      "min_ms": 0.2048,
+      "median_ms": 0.2201
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "sort<float>",
+      "n": 1000,
+      "min_ms": 0.0047,
+      "median_ms": 0.0048
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "stable_sort<index>",
+      "n": 1000,
+      "min_ms": 0.0131,
+      "median_ms": 0.017
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(fnptr)",
+      "n": 1000,
+      "min_ms": 0.002,
+      "median_ms": 0.0023
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(direct)",
+      "n": 1000,
+      "min_ms": 0.002,
+      "median_ms": 0.002
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "sort<float>",
+      "n": 10000,
+      "min_ms": 0.0595,
+      "median_ms": 0.0615
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "stable_sort<index>",
+      "n": 10000,
+      "min_ms": 0.2958,
+      "median_ms": 0.315
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(fnptr)",
+      "n": 10000,
+      "min_ms": 0.0201,
+      "median_ms": 0.0207
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(direct)",
+      "n": 10000,
+      "min_ms": 0.0202,
+      "median_ms": 0.0203
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "sort<float>",
+      "n": 100000,
+      "min_ms": 1.2983,
+      "median_ms": 1.3248
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "stable_sort<index>",
+      "n": 100000,
+      "min_ms": 5.6846,
+      "median_ms": 5.7778
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(fnptr)",
+      "n": 100000,
+      "min_ms": 0.2089,
+      "median_ms": 0.2211
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "AppleClang 21 / libc++ 210106",
+      "shape": "transform(direct)",
+      "n": 100000,
+      "min_ms": 0.2095,
+      "median_ms": 0.2259
+    }
+  ]
+}

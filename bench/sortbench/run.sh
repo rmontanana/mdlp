@@ -118,6 +118,14 @@ END {
     }
 }' "$CSV"
 
-echo
-echo ">>> raw CSV:"
-cat "$CSV"
+# Persist with a machine fingerprint, so results gathered on other machines can
+# be compared here through the same git workflow as `make bench`.
+if [ "${SORTBENCH_STORE:-1}" = "1" ]; then
+    echo
+    python3 "$HERE/../../scripts/benchmarks.py" sortbench-store --csv "$CSV" \
+        || echo ">>> could not store the result (is python3 available?)"
+else
+    echo
+    echo ">>> raw CSV (SORTBENCH_STORE=0, nothing written):"
+    cat "$CSV"
+fi

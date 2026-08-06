@@ -535,6 +535,23 @@ Reading it: if clang+libstdc++ matches GCC and clang+libc++ is the fast one, the
 Fedora needs `dnf install clang libcxx-devel`; Debian and Ubuntu need
 `apt install clang libc++-dev`. Unavailable builds are skipped, not fatal.
 
+Results are stored the same way as the library benchmark, so they travel between
+machines through git:
+
+```bash
+make sortbench          # runs, and stores docs/benchmarks/sortbench/<slug>__<sha>.json
+git add docs/benchmarks/sortbench && git commit && git push
+# anywhere, once gathered
+make sortbench-report   # regenerates docs/benchmarks-sortbench.md
+```
+
+The report states a **verdict per machine** — `stdlib`, `compiler`, `both`,
+`neither` or `inconclusive` — by comparing clang+libstdc++ against GCC+libstdc++
+(which isolates the compiler) and clang+libc++ against clang+libstdc++ (which
+isolates the library), on `stable_sort<index>` at the largest size. A swap has to
+beat 15% to count, comfortably above the 0.9-3.5% noise the library benchmark
+reports. `SORTBENCH_STORE=0 make sortbench` runs without writing anything.
+
 **Limitation, stated plainly:** these are *replicas* of the hot loops, not the
 library. A result is a strong hypothesis about the cause, not a measurement of
 mdlp.

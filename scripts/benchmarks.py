@@ -37,6 +37,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = REPO_ROOT / "docs" / "benchmarks" / "results"
+SORTBENCH_DIR = REPO_ROOT / "docs" / "benchmarks" / "sortbench"
+SORTBENCH_REPORT = REPO_ROOT / "docs" / "benchmarks-sortbench.md"
 REPORT_PATH = REPO_ROOT / "docs" / "benchmarks-platforms.md"
 DEFAULT_BINARY = REPO_ROOT / "build_bench" / "bench" / "benchmark"
 
@@ -599,6 +601,212 @@ def cmd_report(args):
               f"{r['build']['compiler']}, {r['git']['commit']})")
 
 
+# --------------------------------------------------------------------------- #
+# sortbench: toolchain diagnostic
+# --------------------------------------------------------------------------- #
+
+# A build has to differ from the others by more than this to be called faster.
+# Comfortably above the 0.9-3.5% noise the library benchmark reports.
+TOOLCHAIN_MARGIN = 0.15
+
+# The shape that matters most: since Phase 7, sortIndices is ~39% of
+# CPPFImdlp::fit, so this is where a standard-library difference would hurt.
+KEY_SHAPE = "stable_sort<index>"
+
+
+def cmd_sortbench_store(args):
+    csv_path = Path(args.csv)
+    if not csv_path.exists():
+        sys.exit(f"csv not found: {csv_path}")
+
+    rows = []
+    with csv_path.open() as f:
+        header = f.readline().strip().split(",")
+        expected = ["label", "toolchain", "shape", "n", "min_ms", "median_ms"]
+        if header != expected:
+            sys.exit(f"unexpected csv header: {header}")
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            label, toolchain, shape, n, min_ms, median_ms = line.split(",")
+            rows.append({
+                "label": label, "toolchain": toolchain, "shape": shape,
+                "n": int(n), "min_ms": float(min_ms), "median_ms": float(median_ms),
+            })
+    if not rows:
+        sys.exit("csv contained no measurements")
+
+    fp = fingerprint(args.label)
+    git = git_state()
+    builds = []
+    for r in rows:
+        if not any(b["label"] == r["label"] for b in builds):
+            builds.append({"label": r["label"], "toolchain": r["toolchain"]})
+
+    payload = {
+        "schema": 1,
+        "kind": "sortbench",
+        "platform": fp,
+        "git": git,
+        "source_hash": source_hash(),
+        "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "builds": builds,
+        "results": rows,
+    }
+    SORTBENCH_DIR.mkdir(parents=True, exist_ok=True)
+    out = SORTBENCH_DIR / f"{fp['slug']}__{git['commit']}.json"
+    out.write_text(json.dumps(payload, indent=2) + "\n")
+    print(f">>> stored {out.relative_to(REPO_ROOT)}")
+    print(">>> regenerate the comparison with: make sortbench-report")
+
+
+def sortbench_median(run, label, shape, n):
+    for r in run["results"]:
+        if r["label"] == label and r["shape"] == shape and r["n"] == n:
+            return r["median_ms"]
+    return None
+
+
+def diagnose(run):
+    """Read the three builds and say what the pattern points at."""
+    labels = [b["label"] for b in run["builds"]]
+    resolved = {b["label"]: b["toolchain"] for b in run["builds"]}
+    if len({resolved[x] for x in labels}) < 2:
+        return ("inconclusive",
+                "every build resolved to the same toolchain, so this machine "
+                "cannot separate compiler from standard library")
+
+    needed = ["gcc_libstdcxx", "clang_libstdcxx", "clang_libcxx"]
+    if not all(x in labels for x in needed):
+        missing = [x for x in needed if x not in labels]
+        return ("inconclusive",
+                f"missing build(s): {', '.join(missing)}; all three are required "
+                "to separate the two variables")
+
+    sizes = sorted({r["n"] for r in run["results"] if r["shape"] == KEY_SHAPE})
+    if not sizes:
+        return ("inconclusive", f"no {KEY_SHAPE} measurements")
+    n = sizes[-1]
+    base = sortbench_median(run, "gcc_libstdcxx", KEY_SHAPE, n)
+    same_lib = sortbench_median(run, "clang_libstdcxx", KEY_SHAPE, n)
+    other_lib = sortbench_median(run, "clang_libcxx", KEY_SHAPE, n)
+    if not base or not same_lib or not other_lib:
+        return ("inconclusive", "incomplete measurements")
+
+    compiler_gain = 1.0 - same_lib / base      # clang vs gcc, same library
+    stdlib_gain = 1.0 - other_lib / same_lib   # libc++ vs libstdc++, same compiler
+
+    if stdlib_gain > TOOLCHAIN_MARGIN and compiler_gain <= TOOLCHAIN_MARGIN:
+        return ("stdlib",
+                f"swapping the standard library is worth {stdlib_gain * 100:.0f}% on "
+                f"{KEY_SHAPE} at n={n:,}, swapping the compiler only "
+                f"{compiler_gain * 100:.0f}%")
+    if compiler_gain > TOOLCHAIN_MARGIN and stdlib_gain <= TOOLCHAIN_MARGIN:
+        return ("compiler",
+                f"swapping the compiler is worth {compiler_gain * 100:.0f}% on "
+                f"{KEY_SHAPE} at n={n:,}, swapping the standard library only "
+                f"{stdlib_gain * 100:.0f}%")
+    if compiler_gain > TOOLCHAIN_MARGIN and stdlib_gain > TOOLCHAIN_MARGIN:
+        return ("both",
+                f"both matter: compiler {compiler_gain * 100:.0f}%, standard library "
+                f"{stdlib_gain * 100:.0f}%")
+    return ("neither",
+            f"neither swap exceeds {TOOLCHAIN_MARGIN * 100:.0f}% on {KEY_SHAPE} at "
+            f"n={n:,}; the difference lies elsewhere")
+
+
+def render_sortbench(runs):
+    runs = sorted(runs, key=lambda r: r["platform"]["slug"])
+    lines = []
+    add = lines.append
+
+    add("# Toolchain diagnostic (sortbench)")
+    add("")
+    add("Generated by `make sortbench-report` from every result in "
+        "`docs/benchmarks/sortbench/`. Do not edit by hand.")
+    add("")
+    add("`bench/sortbench/` replicates the library's hot loops with no "
+        "dependencies, so one machine can build it with several compiler and "
+        "standard-library combinations. These are **replicas**, not the library: a "
+        "result here is a strong hypothesis about a cause, not a measurement of "
+        "mdlp.")
+    add("")
+    add(f"**{len(runs)}** run(s). "
+        f"Generated {datetime.now(timezone.utc).isoformat(timespec='seconds')}.")
+    add("")
+
+    add("## Verdict")
+    add("")
+    add("| Machine | Reading | Why |")
+    add("|---|---|---|")
+    for r in runs:
+        verdict, why = diagnose(r)
+        add(f"| {r['platform']['cpu']} | **{verdict}** | {why} |")
+    add("")
+    add("`stdlib` means the answer is to change standard library — or better, to "
+        "replace the call, which helps every platform. `compiler` means the answer "
+        "is the compiler. `neither` means the cause is elsewhere and this "
+        "diagnostic has ruled out the obvious suspects.")
+    add("")
+
+    for r in runs:
+        p = r["platform"]
+        add(f"## {p['cpu']}")
+        add("")
+        add(f"{p['os_description']}, {p['arch']}, commit `{r['git']['commit']}`, "
+            f"code `{r.get('source_hash', '?')}`.")
+        add("")
+        add("| Build | Resolved to |")
+        add("|---|---|")
+        for b in r["builds"]:
+            add(f"| `{b['label']}` | {b['toolchain']} |")
+        add("")
+
+        labels = [b["label"] for b in r["builds"]]
+        shapes = []
+        for x in r["results"]:
+            if (x["shape"], x["n"]) not in shapes:
+                shapes.append((x["shape"], x["n"]))
+        add("| Shape | n | " + " | ".join(f"`{x}`" for x in labels) + " |")
+        add("|---|---:|" + "---:|" * len(labels))
+        for shape, n in shapes:
+            base = sortbench_median(r, labels[0], shape, n)
+            cells = []
+            for lab in labels:
+                v = sortbench_median(r, lab, shape, n)
+                if v is None:
+                    cells.append("—")
+                elif base:
+                    cells.append(f"{v:.4f} ({v / base:.2f}×)")
+                else:
+                    cells.append(f"{v:.4f}")
+            add(f"| {shape} | {n:,} | " + " | ".join(cells) + " |")
+        add("")
+        add("Median ms; ratios against the first build.")
+        add("")
+
+    return "\n".join(lines) + "\n"
+
+
+def cmd_sortbench_report(args):
+    if not SORTBENCH_DIR.exists():
+        sys.exit(f"no sortbench results in {SORTBENCH_DIR}\nRun `make sortbench` first.")
+    runs = []
+    for path in sorted(SORTBENCH_DIR.glob("*.json")):
+        try:
+            runs.append(json.loads(path.read_text()))
+        except json.JSONDecodeError as exc:
+            print(f"skipping malformed {path.name}: {exc}", file=sys.stderr)
+    if not runs:
+        sys.exit(f"no sortbench results in {SORTBENCH_DIR}\nRun `make sortbench` first.")
+    SORTBENCH_REPORT.write_text(render_sortbench(runs))
+    print(f">>> wrote {SORTBENCH_REPORT.relative_to(REPO_ROOT)} from {len(runs)} run(s)")
+    for r in runs:
+        verdict, _ = diagnose(r)
+        print(f"    - {r['platform']['cpu']}: {verdict}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -613,6 +821,14 @@ def main():
 
     rep = sub.add_parser("report", help="merge stored results into a comparison")
     rep.set_defaults(func=cmd_report)
+
+    sbs = sub.add_parser("sortbench-store", help="store a sortbench csv with a machine fingerprint")
+    sbs.add_argument("--csv", required=True)
+    sbs.add_argument("--label", default=None)
+    sbs.set_defaults(func=cmd_sortbench_store)
+
+    sbr = sub.add_parser("sortbench-report", help="merge stored sortbench results")
+    sbr.set_defaults(func=cmd_sortbench_report)
 
     args = parser.parse_args()
     args.func(args)
