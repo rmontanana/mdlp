@@ -118,7 +118,7 @@ cause is beyond what this diagnostic can reach.
 
 ## Still open
 
-- **`transform`'s 5× cross-platform gap** has no explanation.
+- **`transform`'s 4.8× cross-platform gap** has no explanation.
 - **The 7950X3D has no `gcc_native` run**, because that build was added after it was
   measured. Whether `-march=native` also helps on Zen 4 — where GCC's generic
   scheduling already performs well — is untested.
