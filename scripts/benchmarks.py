@@ -750,7 +750,17 @@ def sortbench_display_names(runs):
             if b["label"] == "gcc_libstdcxx":
                 tag = b["toolchain"].split(" / ")[0]
                 break
-        names[key] = f"{cpu} · {tag or r['git']['commit']}"
+        names[key] = f"{cpu} · {tag}" if tag else f"{cpu} · {r['git']['commit']}"
+
+    # A toolchain tag is not always enough: repeating a run with the same
+    # compiler is a legitimate way to check reproducibility, and two identical
+    # labels would be as useless as none.
+    used = {}
+    for r in runs:
+        used[names[id(r)]] = used.get(names[id(r)], 0) + 1
+    for r in runs:
+        if used[names[id(r)]] > 1:
+            names[id(r)] = f"{names[id(r)]} ({r['git']['commit']})"
     return names
 
 

@@ -556,32 +556,40 @@ reports. `SORTBENCH_STORE=0 make sortbench` runs without writing anything.
 library. A result is a strong hypothesis about the cause, not a measurement of
 mdlp.
 
-### Both Linux machines: the answer is GCC's *version*, not clang
+### GCC's version was the wrong answer — it is machine-specific
 
-The two Linux runs disagreed, and the disagreement is the finding.
+An earlier revision of this document concluded that GCC 16 fixed what GCC 15 did
+badly. **That was wrong**, and upgrading the Strix Halo refuted it.
 
-| Machine | GCC | Clang | verdicts |
-|---|---|---|---|
-| Ryzen 9 7950X3D | **16** | 22 | `sort<float>`=stdlib, everything else `neither` |
-| Ryzen AI Max+ 395 | **15** | 21 | `sort<float>`=both, everything else `compiler` |
+The reasoning that produced it: the two Linux machines differed in verdicts, and
+they differed in both hardware and compiler release. Clang measured within 4-13%
+across them, which looked like a hardware control, so the GCC gap was attributed to
+the release. The data supported only the weaker claim — *GCC behaves differently on
+these two machines* — and the version was one candidate, not the answer.
 
-Comparing one build label across machines separates compiler *vendor* from
-compiler *version*. The clang columns agree between the two machines to within
-4-13%, so the hardware is comparable. The GCC columns do not:
+Holding GCC constant settles it. `stable_sort<index>` at n = 100 000, the GCC
+column:
 
-| Shape (n = 100 000) | GCC 15 vs GCC 16 | Clang 21 vs Clang 22 |
+| Machine | GCC 15 | GCC 16 |
 |---|---:|---:|
-| `sort<float>` | **+57%** | +9% |
-| `stable_sort<index>` | **+58%** | +13% |
-| `transform` | **+68%** | +4% |
+| Ryzen AI Max+ 395 | 9.787 / 9.799 | **9.763 / 9.761** |
+| Ryzen 9 7950X3D | — | **6.190** |
 
-**GCC 16 produces code as good as clang; GCC 15 does not.** The `compiler` verdict
-on the Strix Halo is really a GCC 15 problem, and on the machine already running
-GCC 16 there is no compiler penalty left to recover.
+The upgrade changed nothing on the Strix Halo — 0.4%, well inside noise. Yet the
+*same* GCC 16 and the *same* libstdc++ 20260515 produce 6.19 ms on the 7950X3D
+against 9.76 ms on the Strix Halo, 58% apart, while clang lands within 13% of
+itself on both machines.
 
-This is a limitation of the diagnostic worth stating: it reports `compiler` when
-clang beats GCC, and cannot tell on its own whether the cause is the vendor or the
-release. The cross-machine table exists to answer that.
+So GCC's code is fine on one machine and slow on the other, at identical versions.
+What is left is the hardware (Zen 4 against Zen 5) or the system configuration, and
+this diagnostic has not yet distinguished them. A `gcc_native` build
+(`-march=native`) has been added to `run.sh`: GCC's default target is generic
+x86-64, so if its scheduling is what hurts on Zen 5, tuning for the real CPU should
+close the gap. If it does not, codegen is not the variable either.
+
+**No conclusion is offered here until that runs.** The honest state is: the
+`compiler` verdict on the Strix Halo is real and reproducible across four runs, and
+its cause is not the compiler release.
 
 ### The one finding that holds everywhere: libstdc++'s `std::sort`
 

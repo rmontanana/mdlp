@@ -68,6 +68,10 @@ echo ">>> sortbench: standalone toolchain diagnostic (no libtorch, no conan)"
 build_and_run "gcc_libstdcxx"    g++
 build_and_run "clang_libstdcxx"  clang++
 build_and_run "clang_libcxx"     clang++ "-stdlib=libc++"
+# GCC's default target is generic x86-64. If its scheduling is what hurts on one
+# machine and not another with the same compiler version, tuning for the actual
+# CPU should close the gap; if it does not, codegen is not the variable.
+build_and_run "gcc_native"       g++ "-march=native"
 
 if [ "$BUILT" -eq 0 ]; then
     echo ">>> no toolchain could be built; nothing to report"
