@@ -10,10 +10,6 @@
 #include "BinDisc.h"
 
 namespace mdlp {
-    enum class compute_strategy_t {
-        LOG, // Logarithmic
-        SQRT // Square root
-    };
     class PKIDisc : public BinDisc {
     public:
         /**
@@ -61,6 +57,18 @@ namespace mdlp {
          * @warning If this throws, X_ has already been moved from.
          */
         void fit(samples_t&& X_, labels_t&& y) override;
+
+        /**
+         * @brief Fit and transform in one call, returning an owned result
+         * @param X Input samples
+         * @param y Labels; read for its size to pick the bin count, then ignored
+         * @param compute_strategy How to derive the bin count from the sample count
+         * @return Discretized labels, by value
+         *
+         * Safe on a temporary, unlike the member `fit_transform`.
+         */
+        static labels_t discretize(const samples_t& X, const labels_t& y,
+            compute_strategy_t compute_strategy = compute_strategy_t::SQRT);
         // Without this, declaring fit() above would hide BinDisc's samples-only
         // overloads from PKIDisc's users.
         using BinDisc::fit;

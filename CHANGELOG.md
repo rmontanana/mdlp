@@ -21,6 +21,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bench/` benchmark harness and `make bench`, behind `ENABLE_BENCHMARK`
   (default OFF, Release-only). Baseline results in `docs/benchmarks.md`.
 
+### Added — configuration and convenience API
+
+- **`MDLPConfig` and `BinDiscConfig`** in `src/DiscretizerConfig.h`: named,
+  chainable parameters, so three positional arguments stop being a guessing game.
+
+  ```cpp
+  CPPFImdlp disc(MDLPConfig{}.withMinLength(5).withMaxDepth(10));
+  BinDisc bins(BinDiscConfig{}.withNBins(5).withStrategy(strategy_t::QUANTILE));
+  ```
+
+  Setters return a modified copy, so a shared baseline can be varied per
+  experiment without one variation leaking into the next. `validate()` checks a
+  config before it reaches a constructor; the positional constructors delegate to
+  the config ones, so validation and its messages have a single implementation.
+
+- **Static `discretize()`** on `CPPFImdlp`, `BinDisc` and `PKIDisc`, returning the
+  labels **by value**:
+
+  ```cpp
+  auto labels = CPPFImdlp::discretize(X, y);
+  ```
+
+  Safer than the member `fit_transform`, which returns a reference into the
+  discretizer's storage and therefore dangles when called on a temporary.
+
+- `strategy_t` and `compute_strategy_t` moved to `typesFImdlp.h` so the config
+  header can name them. Including `BinDisc.h` or `PKIDisc.h` still brings them in.
+
 ### Changed — exceptions (breaking)
 
 - **New exception hierarchy in `src/Exceptions.h`.** `InvalidParameter`,

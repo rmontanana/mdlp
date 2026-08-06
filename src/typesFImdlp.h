@@ -24,5 +24,21 @@ namespace mdlp {
     // collide onto the same cache entry past INT_MAX elements.
     typedef std::map<std::pair<size_t, size_t>, precision_t> cacheEnt_t;
     typedef std::map<std::tuple<size_t, size_t, size_t>, precision_t> cacheIg_t;
+
+    // Strategy enums live here rather than beside the classes that use them, so
+    // Config.h can name them without including those classes and creating a
+    // cycle. Including BinDisc.h or PKIDisc.h still brings them in, as before.
+
+    /** @brief How BinDisc places its bin edges */
+    enum class strategy_t {
+        UNIFORM,  ///< Equal width
+        QUANTILE  ///< Equal frequency
+    };
+
+    /** @brief How PKIDisc derives its bin count from the sample count */
+    enum class compute_strategy_t {
+        LOG,  ///< log(n)
+        SQRT  ///< sqrt(n)
+    };
 }
 #endif

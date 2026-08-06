@@ -13,24 +13,35 @@
 
 namespace mdlp {
 
+    // Both constructors funnel through the config one, so validation lives in a
+    // single place (MDLPConfig::validate) instead of being duplicated here.
     CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_, float proposed) :
-        Discretizer(),
-        min_length(min_length_),
-        max_depth(max_depth_),
-        proposed_cuts(proposed)
+        CPPFImdlp(MDLPConfig{}
+            .withMinLength(min_length_)
+            .withMaxDepth(max_depth_)
+            .withProposedCuts(proposed))
     {
-        // Input validation for constructor parameters
-        if (min_length_ < 3) {
-            throw InvalidParameter("min_length must be at least 3, got " + std::to_string(min_length_));
-        }
-        if (max_depth_ < 1) {
-            throw InvalidParameter("max_depth must be at least 1, got " + std::to_string(max_depth_));
-        }
-        if (proposed < 0.0f) {
-            throw InvalidParameter("proposed_cuts must be non-negative, got " + detail::str(proposed));
-        }
+    }
 
+    CPPFImdlp::CPPFImdlp(const MDLPConfig& config) :
+        Discretizer(),
+        min_length(config.min_length),
+        max_depth(config.max_depth),
+        proposed_cuts(config.proposed_cuts)
+    {
+        config.validate();
         direction = bound_dir_t::RIGHT;
+    }
+
+    labels_t CPPFImdlp::discretize(const samples_t& X, const labels_t& y, const MDLPConfig& config)
+    {
+        CPPFImdlp disc(config);
+        samples_t X_copy = X;
+        labels_t y_copy = y;
+        disc.fit(std::move(X_copy), std::move(y_copy));
+        labels_t out;
+        disc.transform(X, out);
+        return out;
     }
 
     size_t CPPFImdlp::compute_max_num_cut_points() const

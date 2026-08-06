@@ -13,12 +13,28 @@
 
 namespace mdlp {
 
+    // Both constructors funnel through the config one, so validation lives in a
+    // single place (BinDiscConfig::validate) instead of being duplicated here.
     BinDisc::BinDisc(int n_bins, strategy_t strategy) :
-        Discretizer(), n_bins{ n_bins }, strategy{ strategy }
+        BinDisc(BinDiscConfig{}.withNBins(n_bins).withStrategy(strategy))
     {
-        if (n_bins < min_bins) {
-            throw InvalidParameter("n_bins must be at least " + std::to_string(min_bins) + ", got " + std::to_string(n_bins));
-        }
+    }
+
+    BinDisc::BinDisc(const BinDiscConfig& config) :
+        Discretizer(), n_bins{ config.n_bins }, strategy{ config.strategy }
+    {
+        config.validate();
+    }
+
+    labels_t BinDisc::discretize(const samples_t& X, const labels_t& y, const BinDiscConfig& config)
+    {
+        BinDisc disc(config);
+        samples_t X_copy = X;
+        labels_t y_copy = y;
+        disc.fit(std::move(X_copy), std::move(y_copy));
+        labels_t out;
+        disc.transform(X, out);
+        return out;
     }
     BinDisc::~BinDisc() = default;
     void BinDisc::validate_input(const samples_t& X) const

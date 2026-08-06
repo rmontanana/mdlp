@@ -2,7 +2,7 @@
 
 **Target version:** 3.0.0 (major — breaking changes)
 **Branch:** `release/3.0.0`
-**Status:** Phases 0, 1, 2, 3, 4, 5 and 7 complete; Phases 6 and 8 pending
+**Status:** Phases 0-7 complete (T6.1 deferred to 3.1.0); Phase 8 pending
 **Supersedes:** `RELEASE_PLAN_2.2.0.md` (see [Appendix B](#appendix-b--corrections-to-the-superseded-220-plan))
 
 > **This document is the single source of truth for the 3.0.0 release.**
@@ -467,18 +467,48 @@ be. No throughput claim is made.
 **Verification.** 102/102 tests pass. Debug and release builds are warning-free.
 All rows sit within the ≤5% regression ceiling.
 
-### Phase 6 — API improvements
+### Phase 6 — API improvements ✅ COMPLETE (T6.1 deferred)
 
-- **T6.1** Bound modes. `bound_dir_t` already exists but only `RIGHT` is ever used
-  (see D2), so this is new functionality rather than a rename. If the richer
-  `BoundMode` enum (`LEFT_CLOSED` / `RIGHT_CLOSED` / `BOTH_CLOSED` / `BOTH_OPEN`)
-  is adopted, it replaces `bound_dir_t` — **breaking change** — and each mode needs
-  its own tests. Deferring this to 3.1.0 is a legitimate option.
-- **T6.2** `src/Config.h` with `DiscretizerConfig` / `BinDiscConfig`, fluent
-  setters and validation. Add config-taking constructors alongside the existing
-  ones rather than replacing them.
-- **T6.3** Static factory / builder helpers (`CPPFImdlp::builder()`,
-  `fit_transform`) as sugar over the existing API.
+- [ ] **T6.1 Bound modes — deferred to 3.1.0.** `bound_dir_t::LEFT` is still never
+  assigned, so the `lower_bound` branch of `transform()` remains unreachable.
+  Building four bound modes properly means deciding their semantics for each
+  discretizer and testing each one; that is a feature, not a cleanup, and 3.0.0 is
+  already large. **The dead knob ships as it is** — a conscious decision, not an
+  oversight.
+- [x] **T6.2** `src/DiscretizerConfig.h` with `MDLPConfig` and `BinDiscConfig`,
+  fluent setters and `validate()`. Config-taking constructors added alongside the
+  positional ones, which now delegate to them.
+- [x] **T6.3** Static `discretize()` on each discretizer, returning by value.
+
+**Named `DiscretizerConfig.h`, not `Config.h`.** The generated version header is
+`config.h`, and on a case-insensitive filesystem `#include "config.h"` resolved to
+the new file instead, breaking the build. It would have been a latent portability
+trap even where it compiled.
+
+**No separate `builder()`.** The fluent config *is* the builder; adding
+`CPPFImdlp::builder()` would be a second way to say the same thing. Setters return
+a modified copy rather than mutating, so one baseline config can be varied per
+experiment without aliasing.
+
+**Validation has one implementation.** The positional constructors delegate to the
+config ones, which call `validate()`. A test asserts that `validate()` and the
+constructor produce the *same message*, so the two cannot drift.
+
+**`discretize()` exists for a safety reason, not just brevity.** The member
+`fit_transform` returns a reference into the discretizer's own storage, so
+`CPPFImdlp().fit_transform(X, y)` on a temporary leaves a dangling reference.
+`discretize()` returns a value and internally uses the Phase 5 move and
+caller-buffer overloads.
+
+**No `PKIDiscConfig`.** PKIDisc takes one parameter and derives the rest from the
+data; a struct for it would carry a single field.
+
+The strategy enums moved from `BinDisc.h` and `PKIDisc.h` into `typesFImdlp.h` so
+the config header can name them without a cycle. Including the class headers still
+brings them in, so no user code breaks.
+
+**Verification.** 133 tests pass, coverage of `src/` stays at 100% lines and
+functions, debug and release builds are warning-free.
 
 ### Phase 7 — Performance ✅ COMPLETE
 

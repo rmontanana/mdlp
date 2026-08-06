@@ -9,17 +9,39 @@
 
 #include "typesFImdlp.h"
 #include "Discretizer.h"
+#include "DiscretizerConfig.h"
 #include <string>
 
 namespace mdlp {
-    enum class strategy_t {
-        UNIFORM, // Equal width
-        QUANTILE // Equal frequency
-    };
     class BinDisc : public Discretizer {
     public:
-        BinDisc(int n_bins = 3, strategy_t strategy = strategy_t::UNIFORM);
+        BinDisc(int n_bins = MIN_BINS, strategy_t strategy = strategy_t::UNIFORM);
+
+        /**
+         * @brief Construct from a named configuration
+         * @param config Parameters; validated exactly as the positional form is
+         * @throws InvalidParameter if n_bins is below MIN_BINS
+         *
+         * @code
+         * BinDisc disc(BinDiscConfig{}.withNBins(5).withStrategy(strategy_t::QUANTILE));
+         * @endcode
+         */
+        explicit BinDisc(const BinDiscConfig& config);
+
         ~BinDisc();
+
+        /**
+         * @brief Fit and transform in one call, returning an owned result
+         * @param X Input samples
+         * @param y Labels; accepted for interface consistency, not used
+         * @param config Parameters; defaults to the library defaults
+         * @return Discretized labels, by value
+         *
+         * Safe on a temporary, unlike the member `fit_transform`, which returns a
+         * reference into the discretizer's own storage.
+         */
+        static labels_t discretize(const samples_t& X, const labels_t& y,
+            const BinDiscConfig& config = {});
         /**
          * @brief Fit the discretizer to data
          * @param X_ Input samples (continuous values to be discretized)
@@ -76,7 +98,7 @@ namespace mdlp {
         strategy_t strategy;
         // static constexpr, not a const member: a const non-static member would
         // delete the copy and move assignment operators for this class and PKIDisc.
-        static constexpr int min_bins = 3;
+        static constexpr int min_bins = MIN_BINS;
     private:
         void validate_input(const samples_t& X) const;
         void fit_uniform(const samples_t&);

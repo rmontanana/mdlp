@@ -14,6 +14,7 @@
 #include "Metrics.h"
 #include "Discretizer.h"
 #include "Exceptions.h"
+#include "DiscretizerConfig.h"
 
 namespace mdlp {
     /**
@@ -87,6 +88,33 @@ namespace mdlp {
          *         max_depth < 1, or proposed < 0
          */
         CPPFImdlp(size_t min_length_, int max_depth_, float proposed);
+
+        /**
+         * @brief Construct from a named configuration
+         * @param config Parameters; validated exactly as the positional form is
+         * @throws InvalidParameter if any parameter is out of range
+         *
+         * @code
+         * CPPFImdlp disc(MDLPConfig{}.withMinLength(5).withMaxDepth(10));
+         * @endcode
+         */
+        explicit CPPFImdlp(const MDLPConfig& config);
+
+        /**
+         * @brief Fit and transform in one call, returning an owned result
+         * @param X Input samples
+         * @param y Labels
+         * @param config Parameters; defaults to the library defaults
+         * @return Discretized labels, by value
+         *
+         * Sugar for the three-line fit/transform dance, and safe in a way the
+         * member `fit_transform` is not: that returns a reference into the
+         * discretizer's own storage, so calling it on a temporary
+         * (`CPPFImdlp().fit_transform(X, y)`) leaves a dangling reference. This
+         * returns a value and owns nothing afterwards.
+         */
+        static labels_t discretize(const samples_t& X, const labels_t& y,
+            const MDLPConfig& config = {});
 
         virtual ~CPPFImdlp() = default;
 

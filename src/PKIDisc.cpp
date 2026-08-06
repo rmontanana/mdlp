@@ -31,6 +31,17 @@ namespace mdlp {
         BinDisc::fit(X, y);
     }
 
+    labels_t PKIDisc::discretize(const samples_t& X, const labels_t& y, compute_strategy_t compute_strategy)
+    {
+        PKIDisc disc(compute_strategy);
+        samples_t X_copy = X;
+        labels_t y_copy = y;
+        disc.fit(std::move(X_copy), std::move(y_copy));
+        labels_t out;
+        disc.transform(X, out);
+        return out;
+    }
+
     void PKIDisc::fit(samples_t&& X, labels_t&& y)
     {
         // Read y's size before it is moved from.
