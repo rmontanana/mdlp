@@ -510,6 +510,52 @@ report is that it did not come from here.
 
 The performance work that matters is still Phase 7 — the quadratic `getCandidate`.
 
+## Toolchain diagnostic (`make sortbench`)
+
+`bench/sortbench/` is a standalone program that replicates the library's three hot
+loops with **zero dependencies** — no libtorch, no conan, no CMake — so one Linux
+machine can build it three ways and separate two variables the project itself
+cannot:
+
+```
+g++     -O3                   GCC   + libstdc++   (what the project uses)
+clang++ -O3                   clang + libstdc++   (isolates the compiler)
+clang++ -O3 -stdlib=libc++    clang + libc++      (isolates the standard library)
+```
+
+The project cannot do this itself: libtorch comes from conan prebuilt against
+libstdc++, and libstdc++ and libc++ have incompatible ABIs for `std::string` and
+`std::vector`, so building mdlp against libc++ would mean rebuilding libtorch from
+source.
+
+Reading it: if clang+libstdc++ matches GCC and clang+libc++ is the fast one, the
+**standard library** is responsible. If both clang builds are fast, the
+**compiler** is. If all three match, neither is.
+
+Fedora needs `dnf install clang libcxx-devel`; Debian and Ubuntu need
+`apt install clang libc++-dev`. Unavailable builds are skipped, not fatal.
+
+**Limitation, stated plainly:** these are *replicas* of the hot loops, not the
+library. A result is a strong hypothesis about the cause, not a measurement of
+mdlp.
+
+### What the macOS run already established
+
+macOS cannot answer the toolchain question at all — `g++` is a symlink to clang and
+libstdc++ is unavailable, so all three builds resolve to AppleClang + libc++ and
+land within noise of each other. The script detects this and says so rather than
+presenting three identical columns as a comparison.
+
+It did settle one thing that was previously an assumption. At n = 100 000,
+`stable_sort<index>` costs **6.4 ms** against `CPPFImdlp::fit`'s **16.3 ms**: the
+sort is roughly **39% of fit** now that Phase 7 removed the quadratic term. Calling
+`fit` sort-dominated is a measurement, not a guess.
+
+It also weakens one hypothesis. `transform` is written with the bound function
+selected into a *function pointer*, which cannot be inlined; a variant with the
+branch hoisted out of the loop measures identically on clang (0.2302 vs 0.2308 ms).
+Whether GCC behaves the same is exactly what the Linux run will show.
+
 ## Regression policy
 
 The success criteria in the release plan allow at most a **5% regression** against

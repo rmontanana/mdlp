@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: debug release install test bench bench-report conan-create viewcoverage
+.PHONY: debug release install test bench bench-report sortbench conan-create viewcoverage
 lcov := lcov
 
 f_debug = build_debug
@@ -93,6 +93,9 @@ bench: ## Build and run the benchmarks, storing the result (LEVEL=quick|full, LA
 
 bench-report: ## Regenerate the cross-platform benchmark comparison
 	@$(python3) scripts/benchmarks.py report
+
+sortbench: ## Toolchain diagnostic: compare std::sort/stable_sort across compilers and stdlibs
+	@bash bench/sortbench/run.sh
 
 viewcoverage: ## View the html coverage report
 	@which $(genhtml) >/dev/null || (echo ">>> Please install lcov (genhtml not found)"; exit 1)
