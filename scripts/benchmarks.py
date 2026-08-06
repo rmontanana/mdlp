@@ -725,8 +725,38 @@ def diagnose(run):
     return out, None
 
 
+def sortbench_display_names(runs):
+    """Machine names, disambiguated when one machine appears more than once.
+
+    Re-running a machine after a toolchain upgrade is exactly the experiment this
+    diagnostic invites, so two runs of one machine is the normal case, not an edge
+    case. Labelling both with the bare CPU name would repeat the mistake the
+    library report had to fix.
+    """
+    counts = {}
+    for r in runs:
+        counts[r["platform"]["slug"]] = counts.get(r["platform"]["slug"], 0) + 1
+    names = {}
+    for r in runs:
+        key = id(r)
+        cpu = r["platform"]["cpu"]
+        if counts[r["platform"]["slug"]] == 1:
+            names[key] = cpu
+            continue
+        # Disambiguate by whatever the default build resolved to; a compiler
+        # upgrade is the usual reason for a repeat run.
+        tag = None
+        for b in r["builds"]:
+            if b["label"] == "gcc_libstdcxx":
+                tag = b["toolchain"].split(" / ")[0]
+                break
+        names[key] = f"{cpu} · {tag or r['git']['commit']}"
+    return names
+
+
 def render_sortbench(runs):
-    runs = sorted(runs, key=lambda r: r["platform"]["slug"])
+    runs = sorted(runs, key=lambda r: (r["platform"]["slug"], r.get("recorded_at", "")))
+    names = sortbench_display_names(runs)
     lines = []
     add = lines.append
 
@@ -757,7 +787,7 @@ def render_sortbench(runs):
     add("")
     for r in runs:
         diags, why = diagnose(r)
-        add(f"**{r['platform']['cpu']}**")
+        add(f"**{names[id(r)]}**")
         add("")
         if why:
             add(f"- Inconclusive: {why}.")
@@ -808,12 +838,12 @@ def render_sortbench(runs):
                 for shape in shapes:
                     v = sortbench_median(r, label, shape, largest)
                     cells.append(f"{v:.3f}" if v is not None else "—")
-                add(f"| {r['platform']['cpu']} | {tc} | " + " | ".join(cells) + " |")
+                add(f"| {names[id(r)]} | {tc} | " + " | ".join(cells) + " |")
             add("")
 
     for r in runs:
         p = r["platform"]
-        add(f"## {p['cpu']}")
+        add(f"## {names[id(r)]}")
         add("")
         add(f"{p['os_description']}, {p['arch']}, commit `{r['git']['commit']}`, "
             f"code `{r.get('source_hash', '?')}`.")
@@ -863,13 +893,14 @@ def cmd_sortbench_report(args):
         sys.exit(f"no sortbench results in {SORTBENCH_DIR}\nRun `make sortbench` first.")
     SORTBENCH_REPORT.write_text(render_sortbench(runs))
     print(f">>> wrote {SORTBENCH_REPORT.relative_to(REPO_ROOT)} from {len(runs)} run(s)")
+    names = sortbench_display_names(runs)
     for r in runs:
         diags, why = diagnose(r)
         if why:
-            print(f"    - {r['platform']['cpu']}: inconclusive ({why})")
+            print(f"    - {names[id(r)]}: inconclusive ({why})")
         else:
             summary = ", ".join(f"{d['shape']}={d['verdict']}" for d in diags)
-            print(f"    - {r['platform']['cpu']}: {summary}")
+            print(f"    - {names[id(r)]}: {summary}")
 
 
 def main():
