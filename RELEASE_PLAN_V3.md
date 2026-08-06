@@ -287,10 +287,20 @@ performance goals stay unmeasurable.
   measured are taken at idle clocks; the version 1 Strix Halo run finished 21.7%
   *faster* than it started.
 
-**Cross-platform outcome.** `CPPFImdlp::fit` measures an exponent of 2.03 (M4 Max,
-AppleClang), 1.97 (7950X3D, GCC 16) and 1.94 (Ryzen AI Max+ 395, GCC 15), all with
-R² = 1.000. Three microarchitectures, two ISAs, three compilers: **the quadratic is
-algorithmic**, and Phase 7 is justified without qualification.
+**Cross-platform outcome (dataset version 2).** All three runs report the same
+source hash, the same dataset checksums at every size, clean trees and
+`--level full` — the comparison is verified, not assumed. `CPPFImdlp::fit` measures
+an exponent of 1.98 (M4 Max, AppleClang 21), 1.96 (7950X3D, GCC 16) and 1.93
+(Ryzen AI Max+ 395, GCC 15). Three microarchitectures, two ISAs, three compilers:
+**the quadratic is algorithmic**, and Phase 7 is justified without qualification.
+
+Two toolchain anomalies are recorded in `docs/benchmarks.md` for later:
+`BinDisc::fit (quantile)` is 3.0-3.2× slower on Linux at n = 100 000 (and 4.8-5.2×
+at n = 10 000, yet *faster* at n = 1 000), and `CPPFImdlp::transform` is 2.4-2.8×
+slower but only at n = 100 000. Both sit far above the 0.9-3.5% measurement noise
+and neither is explained by the data, which is now proven identical. Both are in
+paths four orders of magnitude cheaper than `CPPFImdlp::fit`, so neither blocks the
+release.
 
 **Two findings change the rest of the plan:**
 

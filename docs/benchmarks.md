@@ -207,34 +207,70 @@ which are four orders of magnitude faster at that size, until Phase 7 lands.
 
 ### 1b. Confirmed on three platforms
 
-The single-machine result above was reproduced on two more machines. Full tables
-in [benchmarks-platforms.md](benchmarks-platforms.md); the exponents:
+Reproduced on two more machines at dataset version 2. Full tables in
+[benchmarks-platforms.md](benchmarks-platforms.md).
+
+The comparison is verified rather than assumed: all three runs report the **same
+source hash** (`89bc5a73a4ae`), the **same dataset checksums** at every size, a
+clean working tree and `--level full`. The platforms executed identical code over
+identical bytes.
 
 | Platform | ISA | Compiler | exponent | R² |
 |---|---|---|---:|---:|
-| Apple M4 Max | ARM | AppleClang 21.0.0 | **2.03** | 1.000 |
-| AMD Ryzen 9 7950X3D | x86_64 | GCC 16.1.1 | **1.97** | 1.000 |
-| AMD Ryzen AI Max+ 395 | x86_64 | GCC 15.3.1 | **1.94** | 1.000 |
+| Apple M4 Max | ARM | AppleClang 21.0.0 | **1.98** | 1.000 |
+| AMD Ryzen 9 7950X3D | x86_64 | GCC 16.1.1 | **1.96** | 0.999 |
+| AMD Ryzen AI Max+ 395 | x86_64 | GCC 15.3.1 | **1.93** | 0.999 |
 
-Three microarchitectures, two instruction sets, three compilers, R² = 1.000
-throughout. **The quadratic is a property of the algorithm, not of any machine.**
+Three microarchitectures, two instruction sets, three compilers. **The quadratic is
+a property of the algorithm, not of any machine.** Version 1 measured 2.03 / 1.97 /
+1.94 on different data per platform; changing the generator moved the exponent by
+less than the fit's own resolution, which is itself a useful check.
 
-This conclusion survives the dataset-portability problem described under "Dataset
-versions" above: each exponent is fitted within one platform on that platform's
-own data, so it does not depend on the platforms having received identical input.
-The absolute cross-platform comparisons in the same report *do* depend on it, and
-are therefore quarantined until every platform is re-run at dataset version 2.
+The clock ramp did its job: the Strix Halo drifted −21.7% under version 1 and
++1.9% under version 2.
 
-Two anomalies in those results are unexplained and worth chasing once the data is
-known to be identical. Both appear on **both** Linux machines and neither on
-macOS, which points at the standard library rather than at hardware:
+### 1c. Two toolchain anomalies, now isolated from the data
 
-- `BinDisc::fit (quantile)` is ~3.2× slower on Linux at n = 100 000, and its
-  n = 1 000 → 10 000 ratio is 64.9× and 120.9× against 12.2× on macOS. For what is
-  essentially a `std::sort`, a 120× cost for 10× the data makes no sense.
-  `PKIDisc::fit` mirrors it exactly, as expected since it delegates.
-- `CPPFImdlp::transform` is 2.7–3.1× slower on Linux, despite being an
-  `upper_bound` over a handful of cut points plus `push_back`.
+With the datasets proven identical, these cannot be explained by one platform
+having been given less work. Measurement noise is 0.9–3.5%; the effects below are
+240–520%, so they are real.
+
+**`BinDisc::fit (quantile)` — Linux 3.0–3.2× slower at n = 100 000**, and 4.8–5.2×
+slower at n = 10 000, yet *equal or faster* at n = 1 000 (0.56× on the Strix Halo).
+The crossover sits between n = 1 000 and n = 10 000.
+
+| n | M4 Max | 7950X3D | Ryzen AI Max+ 395 |
+|---:|---:|---:|---:|
+| 1 000 | 0.0053 | 0.0051 (0.96×) | 0.0030 (**0.56×**) |
+| 10 000 | 0.0670 | 0.3233 (**4.83×**) | 0.3508 (**5.24×**) |
+| 100 000 | 1.5063 | 4.5810 (**3.04×**) | 4.8791 (**3.24×**) |
+
+`PKIDisc::fit` mirrors it exactly, as expected since it delegates. The work here is
+essentially one `std::sort` over a by-value copy, so a 5× swing between adjacent
+sizes points at either the sort implementation (libstdc++ vs libc++) or the
+allocator behind the copy — glibc switches to `mmap` for large blocks, macOS does
+not.
+
+**`CPPFImdlp::transform` — Linux 2.4–2.8× slower, but only at n = 100 000.** At
+n = 10 000 the 7950X3D is *faster* (0.73×) and at n = 1 000 the three are level.
+The routine is an `upper_bound` over a handful of cut points plus `push_back` into
+a buffer that already has capacity, so nothing in the algorithm explains a
+size-dependent cliff.
+
+Neither is diagnosable from the result files alone. The next step is a targeted
+micro-benchmark on one Linux machine timing `std::sort` on its own, separated from
+the by-value copy, at n = 1 000 / 10 000 / 100 000. That distinguishes the sort
+implementation from the allocator in one run.
+
+Both anomalies are in unsupervised code paths that are already four orders of
+magnitude cheaper than `CPPFImdlp::fit`, so neither blocks the release.
+
+### 1d. MDLP itself is genuinely faster on the AMD machines
+
+Now that the inputs are verified identical, this comparison can be trusted:
+`CPPFImdlp::fit` runs at **0.67× and 0.68×** of the M4 Max time at n = 100 000, and
+the advantage holds across sizes. Both AMD parts land in the same place, which is
+what one would expect if the effect is real rather than a scheduling artefact.
 
 ### 2. Input copying is negligible, which reframes Phase 5
 
