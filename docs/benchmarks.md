@@ -340,6 +340,49 @@ On mfeat-factors, where n is only 2 000, the same change is worth 10.9×
 n = 1 000 synthetically, and confirmation that the O(k) cost the fix introduces is
 not a problem at 10 classes.
 
+### Confirmed on all three platforms
+
+Re-run after Phase 7 with identical dataset checksums and an identical source
+hash (`c5cee47706d5`) on all three machines:
+
+| Platform | exponent before | exponent after |
+|---|---:|---:|
+| Apple M4 Max | 1.98 | **1.17** |
+| AMD Ryzen 9 7950X3D | 1.96 | **1.21** |
+| AMD Ryzen AI Max+ 395 | 1.93 | **1.23** |
+
+### The Linux advantage on MDLP inverted
+
+This is the most consequential secondary effect, and it was predicted here before
+the measurement existed.
+
+`CPPFImdlp::fit` relative to the M4 Max, at n = 100 000:
+
+| | before Phase 7 | after Phase 7 |
+|---|---:|---:|
+| AMD Ryzen 9 7950X3D | 0.67× (faster) | **1.10× (slower)** |
+| AMD Ryzen AI Max+ 395 | 0.68× (faster) | **1.12× (slower)** |
+
+While `fit` was quadratic, the entropy rescans dwarfed everything and the AMD
+machines' raw throughput won by a third. With that term gone, what remains is
+`std::stable_sort` in `sortIndices` plus linear scans — and the same toolchain
+penalty that shows up in `BinDisc::fit (quantile)` (still 2.9-3.2× slower on Linux)
+now shows through `fit` itself. The quadratic had been masking it.
+
+**In absolute terms this is not worth worrying about**: `fit` at n = 100 000 costs
+16.3 ms on macOS against 17.9-18.1 ms on Linux. Everything got roughly 500×
+cheaper, so a 10% relative gap is 1.7 ms.
+
+**In terms of what to optimise next it matters a lot.** `fit` is now sort-dominated,
+which means the sort is the next lever — and unlike a toolchain switch, a better
+sort would help every platform. Settling whether libstdc++'s `std::stable_sort` is
+the culprit is now worth the standalone experiment, because the answer changes what
+gets optimised rather than merely which compiler to prefer.
+
+The other two anomalies are unchanged and now proportionally larger, since the
+denominator shrank: `CPPFImdlp::transform` is 2.3-2.6× slower on Linux and has gone
+from 0.007% of a fit to about 4%; `BinDisc::fit (quantile)` remains 2.9-3.2× slower.
+
 ### What this changes downstream
 
 The two Linux anomalies recorded above were measured when `CPPFImdlp::fit`
