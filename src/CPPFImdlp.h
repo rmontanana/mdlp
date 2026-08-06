@@ -13,6 +13,7 @@
 #include <string>
 #include "Metrics.h"
 #include "Discretizer.h"
+#include "Exceptions.h"
 
 namespace mdlp {
     /**
@@ -82,9 +83,8 @@ namespace mdlp {
          * @param max_depth_ Maximum recursion depth (default: unlimited)
          * @param proposed Number of proposed cuts (default: 0 = no limit)
          * 
-         * @throws std::invalid_argument if min_length < 3
-         * @throws std::invalid_argument if max_depth < 1
-         * @throws std::invalid_argument if proposed < 0
+         * @throws InvalidParameter (also a `std::invalid_argument`) if min_length < 3,
+         *         max_depth < 1, or proposed < 0
          */
         CPPFImdlp(size_t min_length_, int max_depth_, float proposed);
 
@@ -148,19 +148,19 @@ namespace mdlp {
          * @brief Safely access X array with bounds checking
          * @param idx Index in the indices array
          * @return Value from X array
-         * @throws std::out_of_range if index is out of bounds
+         * @throws IndexError (also a `std::out_of_range`) if the index is out of bounds
          */
         inline precision_t safe_X_access(size_t idx) const
         {
             if (indices.empty()) {
-                throw std::out_of_range("Indices array is empty");
+                throw IndexError("Indices array is empty");
             }
             if (idx >= indices.size()) {
-                throw std::out_of_range("Index out of bounds for indices array");
+                throw IndexError("Index " + std::to_string(idx) + " out of bounds for indices array of size " + std::to_string(indices.size()));
             }
             size_t real_idx = indices[idx];
             if (real_idx >= X.size()) {
-                throw std::out_of_range("Index out of bounds for X array");
+                throw IndexError("Index " + std::to_string(real_idx) + " out of bounds for X array of size " + std::to_string(X.size()));
             }
             return X[real_idx];
         }
@@ -169,19 +169,19 @@ namespace mdlp {
          * @brief Safely access y array with bounds checking
          * @param idx Index in the indices array
          * @return Value from y array
-         * @throws std::out_of_range if index is out of bounds
+         * @throws IndexError (also a `std::out_of_range`) if the index is out of bounds
          */
         inline label_t safe_y_access(size_t idx) const
         {
             if (indices.empty()) {
-                throw std::out_of_range("Indices array is empty");
+                throw IndexError("Indices array is empty");
             }
             if (idx >= indices.size()) {
-                throw std::out_of_range("Index out of bounds for indices array");
+                throw IndexError("Index " + std::to_string(idx) + " out of bounds for indices array of size " + std::to_string(indices.size()));
             }
             size_t real_idx = indices[idx];
             if (real_idx >= y.size()) {
-                throw std::out_of_range("Index out of bounds for y array");
+                throw IndexError("Index " + std::to_string(real_idx) + " out of bounds for y array of size " + std::to_string(y.size()));
             }
             return y[real_idx];
         }
@@ -191,12 +191,12 @@ namespace mdlp {
          * @param a First value
          * @param b Value to subtract
          * @return Result of a - b
-         * @throws std::underflow_error if b > a
+         * @throws UnderflowError (also a `std::underflow_error`) if b > a
          */
         inline size_t safe_subtract(size_t a, size_t b) const
         {
             if (b > a) {
-                throw std::underflow_error("Subtraction would cause underflow");
+                throw UnderflowError("Subtraction would underflow: " + std::to_string(a) + " - " + std::to_string(b));
             }
             return a - b;
         }

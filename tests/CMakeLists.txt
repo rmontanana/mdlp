@@ -36,6 +36,12 @@ target_link_libraries(PKIDisc_unittest GTest::gtest_main torch::torch)
 target_compile_options(PKIDisc_unittest PRIVATE --coverage)
 target_link_options(PKIDisc_unittest PRIVATE --coverage)
 
+add_executable(Exceptions_unittest Exceptions_unittest.cpp
+${fimdlp_SOURCE_DIR}/src/CPPFImdlp.cpp ${fimdlp_SOURCE_DIR}/src/Metrics.cpp ${fimdlp_SOURCE_DIR}/src/BinDisc.cpp ${fimdlp_SOURCE_DIR}/src/Discretizer.cpp)
+target_link_libraries(Exceptions_unittest GTest::gtest_main torch::torch)
+target_compile_options(Exceptions_unittest PRIVATE --coverage)
+target_link_options(Exceptions_unittest PRIVATE --coverage)
+
 add_executable(RealDatasets_unittest RealDatasets_unittest.cpp
 ${fimdlp_SOURCE_DIR}/src/CPPFImdlp.cpp ${fimdlp_SOURCE_DIR}/src/Metrics.cpp ${fimdlp_SOURCE_DIR}/src/Discretizer.cpp)
 target_link_libraries(RealDatasets_unittest GTest::gtest_main torch::torch)
@@ -50,3 +56,4 @@ gtest_discover_tests(BinDisc_unittest)
 gtest_discover_tests(Discretizer_unittest)
 gtest_discover_tests(PKIDisc_unittest)
 gtest_discover_tests(RealDatasets_unittest)
+gtest_discover_tests(Exceptions_unittest)

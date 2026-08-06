@@ -417,14 +417,14 @@ namespace mdlp {
     {
         // Test when data size is smaller than n_bins
         samples_t X = { 1.0, 2.0 }; // Only 2 elements for 3 bins
-        EXPECT_THROW_WITH_MESSAGE(fit(X), std::invalid_argument, "Input data size must be at least equal to n_bins");
+        EXPECT_THROW_WITH_MESSAGE(fit(X), std::invalid_argument, "Input data size (2) must be at least n_bins (3)");
     }
 
     TEST_F(TestBinDisc3Q, FitDataSizeTooSmall)
     {
         // Test when data size is smaller than n_bins
         samples_t X = { 1.0, 2.0 }; // Only 2 elements for 3 bins
-        EXPECT_THROW_WITH_MESSAGE(fit(X), std::invalid_argument, "Input data size must be at least equal to n_bins");
+        EXPECT_THROW_WITH_MESSAGE(fit(X), std::invalid_argument, "Input data size (2) must be at least n_bins (3)");
     }
 
     TEST_F(TestBinDisc3U, FitWithYEmptyX)
@@ -438,7 +438,7 @@ namespace mdlp {
     TEST_F(TestBinDisc3U, LinspaceInvalidNumPoints)
     {
         // Test linspace with num < 2
-        EXPECT_THROW_WITH_MESSAGE(linspace(0.0f, 1.0f, 1), std::invalid_argument, "Number of points must be at least 2 for linspace");
+        EXPECT_THROW_WITH_MESSAGE(linspace(0.0f, 1.0f, 1), std::invalid_argument, "linspace: num must be at least 2, got 1");
     }
 
     TEST_F(TestBinDisc3U, LinspaceNaNValues)

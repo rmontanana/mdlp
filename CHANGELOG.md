@@ -21,6 +21,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bench/` benchmark harness and `make bench`, behind `ENABLE_BENCHMARK`
   (default OFF, Release-only). Baseline results in `docs/benchmarks.md`.
 
+### Changed — exceptions (breaking)
+
+- **New exception hierarchy in `src/Exceptions.h`.** `InvalidParameter`,
+  `ValidationError`, `NotFittedError`, `IndexError` and `UnderflowError`, all
+  tagged with `DiscretizerError` so one handler can catch anything the library
+  throws:
+
+  ```cpp
+  try { disc.fit(X, y); }
+  catch (const mdlp::DiscretizerError& e) { log(e.message()); }
+  ```
+
+  **Existing `catch` blocks keep working.** Each type also derives from the `std::`
+  exception it replaces, so `catch (const std::invalid_argument&)`,
+  `catch (const std::out_of_range&)` and `catch (const std::exception&)` behave
+  exactly as they did in 2.x. `DiscretizerError` itself deliberately does not
+  derive from `std::exception` — that is what keeps the `std::` base unambiguous —
+  so a tag-typed handler uses `message()` rather than `what()`.
+
+- **Error messages now name the parameter and its value** where a value exists:
+  `"min_length must be at least 3, got 2"`,
+  `"Index 5 out of bounds for X array of size 2"`,
+  `"proposed_cuts (8) cannot exceed the number of samples (7)"`. The previous
+  `"wrong proposed num_cuts value"` said nothing at all. **This is the breaking
+  part**: code matching on exact message text needs updating. Tensor validation
+  messages are unchanged.
+
 ### Performance
 
 - **`CPPFImdlp::fit` is no longer quadratic.** `getCandidate()` called

@@ -12,10 +12,10 @@ namespace mdlp {
     {
         // Input validation
         if (data.empty()) {
-            throw std::invalid_argument("Data for transformation cannot be empty");
+            throw ValidationError("Data for transformation cannot be empty");
         }
         if (cutPoints.size() < 2) {
-            throw std::runtime_error("Discretizer not fitted yet or no valid cut points found");
+            throw NotFittedError("Discretizer not fitted yet or no valid cut points found");
         }
 
         out.clear();
@@ -55,16 +55,16 @@ namespace mdlp {
         const std::string& empty_message)
     {
         if (t.dim() != 1) {
-            throw std::invalid_argument("Only 1D tensors supported");
+            throw ValidationError("Only 1D tensors supported");
         }
         if (!t.is_cpu()) {
-            throw std::invalid_argument(name + " tensor must reside on the CPU"); // LCOV_EXCL_LINE
+            throw ValidationError(name + " tensor must reside on the CPU"); // LCOV_EXCL_LINE
         }
         if (t.scalar_type() != expected_type) {
-            throw std::invalid_argument(name + " tensor must be " + type_name + " type");
+            throw ValidationError(name + " tensor must be " + type_name + " type");
         }
         if (t.numel() == 0) {
-            throw std::invalid_argument(empty_message);
+            throw ValidationError(empty_message);
         }
         // Accept non-contiguous inputs. A column view of a 2-D dataset has a
         // stride greater than one, so walking data_ptr() + numel() would read
@@ -82,7 +82,7 @@ namespace mdlp {
         auto X_valid = validate_tensor(X_, torch::kFloat32, "X", "Float32", "Tensors cannot be empty");
         auto y_valid = validate_tensor(y_, torch::kInt32, "y", "Int32", "Tensors cannot be empty");
         if (X_valid.numel() != y_valid.numel()) {
-            throw std::invalid_argument("X and y tensors must have same number of elements");
+            throw ValidationError("X and y tensors must have same number of elements");
         }
         return { X_valid, y_valid };
     }

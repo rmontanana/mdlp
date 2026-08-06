@@ -120,11 +120,11 @@ namespace mdlp {
 
     TEST_F(TestFImdlp, FitErrorMinLength)
     {
-        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(2, 10, 0), invalid_argument, "min_length must be greater than 2");
+        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(2, 10, 0), invalid_argument, "min_length must be at least 3, got 2");
     }
     TEST_F(TestFImdlp, FitErrorMaxDepth)
     {
-        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 0, 0), invalid_argument, "max_depth must be greater than 0");
+        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 0, 0), invalid_argument, "max_depth must be at least 1, got 0");
     }
 
     TEST_F(TestFImdlp, JoinFit)
@@ -140,14 +140,14 @@ namespace mdlp {
 
     TEST_F(TestFImdlp, FitErrorMinCutPoints)
     {
-        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 10, -1), invalid_argument, "proposed_cuts must be non-negative");
+        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 10, -1), invalid_argument, "proposed_cuts must be non-negative, got -1");
     }
     TEST_F(TestFImdlp, FitErrorMaxCutPoints)
     {
         auto test = CPPFImdlp(3, 1, 8);
         samples_t X_ = { 1, 2, 2, 3, 4, 2, 3 };
         labels_t y_ = { 0, 0, 1, 2, 3, 4, 5 };
-        EXPECT_THROW_WITH_MESSAGE(test.fit(X_, y_), invalid_argument, "wrong proposed num_cuts value");
+        EXPECT_THROW_WITH_MESSAGE(test.fit(X_, y_), invalid_argument, "proposed_cuts (8) cannot exceed the number of samples (7)");
     }
 
     TEST_F(TestFImdlp, SortIndices)
@@ -383,7 +383,7 @@ namespace mdlp {
         indices = { 0, 1 }; // shorter than expected
 
         // This should trigger the first exception in safe_X_access (idx >= indices.size())
-        EXPECT_THROW_WITH_MESSAGE(safe_X_access(2), std::out_of_range, "Index out of bounds for indices array");
+        EXPECT_THROW_WITH_MESSAGE(safe_X_access(2), std::out_of_range, "Index 2 out of bounds for indices array of size 2");
     }
 
     TEST_F(TestFImdlp, SafeXAccessXOutOfBounds)
@@ -394,7 +394,7 @@ namespace mdlp {
         indices = { 0, 1, 5 }; // indices[2] = 5 is out of bounds for X
 
         // This should trigger the second exception in safe_X_access (real_idx >= X.size())
-        EXPECT_THROW_WITH_MESSAGE(safe_X_access(2), std::out_of_range, "Index out of bounds for X array");
+        EXPECT_THROW_WITH_MESSAGE(safe_X_access(2), std::out_of_range, "Index 5 out of bounds for X array of size 2");
     }
 
     TEST_F(TestFImdlp, SafeYAccessIndexOutOfBounds)
@@ -405,7 +405,7 @@ namespace mdlp {
         indices = { 0, 1 }; // shorter than expected
 
         // This should trigger the first exception in safe_y_access (idx >= indices.size())
-        EXPECT_THROW_WITH_MESSAGE(safe_y_access(2), std::out_of_range, "Index out of bounds for indices array");
+        EXPECT_THROW_WITH_MESSAGE(safe_y_access(2), std::out_of_range, "Index 2 out of bounds for indices array of size 2");
     }
 
     TEST_F(TestFImdlp, SafeYAccessYOutOfBounds)
@@ -416,7 +416,7 @@ namespace mdlp {
         indices = { 0, 1, 5 }; // indices[2] = 5 is out of bounds for y
 
         // This should trigger the second exception in safe_y_access (real_idx >= y.size())
-        EXPECT_THROW_WITH_MESSAGE(safe_y_access(2), std::out_of_range, "Index out of bounds for y array");
+        EXPECT_THROW_WITH_MESSAGE(safe_y_access(2), std::out_of_range, "Index 5 out of bounds for y array of size 2");
     }
 
     TEST_F(TestFImdlp, SafeXAccessEmptyIndices)
@@ -444,7 +444,7 @@ namespace mdlp {
     TEST_F(TestFImdlp, SafeSubtractUnderflow)
     {
         // Test safe_subtract with underflow condition (b > a)
-        EXPECT_THROW_WITH_MESSAGE(safe_subtract(3, 5), std::underflow_error, "Subtraction would cause underflow");
+        EXPECT_THROW_WITH_MESSAGE(safe_subtract(3, 5), std::underflow_error, "Subtraction would underflow: 3 - 5");
     }
     TEST_F(TestFImdlp, TestHeartStatLog)
     {

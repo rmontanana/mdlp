@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include "BinDisc.h"
+#include "Exceptions.h"
 
 namespace mdlp {
 
@@ -16,17 +17,17 @@ namespace mdlp {
         Discretizer(), n_bins{ n_bins }, strategy{ strategy }
     {
         if (n_bins < min_bins) {
-            throw std::invalid_argument("n_bins must be greater than " + std::to_string(min_bins - 1));
+            throw InvalidParameter("n_bins must be at least " + std::to_string(min_bins) + ", got " + std::to_string(n_bins));
         }
     }
     BinDisc::~BinDisc() = default;
     void BinDisc::validate_input(const samples_t& X) const
     {
         if (X.empty()) {
-            throw std::invalid_argument("Input data X cannot be empty");
+            throw ValidationError("Input data X cannot be empty");
         }
         if (X.size() < static_cast<size_t>(n_bins)) {
-            throw std::invalid_argument("Input data size must be at least equal to n_bins");
+            throw ValidationError("Input data size (" + std::to_string(X.size()) + ") must be at least n_bins (" + std::to_string(n_bins) + ")");
         }
     }
     void BinDisc::fit(samples_t& X)
@@ -54,7 +55,7 @@ namespace mdlp {
     void BinDisc::fit(samples_t& X, labels_t& y)
     {
         if (X.empty()) {
-            throw std::invalid_argument("X cannot be empty");
+            throw ValidationError("X cannot be empty");
         }
 
         // BinDisc is inherently unsupervised, but we validate inputs for consistency
@@ -64,7 +65,7 @@ namespace mdlp {
     void BinDisc::fit(samples_t&& X, labels_t&& y)
     {
         if (X.empty()) {
-            throw std::invalid_argument("X cannot be empty");
+            throw ValidationError("X cannot be empty");
         }
         fit(std::move(X));
     }
@@ -72,13 +73,13 @@ namespace mdlp {
     {
         // Input validation
         if (num < 2) {
-            throw std::invalid_argument("Number of points must be at least 2 for linspace");
+            throw InvalidParameter("linspace: num must be at least 2, got " + std::to_string(num));
         }
         if (std::isnan(start) || std::isnan(end)) {
-            throw std::invalid_argument("Start and end values cannot be NaN");
+            throw InvalidParameter("Start and end values cannot be NaN");
         }
         if (std::isinf(start) || std::isinf(end)) {
-            throw std::invalid_argument("Start and end values cannot be infinite");
+            throw InvalidParameter("Start and end values cannot be infinite");
         }
 
         if (start == end) {
@@ -100,10 +101,10 @@ namespace mdlp {
     {
         // Input validation
         if (data.empty()) {
-            throw std::invalid_argument("Data cannot be empty for percentile calculation");
+            throw ValidationError("Data cannot be empty for percentile calculation");
         }
         if (percentiles.empty()) {
-            throw std::invalid_argument("Percentiles cannot be empty");
+            throw ValidationError("Percentiles cannot be empty");
         }
 
         // Implementation taken from https://dpilger26.github.io/NumCpp/doxygen/html/percentile_8hpp_source.html

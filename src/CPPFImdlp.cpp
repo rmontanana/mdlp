@@ -21,13 +21,13 @@ namespace mdlp {
     {
         // Input validation for constructor parameters
         if (min_length_ < 3) {
-            throw std::invalid_argument("min_length must be greater than 2");
+            throw InvalidParameter("min_length must be at least 3, got " + std::to_string(min_length_));
         }
         if (max_depth_ < 1) {
-            throw std::invalid_argument("max_depth must be greater than 0");
+            throw InvalidParameter("max_depth must be at least 1, got " + std::to_string(max_depth_));
         }
         if (proposed < 0.0f) {
-            throw std::invalid_argument("proposed_cuts must be non-negative");
+            throw InvalidParameter("proposed_cuts must be non-negative, got " + detail::str(proposed));
         }
 
         direction = bound_dir_t::RIGHT;
@@ -40,7 +40,7 @@ namespace mdlp {
             return numeric_limits<size_t>::max();
         }
         if (proposed_cuts > static_cast<precision_t>(X.size())) {
-            throw invalid_argument("wrong proposed num_cuts value");
+            throw InvalidParameter("proposed_cuts (" + detail::str(proposed_cuts) + ") cannot exceed the number of samples (" + std::to_string(X.size()) + ")");
         }
         if (proposed_cuts < 1)
             return static_cast<size_t>(round(static_cast<precision_t>(X.size()) * proposed_cuts));
@@ -71,10 +71,10 @@ namespace mdlp {
         discretizedData.clear();
         cutPoints.clear();
         if (X.size() != y.size()) {
-            throw std::invalid_argument("X and y must have the same size: " + std::to_string(X.size()) + " != " + std::to_string(y.size()));
+            throw ValidationError("X and y must have the same size: " + std::to_string(X.size()) + " != " + std::to_string(y.size()));
         }
         if (X.empty() || y.empty()) {
-            throw invalid_argument("X and y must have at least one element");
+            throw ValidationError("X and y must have at least one element");
         }
         // Sorts the members, not the caller's vectors: after a move the latter no
         // longer hold the data.
@@ -255,7 +255,7 @@ namespace mdlp {
         std::iota(idx.begin(), idx.end(), 0);
         stable_sort(idx.begin(), idx.end(), [&X_, &y_](size_t i1, size_t i2) {
             if (i1 >= X_.size() || i2 >= X_.size() || i1 >= y_.size() || i2 >= y_.size()) {
-                throw std::out_of_range("Index out of bounds in sort comparison");
+                throw IndexError("Index out of bounds in sort comparison");
             }
             if (X_[i1] == X_[i2])
                 return y_[i1] < y_[i2];

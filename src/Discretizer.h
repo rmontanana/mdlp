@@ -12,6 +12,7 @@
 #include "typesFImdlp.h"
 #include <torch/torch.h>
 #include "config.h"
+#include "Exceptions.h"
 
 namespace mdlp {
     enum class bound_dir_t {
@@ -144,8 +145,9 @@ namespace mdlp {
          * @brief Fit the discretizer using PyTorch tensors
          * @param X_ Input tensor (Float32, 1D, CPU)
          * @param y_ Labels tensor (Int32, 1D, CPU)
-         * @throws std::invalid_argument if a tensor is not 1D, not on the CPU,
-         *         has the wrong dtype, is empty, or if sizes do not match
+         * @throws ValidationError (also a `std::invalid_argument`) if a tensor is
+         *         not 1D, not on the CPU, has the wrong dtype, is empty, or if
+         *         sizes do not match
          *
          * @note Non-contiguous tensors are accepted. A column view of a 2-D
          *       dataset (e.g. `dataset.select(1, col)`) is not contiguous, and
@@ -160,8 +162,8 @@ namespace mdlp {
          * @brief Transform PyTorch tensor using previously computed cut points
          * @param X_ Input tensor (Float32, 1D, CPU)
          * @return Discretized tensor (Int32)
-         * @throws std::invalid_argument if X_ is not 1D, not on the CPU, has the
-         *         wrong dtype, or is empty
+         * @throws ValidationError (also a `std::invalid_argument`) if X_ is not 1D,
+         *         not on the CPU, has the wrong dtype, or is empty
          *
          * @note Non-contiguous tensors are accepted; see fit_t().
          */
@@ -172,7 +174,8 @@ namespace mdlp {
          * @param X_ Input tensor (Float32, 1D, CPU)
          * @param y_ Labels tensor (Int32, 1D, CPU)
          * @return Discretized tensor (Int32)
-         * @throws std::invalid_argument under the same conditions as fit_t()
+         * @throws ValidationError (also a `std::invalid_argument`) under the same
+         *         conditions as fit_t()
          *
          * @note Non-contiguous tensors are accepted; see fit_t().
          */
@@ -201,7 +204,7 @@ namespace mdlp {
          * @param type_name Human-readable type name used in error messages
          * @param empty_message Message thrown when the tensor has no elements
          * @return A contiguous tensor; the input itself when already contiguous
-         * @throws std::invalid_argument if any check fails
+         * @throws ValidationError (also a `std::invalid_argument`) if any check fails
          */
         static torch::Tensor validate_tensor(
             const torch::Tensor& t,
@@ -212,7 +215,8 @@ namespace mdlp {
 
         /**
          * @brief Validate an (X, y) tensor pair and return contiguous equivalents
-         * @throws std::invalid_argument if either tensor is invalid or sizes differ
+         * @throws ValidationError (also a `std::invalid_argument`) if either tensor is
+         *         invalid or the sizes differ
          */
         static std::pair<torch::Tensor, torch::Tensor> validate_pair(
             const torch::Tensor& X_,

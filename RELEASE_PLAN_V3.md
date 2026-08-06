@@ -2,7 +2,7 @@
 
 **Target version:** 3.0.0 (major — breaking changes)
 **Branch:** `release/3.0.0`
-**Status:** Phases 0, 1, 2, 3, 5 and 7 complete; Phases 4, 6, 8 pending
+**Status:** Phases 0, 1, 2, 3, 4, 5 and 7 complete; Phases 6 and 8 pending
 **Supersedes:** `RELEASE_PLAN_2.2.0.md` (see [Appendix B](#appendix-b--corrections-to-the-superseded-220-plan))
 
 > **This document is the single source of truth for the 3.0.0 release.**
@@ -400,18 +400,38 @@ from `{1,1,1,1,1,2,2,2,2,2}` to `{3,3,3,3,3,3,3,3,3,3}`. The copy/move assertion
 are self-proving — with reference members restored the test file no longer
 compiles, since `is_copy_assignable_v<Metrics>` becomes false.
 
-### Phase 4 — Error handling
+### Phase 4 — Error handling ✅ COMPLETE
 
-- **T4.1** Create `src/Exceptions.h` with a `DiscretizerException` base deriving
-  from `std::runtime_error`, plus `InvalidParameterException`, `ValidationException`,
-  `IndexException`, `NotFittedError`.
-- **T4.2** Migrate existing throw sites. **Breaking change** — keep each new type
-  derived from the `std::` type it replaces (`std::invalid_argument`,
-  `std::out_of_range`) so existing `catch` blocks keep working. The two prior plans
-  disagreed on this hierarchy; this is the ruling.
-- **T4.3** Include the offending value and parameter name in every message.
-- **T4.4** Update the tests that assert on exception type and message text —
-  several use `EXPECT_THROW_WITH_MESSAGE` and will need revisiting.
+- [x] **T4.1** `src/Exceptions.h` defines `DiscretizerError` plus
+  `InvalidParameter`, `ValidationError`, `NotFittedError`, `IndexError` and
+  `UnderflowError`.
+- [x] **T4.2** Every throw site migrated; no `throw std::` remains in `src/`.
+- [x] **T4.3** Messages carry the parameter name and the offending value **where a
+  value exists**. Not every message: "X cannot be empty" has no value to report,
+  and the tensor messages were left alone — 13 assertions depend on them and the
+  caller can trivially inspect its own tensor. Enrichment went where the value is
+  *not* obvious to the caller: index errors, size mismatches, parameter validation.
+- [x] **T4.4** 12 assertions updated, and `tests/Exceptions_unittest.cpp` added with
+  11 tests pinning the hierarchy's contract.
+
+**The base cannot derive from `std::runtime_error` as T4.1 originally specified.**
+`std::invalid_argument` and `std::out_of_range` derive from `std::logic_error`, not
+`std::runtime_error`, so a single base deriving from `std::runtime_error` is
+incompatible with T4.2's ruling that each type also derive from the `std::` type it
+replaces. `DiscretizerError` is therefore a tag that derives from **nothing**, and
+each concrete type inherits from both it and its `std::` counterpart. Had the tag
+also derived from `std::exception`, that base would be inherited twice and become
+ambiguous.
+
+The cost of that choice: a handler typed on the tag cannot call `what()`. Each type
+provides `message()` for exactly this, and a test pins it for all five.
+
+**Backward compatibility is preserved and tested:** `catch (const
+std::invalid_argument&)`, `catch (const std::out_of_range&)` and `catch (const
+std::exception&)` all still work. The only breaking change is message text.
+
+**Verification.** 119 tests pass. Coverage of `src/` reached **100%** lines and
+functions for the first time. Debug and release builds are warning-free.
 
 ### Phase 5 — Move semantics and buffer reuse ✅ COMPLETE
 
