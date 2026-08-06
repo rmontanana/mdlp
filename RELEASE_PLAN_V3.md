@@ -2,7 +2,7 @@
 
 **Target version:** 3.0.0 (major — breaking changes)
 **Branch:** `release/3.0.0`
-**Status:** Phases 0, 1, 2, 3 and 5 complete; Phases 4, 6, 7, 8 pending
+**Status:** Phases 0, 1, 2, 3, 5 and 7 complete; Phases 4, 6, 8 pending
 **Supersedes:** `RELEASE_PLAN_2.2.0.md` (see [Appendix B](#appendix-b--corrections-to-the-superseded-220-plan))
 
 > **This document is the single source of truth for the 3.0.0 release.**
@@ -460,13 +460,41 @@ All rows sit within the ≤5% regression ceiling.
 - **T6.3** Static factory / builder helpers (`CPPFImdlp::builder()`,
   `fit_transform`) as sugar over the existing API.
 
-### Phase 7 — Performance
+### Phase 7 — Performance ✅ COMPLETE
 
-- **T7.1** Profile against the Phase 0 baseline and identify the top three costs
-  before optimizing anything.
-- **T7.2** Optimize the entropy caching path if profiling justifies it.
-- **T7.3** Parallelism is **out of scope for 3.0.0** — it interacts directly with
-  the unresolved threading contract from T3.3. Revisit for 3.1.0.
+- [x] **T7.1** Profiled in Phase 0. The single dominant cost was `getCandidate()`
+  rescanning its interval at every class boundary, confirmed by instrumenting
+  `Metrics::entropy` and reproduced on three platforms.
+- [x] **T7.2** `getCandidate()` now carries per-class counts incrementally,
+  replacing the O(n²) term with O(n·k) for k classes.
+  `Metrics::entropyFromCounts` is the single implementation shared by the batch
+  and incremental paths, so they cannot drift apart.
+- [x] **T7.3** Parallelism remains **out of scope for 3.0.0**, and is now much less
+  attractive: the operation it would have parallelised got 515× faster.
+
+**Result on the M4 Max, against the dataset version 2 baseline:**
+
+| n | before | after | speedup |
+|---:|---:|---:|---:|
+| 1 000 | 0.9514 ms | 0.0723 ms | **13×** |
+| 10 000 | 82.03 ms | 1.048 ms | **78×** |
+| 100 000 | 8 517 ms | 16.53 ms | **515×** |
+
+Ten times the data now costs 11-16× instead of ~100×. Nothing outside
+`getCandidate` moved.
+
+**Equivalence is exact, not approximate.** The full 104-test suite passes
+unchanged, including the tests asserting exact cut points; and a differential
+harness compared old against new across 180 configurations — n from 50 to 4 000,
+2 to 6 classes, seven duplicate densities, three parameter sets — producing
+byte-identical cut points, depths and transform outputs.
+
+**Consequence for the open toolchain question:** `CPPFImdlp::fit` no longer dwarfs
+everything. At n = 100 000 it is 16.5 ms against `transform`'s 0.63 ms, so
+`transform` went from 0.007% of the work to ~4%, and the `stable_sort` in
+`sortIndices` is now a real share of `fit`. Re-running the cross-platform
+comparison is worthwhile and the libstdc++/libc++ question matters more than
+before.
 
 ### Phase 8 — Testing, docs, release
 

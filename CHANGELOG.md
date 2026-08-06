@@ -21,6 +21,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bench/` benchmark harness and `make bench`, behind `ENABLE_BENCHMARK`
   (default OFF, Release-only). Baseline results in `docs/benchmarks.md`.
 
+### Performance
+
+- **`CPPFImdlp::fit` is no longer quadratic.** `getCandidate()` called
+  `Metrics::entropy` for both sides of every candidate split, and each call was a
+  distinct cache key that rescanned its whole interval — O(n) work at O(n)
+  boundaries. It now carries per-class counts incrementally as the scan advances,
+  which is O(n·k) for k classes.
+
+  Measured on an Apple M4 Max: **13× faster at n = 1 000, 78× at n = 10 000 and
+  515× at n = 100 000**, where discretizing one feature fell from 8.5 seconds to
+  16.5 milliseconds. Confirmed quadratic beforehand on three platforms spanning two
+  instruction sets and three compilers.
+
+  Cut points are unchanged — bit-identical, not approximately equal.
+  `Metrics::entropyFromCounts` is now the single implementation shared by the batch
+  and incremental paths.
+
 ### Fixed
 
 - **Tensor discretization silently produced wrong results for non-contiguous input.**

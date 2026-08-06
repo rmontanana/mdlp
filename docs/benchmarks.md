@@ -197,7 +197,8 @@ expensive full-interval scans.
 
 The fix is to compute the entropies incrementally — carry running per-class counts
 as `idx` advances instead of rescanning from `start` each time — which turns
-`getCandidate` into O(n) plus O(k) per step for k classes. This is a Phase 7 item
+`getCandidate` into O(n) plus O(k) per step for k classes. **This was implemented
+in Phase 7; see the section below.** It was a Phase 7 item
 and is worth far more than the "20-30%" the original plan hoped for: at n = 100 000
 the current implementation spends over eight seconds on a single feature.
 
@@ -271,6 +272,52 @@ Now that the inputs are verified identical, this comparison can be trusted:
 `CPPFImdlp::fit` runs at **0.67× and 0.68×** of the M4 Max time at n = 100 000, and
 the advantage holds across sizes. Both AMD parts land in the same place, which is
 what one would expect if the effect is real rather than a scheduling artefact.
+
+## Phase 7 result: the quadratic is gone
+
+`getCandidate()` now carries per-class counts as `idx` advances instead of asking
+`Metrics::entropy` to rescan the interval at every class boundary. Measured on the
+M4 Max against the dataset version 2 baseline:
+
+| n | before | after | speedup |
+|---:|---:|---:|---:|
+| 1 000 | 0.9514 ms | 0.0723 ms | **13×** |
+| 10 000 | 82.03 ms | 1.048 ms | **78×** |
+| 100 000 | 8 517 ms | 16.53 ms | **515×** |
+
+Discretizing a 100 000-sample feature dropped from **8.5 seconds to 16.5
+milliseconds**. The speedup grows with n, which is what replacing an O(n²) term
+with an O(n·k) one looks like.
+
+The scaling ratios confirm it. Ten times the data now costs 11.2× / 14.5× / 15.8×
+instead of the previous ~100×; what remains is the `std::stable_sort` in
+`sortIndices` plus the linear scans, i.e. roughly n log n.
+
+Nothing else moved: `transform` and the `BinDisc` paths are within 10% of their
+previous figures, as expected from a change confined to `getCandidate`.
+
+### Equivalence
+
+Cut points are **identical**, not merely close. `Metrics::entropyFromCounts` is now
+the single implementation shared by the batch and incremental paths, so the two
+cannot drift: same iteration order over labels, same types, same skipping of zero
+counts, therefore bit-identical floating point.
+
+Verified two ways: the full 104-test suite passes unchanged, including the tests
+that assert exact cut points on iris; and a differential harness compared the old
+and new implementations across 180 configurations — n from 50 to 4 000, 2 to 6
+classes, seven duplicate densities, three parameter sets — producing byte-identical
+cut points, recursion depths and transform outputs.
+
+### What this changes downstream
+
+The two Linux anomalies recorded above were measured when `CPPFImdlp::fit`
+dominated everything by four orders of magnitude. That is no longer true: at
+n = 100 000 `fit` is now 16.5 ms against `transform`'s 0.63 ms, so `transform` has
+gone from 0.007% of the work to about 4%. The `std::stable_sort` in `sortIndices`
+is now a meaningful share of `fit` itself. **Re-running the cross-platform
+comparison is worthwhile, and the toolchain question is now more relevant than it
+was**, not less.
 
 ### 2. Input copying is negligible, which reframes Phase 5
 

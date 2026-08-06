@@ -161,9 +161,6 @@ namespace mdlp {
         size_t candidate = numeric_limits<size_t>::max();
         size_t elements = safe_subtract(end, start);
         bool sameValues = true;
-        precision_t entropy_left;
-        precision_t entropy_right;
-        precision_t minEntropy;
         // Check if all the values of the variable in the interval are the same
         for (size_t idx = start + 1; idx < end; idx++) {
             if (safe_X_access(idx) != safe_X_access(start)) {
@@ -173,13 +170,52 @@ namespace mdlp {
         }
         if (sameValues)
             return candidate;
-        minEntropy = metrics.entropy(start, end);
+
+        // Class counts carried incrementally across the scan.
+        //
+        // This loop used to call metrics.entropy(start, idx) and
+        // metrics.entropy(idx, end) at every class boundary. Each of those is a
+        // distinct cache key, so every one was a miss that rescanned its whole
+        // interval — O(n) work at O(n) boundaries, which made fit() quadratic and
+        // cost 8.5 seconds for a single feature of 100,000 samples (measured on
+        // three platforms; see docs/benchmarks.md).
+        //
+        // Moving one element from the right side to the left as idx advances
+        // keeps both distributions up to date in O(1), leaving only the O(k)
+        // entropy evaluation per boundary for k classes.
+        label_t max_label = 0;
+        for (size_t idx = start; idx < end; idx++) {
+            const label_t label = safe_y_access(idx);
+            if (label > max_label) {
+                max_label = label;
+            }
+        }
+        // Sized to the widest label in the whole interval, so both sides share a
+        // layout. Trailing zeros are skipped by entropyFromCounts, which is what
+        // makes each side's result identical to entropy() over the same range.
+        labels_t counts_left(static_cast<size_t>(max_label) + 1, 0);
+        labels_t counts_right(static_cast<size_t>(max_label) + 1, 0);
+        int n_left = 0;
+        int n_right = 0;
+        for (size_t idx = start; idx < end; idx++) {
+            counts_right[static_cast<size_t>(safe_y_access(idx))]++;
+            n_right++;
+        }
+
+        precision_t minEntropy = metrics.entropy(start, end);
         for (size_t idx = start + 1; idx < end; idx++) {
+            const auto moved = static_cast<size_t>(safe_y_access(idx - 1));
+            counts_left[moved]++;
+            n_left++;
+            counts_right[moved]--;
+            n_right--;
             // Cutpoints are always on boundaries (definition 2)
             if (safe_y_access(idx) == safe_y_access(idx - 1))
                 continue;
-            entropy_left = precision_t(idx - start) / static_cast<precision_t>(elements) * metrics.entropy(start, idx);
-            entropy_right = precision_t(end - idx) / static_cast<precision_t>(elements) * metrics.entropy(idx, end);
+            const precision_t entropy_left = precision_t(idx - start) / static_cast<precision_t>(elements)
+                * Metrics::entropyFromCounts(counts_left, n_left);
+            const precision_t entropy_right = precision_t(end - idx) / static_cast<precision_t>(elements)
+                * Metrics::entropyFromCounts(counts_right, n_right);
             if (entropy_left + entropy_right < minEntropy) {
                 minEntropy = entropy_left + entropy_right;
                 candidate = idx;

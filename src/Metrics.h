@@ -76,6 +76,22 @@ namespace mdlp {
         int computeNumClasses(size_t start, size_t end) const;
 
         /**
+         * @brief Entropy of a class distribution given as per-class counts
+         * @param counts Occurrences indexed by label; zero entries are skipped
+         * @param nElements Total number of elements, i.e. the sum of counts
+         * @return Entropy in bits
+         *
+         * Shared by entropy() and by CPPFImdlp::getCandidate(), which carries its
+         * counts incrementally. Keeping one implementation is what guarantees the
+         * two cannot drift apart: identical iteration order and identical types
+         * make the results bit-identical, not merely close.
+         *
+         * Trailing zero counts are harmless, so a caller may size its array to the
+         * widest label in a *containing* interval and still get the same answer.
+         */
+        static precision_t entropyFromCounts(const labels_t& counts, int nElements);
+
+        /**
          * @brief Entropy of [start, end)
          * @return Entropy in bits, or 0 for intervals shorter than 2 or out of range
          * @note Memoizes; not const.

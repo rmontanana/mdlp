@@ -48,8 +48,6 @@ namespace mdlp {
             return cached->second;
         }
 
-        precision_t p;
-        precision_t ventropy = 0;
         int nElements = 0;
 
         if (indices.empty() || start >= indices.size() || end > indices.size()) {
@@ -79,14 +77,24 @@ namespace mdlp {
             counts[label]++;
             nElements++;
         }
+        const precision_t ventropy = entropyFromCounts(counts, nElements);
+
+        entropyCache[{start, end}] = ventropy;
+        return ventropy;
+    }
+
+    precision_t Metrics::entropyFromCounts(const labels_t& counts, int nElements)
+    {
+        precision_t ventropy = 0;
+        if (nElements <= 0) {
+            return ventropy;
+        }
         for (auto count : counts) {
             if (count > 0) {
-                p = static_cast<precision_t>(count) / static_cast<precision_t>(nElements);
+                const precision_t p = static_cast<precision_t>(count) / static_cast<precision_t>(nElements);
                 ventropy -= p * log2(p);
             }
         }
-
-        entropyCache[{start, end}] = ventropy;
         return ventropy;
     }
 
