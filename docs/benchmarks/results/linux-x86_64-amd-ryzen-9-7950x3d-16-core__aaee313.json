@@ -1,0 +1,390 @@
+{
+  "schema": 1,
+  "library_version": "2.1.3",
+  "level": "full",
+  "n_classes": 3,
+  "seed": 42,
+  "build": {
+    "compiler": "GCC 16.1.1",
+    "cpp_standard": 201703,
+    "pointer_bits": 64,
+    "hardware_concurrency": 32
+  },
+  "thermal_drift": {
+    "probe": "CPPFImdlp::fit n=1000",
+    "before_median_ms": 0.676077,
+    "after_median_ms": 0.726442
+  },
+  "results": [
+    {
+      "benchmark": "CPPFImdlp::fit",
+      "n": 100,
+      "reps": 500,
+      "min_ms": 0.009769,
+      "median_ms": 0.00988,
+      "mean_ms": 0.009976
+    },
+    {
+      "benchmark": "BinDisc::fit (uniform)",
+      "n": 100,
+      "reps": 500,
+      "min_ms": 0.00014,
+      "median_ms": 0.00015,
+      "mean_ms": 0.000147
+    },
+    {
+      "benchmark": "BinDisc::fit (quantile)",
+      "n": 100,
+      "reps": 500,
+      "min_ms": 0.00034,
+      "median_ms": 0.00036,
+      "mean_ms": 0.00036
+    },
+    {
+      "benchmark": "PKIDisc::fit (sqrt)",
+      "n": 100,
+      "reps": 500,
+      "min_ms": 0.000389,
+      "median_ms": 0.0004,
+      "mean_ms": 0.00041
+    },
+    {
+      "benchmark": "CPPFImdlp::transform",
+      "n": 100,
+      "reps": 500,
+      "min_ms": 0.00018,
+      "median_ms": 0.00018,
+      "mean_ms": 0.000184
+    },
+    {
+      "benchmark": "BinDisc::transform",
+      "n": 100,
+      "reps": 500,
+      "min_ms": 0.00019,
+      "median_ms": 0.0002,
+      "mean_ms": 0.000198
+    },
+    {
+      "benchmark": "(reference) copy X + y",
+      "n": 100,
+      "reps": 500,
+      "min_ms": 2e-05,
+      "median_ms": 3e-05,
+      "mean_ms": 2.7e-05
+    },
+    {
+      "benchmark": "CPPFImdlp::fit (move)",
+      "n": 100,
+      "reps": 500,
+      "min_ms": 0.01063,
+      "median_ms": 0.01135,
+      "mean_ms": 0.011409
+    },
+    {
+      "benchmark": "BinDisc::fit (quantile, pool copy)",
+      "n": 100,
+      "reps": 500,
+      "min_ms": 0.00034,
+      "median_ms": 0.00036,
+      "mean_ms": 0.000357
+    },
+    {
+      "benchmark": "BinDisc::fit (quantile, move)",
+      "n": 100,
+      "reps": 500,
+      "min_ms": 0.000339,
+      "median_ms": 0.00035,
+      "mean_ms": 0.00035
+    },
+    {
+      "benchmark": "CPPFImdlp::transform (buffer)",
+      "n": 100,
+      "reps": 500,
+      "min_ms": 0.00018,
+      "median_ms": 0.00018,
+      "mean_ms": 0.000182
+    },
+    {
+      "benchmark": "CPPFImdlp::fit",
+      "n": 1000,
+      "reps": 200,
+      "min_ms": 0.643198,
+      "median_ms": 0.681017,
+      "mean_ms": 0.679695
+    },
+    {
+      "benchmark": "BinDisc::fit (uniform)",
+      "n": 1000,
+      "reps": 200,
+      "min_ms": 0.00111,
+      "median_ms": 0.00112,
+      "mean_ms": 0.00114
+    },
+    {
+      "benchmark": "BinDisc::fit (quantile)",
+      "n": 1000,
+      "reps": 200,
+      "min_ms": 0.00503,
+      "median_ms": 0.00513,
+      "mean_ms": 0.005161
+    },
+    {
+      "benchmark": "PKIDisc::fit (sqrt)",
+      "n": 1000,
+      "reps": 200,
+      "min_ms": 0.00526,
+      "median_ms": 0.00534,
+      "mean_ms": 0.005379
+    },
+    {
+      "benchmark": "CPPFImdlp::transform",
+      "n": 1000,
+      "reps": 200,
+      "min_ms": 0.00268,
+      "median_ms": 0.0027,
+      "mean_ms": 0.002726
+    },
+    {
+      "benchmark": "BinDisc::transform",
+      "n": 1000,
+      "reps": 200,
+      "min_ms": 0.00222,
+      "median_ms": 0.00224,
+      "mean_ms": 0.002245
+    },
+    {
+      "benchmark": "(reference) copy X + y",
+      "n": 1000,
+      "reps": 200,
+      "min_ms": 9e-05,
+      "median_ms": 0.0001,
+      "mean_ms": 9.8e-05
+    },
+    {
+      "benchmark": "CPPFImdlp::fit (move)",
+      "n": 1000,
+      "reps": 200,
+      "min_ms": 0.665758,
+      "median_ms": 0.685957,
+      "mean_ms": 0.688087
+    },
+    {
+      "benchmark": "BinDisc::fit (quantile, pool copy)",
+      "n": 1000,
+      "reps": 200,
+      "min_ms": 0.00503,
+      "median_ms": 0.00511,
+      "mean_ms": 0.005131
+    },
+    {
+      "benchmark": "BinDisc::fit (quantile, move)",
+      "n": 1000,
+      "reps": 200,
+      "min_ms": 0.00502,
+      "median_ms": 0.0051,
+      "mean_ms": 0.005164
+    },
+    {
+      "benchmark": "CPPFImdlp::transform (buffer)",
+      "n": 1000,
+      "reps": 200,
+      "min_ms": 0.00266,
+      "median_ms": 0.00268,
+      "mean_ms": 0.002706
+    },
+    {
+      "benchmark": "CPPFImdlp::fit",
+      "n": 10000,
+      "reps": 50,
+      "min_ms": 53.137498,
+      "median_ms": 53.622626,
+      "mean_ms": 53.663771
+    },
+    {
+      "benchmark": "BinDisc::fit (uniform)",
+      "n": 10000,
+      "reps": 50,
+      "min_ms": 0.0104,
+      "median_ms": 0.01065,
+      "mean_ms": 0.01075
+    },
+    {
+      "benchmark": "BinDisc::fit (quantile)",
+      "n": 10000,
+      "reps": 50,
+      "min_ms": 0.323199,
+      "median_ms": 0.332779,
+      "mean_ms": 0.334289
+    },
+    {
+      "benchmark": "PKIDisc::fit (sqrt)",
+      "n": 10000,
+      "reps": 50,
+      "min_ms": 0.317909,
+      "median_ms": 0.335789,
+      "mean_ms": 0.333062
+    },
+    {
+      "benchmark": "CPPFImdlp::transform",
+      "n": 10000,
+      "reps": 50,
+      "min_ms": 0.03352,
+      "median_ms": 0.03392,
+      "mean_ms": 0.036625
+    },
+    {
+      "benchmark": "BinDisc::transform",
+      "n": 10000,
+      "reps": 50,
+      "min_ms": 0.023059,
+      "median_ms": 0.02311,
+      "mean_ms": 0.023954
+    },
+    {
+      "benchmark": "(reference) copy X + y",
+      "n": 10000,
+      "reps": 50,
+      "min_ms": 0.00105,
+      "median_ms": 0.00106,
+      "mean_ms": 0.001062
+    },
+    {
+      "benchmark": "CPPFImdlp::fit (move)",
+      "n": 10000,
+      "reps": 50,
+      "min_ms": 53.281577,
+      "median_ms": 53.884765,
+      "mean_ms": 53.99781
+    },
+    {
+      "benchmark": "BinDisc::fit (quantile, pool copy)",
+      "n": 10000,
+      "reps": 50,
+      "min_ms": 0.321169,
+      "median_ms": 0.332829,
+      "mean_ms": 0.333853
+    },
+    {
+      "benchmark": "BinDisc::fit (quantile, move)",
+      "n": 10000,
+      "reps": 50,
+      "min_ms": 0.317739,
+      "median_ms": 0.333629,
+      "mean_ms": 0.330907
+    },
+    {
+      "benchmark": "CPPFImdlp::transform (buffer)",
+      "n": 10000,
+      "reps": 50,
+      "min_ms": 0.03384,
+      "median_ms": 0.03391,
+      "mean_ms": 0.037547
+    },
+    {
+      "benchmark": "CPPFImdlp::fit",
+      "n": 100000,
+      "reps": 10,
+      "min_ms": 5784.76337,
+      "median_ms": 5804.220645,
+      "mean_ms": 5805.956492
+    },
+    {
+      "benchmark": "BinDisc::fit (uniform)",
+      "n": 100000,
+      "reps": 10,
+      "min_ms": 0.0996,
+      "median_ms": 0.105749,
+      "mean_ms": 0.111008
+    },
+    {
+      "benchmark": "BinDisc::fit (quantile)",
+      "n": 100000,
+      "reps": 10,
+      "min_ms": 4.706462,
+      "median_ms": 4.900832,
+      "mean_ms": 4.868517
+    },
+    {
+      "benchmark": "PKIDisc::fit (sqrt)",
+      "n": 100000,
+      "reps": 10,
+      "min_ms": 4.831682,
+      "median_ms": 4.925942,
+      "mean_ms": 4.90467
+    },
+    {
+      "benchmark": "CPPFImdlp::transform",
+      "n": 100000,
+      "reps": 10,
+      "min_ms": 1.541254,
+      "median_ms": 1.545584,
+      "mean_ms": 1.545524
+    },
+    {
+      "benchmark": "BinDisc::transform",
+      "n": 100000,
+      "reps": 10,
+      "min_ms": 0.567798,
+      "median_ms": 0.573008,
+      "mean_ms": 0.572349
+    },
+    {
+      "benchmark": "(reference) copy X + y",
+      "n": 100000,
+      "reps": 10,
+      "min_ms": 0.01234,
+      "median_ms": 0.01319,
+      "mean_ms": 0.013709
+    },
+    {
+      "benchmark": "CPPFImdlp::fit (move)",
+      "n": 100000,
+      "reps": 10,
+      "min_ms": 5781.615295,
+      "median_ms": 5891.138792,
+      "mean_ms": 5887.765436
+    },
+    {
+      "benchmark": "BinDisc::fit (quantile, pool copy)",
+      "n": 100000,
+      "reps": 10,
+      "min_ms": 4.64495,
+      "median_ms": 4.949351,
+      "mean_ms": 4.879716
+    },
+    {
+      "benchmark": "BinDisc::fit (quantile, move)",
+      "n": 100000,
+      "reps": 10,
+      "min_ms": 4.828551,
+      "median_ms": 4.876551,
+      "mean_ms": 4.873422
+    },
+    {
+      "benchmark": "CPPFImdlp::transform (buffer)",
+      "n": 100000,
+      "reps": 10,
+      "min_ms": 1.611624,
+      "median_ms": 1.627634,
+      "mean_ms": 1.625442
+    }
+  ],
+  "platform": {
+    "os": "Linux",
+    "os_description": "Fedora Linux 44 (KDE Plasma Desktop Edition)",
+    "kernel": "7.1.5-201.fc44.x86_64",
+    "arch": "x86_64",
+    "cpu": "AMD Ryzen 9 7950X3D 16-Core Processor",
+    "cpu_count": 32,
+    "cores": null,
+    "ram_bytes": 66490486784,
+    "ram_gib": 62,
+    "label": null,
+    "slug": "linux-x86_64-amd-ryzen-9-7950x3d-16-core"
+  },
+  "git": {
+    "commit": "aaee313",
+    "dirty": false
+  },
+  "recorded_at": "2026-08-06T10:47:51+00:00"
+}
