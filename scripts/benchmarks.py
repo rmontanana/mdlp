@@ -39,6 +39,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = REPO_ROOT / "docs" / "benchmarks" / "results"
 SORTBENCH_DIR = REPO_ROOT / "docs" / "benchmarks" / "sortbench"
 SORTBENCH_REPORT = REPO_ROOT / "docs" / "benchmarks-sortbench.md"
+# Narrative conclusions live outside the generator so they stay hand-editable:
+# the report itself is regenerated and carries a "do not edit" banner.
+SORTBENCH_CONCLUSIONS = REPO_ROOT / "bench" / "sortbench" / "conclusions.md"
 REPORT_PATH = REPO_ROOT / "docs" / "benchmarks-platforms.md"
 DEFAULT_BINARY = REPO_ROOT / "build_bench" / "bench" / "benchmark"
 
@@ -808,6 +811,18 @@ def render_sortbench(runs):
     add(f"**{len(runs)}** run(s). "
         f"Generated {datetime.now(timezone.utc).isoformat(timespec='seconds')}.")
     add("")
+
+    if SORTBENCH_CONCLUSIONS.exists():
+        add("---")
+        add("")
+        add(SORTBENCH_CONCLUSIONS.read_text().rstrip())
+        add("")
+        add("---")
+        add("")
+        add("*The conclusions above are maintained by hand in "
+            "`bench/sortbench/conclusions.md`; everything below is generated from "
+            "the stored results.*")
+        add("")
 
     add("## Verdict, per shape")
     add("")
