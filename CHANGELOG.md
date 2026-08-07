@@ -95,6 +95,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **NaN and infinite samples are now rejected instead of silently processed.**
+  `CPPFImdlp` sorts with `std::stable_sort` and `BinDisc`'s QUANTILE strategy with
+  `std::sort`; both require a strict weak ordering, which NaN comparisons do not
+  provide, so passing NaN was undefined behaviour rather than merely a wrong
+  answer. Infinities were rejected only by `BinDisc` UNIFORM and accepted
+  everywhere else. `fit` and `transform` now throw `ValidationError` naming the
+  index and value of the first offending sample, in every discretizer and through
+  the tensor entry points.
+- **`safe_X_access` and `safe_y_access` had become too large to inline**, after
+  their error messages grew to include the offending index. They are called once
+  per element in the MDLP scan, and the bloat cost 12% on `CPPFImdlp::fit`. The
+  throw paths are now out of line.
 - **Tensor discretization silently produced wrong results for non-contiguous input.**
   `fit_t`, `transform_t` and `fit_transform_t` validated rank, dtype and element
   count but not contiguity, then read `data_ptr()` directly. A 1-D non-contiguous

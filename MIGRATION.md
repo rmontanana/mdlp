@@ -13,6 +13,7 @@ so you can check it in a minute.
 | **matches on exception message text** | **Update** — messages changed |
 | **passes non-contiguous tensors** | **Results change** — they were wrong before |
 | **passes non-CPU tensors** | **Now throws** — it used to read invalid memory |
+| **passes NaN or infinite samples** | **Now throws** — it used to produce nonsense |
 | subclasses `Discretizer` | Add `using Discretizer::fit;` if you want rvalue support |
 | includes `Config.h` | No such header existed in 2.x; the new one is `DiscretizerConfig.h` |
 
@@ -83,7 +84,23 @@ before calling:
 disc.fit_t(X.cpu(), y.cpu());
 ```
 
-### 4. `Metrics` changed shape
+### 4. NaN and infinite samples are rejected
+
+`fit` and `transform` now throw `ValidationError` if any sample is not finite,
+naming the index and value:
+
+```
+Sample at index 3 is not a finite number: nan
+```
+
+In 2.x these were accepted. NaN made the sort undefined behaviour; infinities were
+rejected only by `BinDisc` UNIFORM. If your pipeline relied on passing them
+through, filter or impute before calling `fit`.
+
+Note that **sentinel values are not caught** — `-999` is a finite number, and the
+library cannot tell it from a measurement. See [SECURITY.md](SECURITY.md).
+
+### 5. `Metrics` changed shape
 
 Rarely used directly, but it is an installed header. It now **owns** its data
 instead of holding references, is copyable and movable, and has no internal mutex.
@@ -94,7 +111,7 @@ passed at construction. The unused `numClasses` member is gone;
 `Metrics` is **not thread-safe** and never really was — see
 [SECURITY.md](SECURITY.md).
 
-### 5. `strategy_t` and `compute_strategy_t` moved headers
+### 6. `strategy_t` and `compute_strategy_t` moved headers
 
 They now live in `typesFImdlp.h`. Including `BinDisc.h` or `PKIDisc.h` still brings
 them in, so this only matters if you were forward-declaring them.

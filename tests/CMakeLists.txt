@@ -49,7 +49,7 @@ target_compile_options(Config_unittest PRIVATE --coverage)
 target_link_options(Config_unittest PRIVATE --coverage)
 
 add_executable(Security_unittest Security_unittest.cpp
-${fimdlp_SOURCE_DIR}/src/CPPFImdlp.cpp ${fimdlp_SOURCE_DIR}/src/Metrics.cpp ${fimdlp_SOURCE_DIR}/src/BinDisc.cpp ${fimdlp_SOURCE_DIR}/src/Discretizer.cpp)
+${fimdlp_SOURCE_DIR}/src/CPPFImdlp.cpp ${fimdlp_SOURCE_DIR}/src/Metrics.cpp ${fimdlp_SOURCE_DIR}/src/BinDisc.cpp ${fimdlp_SOURCE_DIR}/src/PKIDisc.cpp ${fimdlp_SOURCE_DIR}/src/Discretizer.cpp)
 target_link_libraries(Security_unittest GTest::gtest_main torch::torch)
 target_compile_options(Security_unittest PRIVATE --coverage)
 target_link_options(Security_unittest PRIVATE --coverage)

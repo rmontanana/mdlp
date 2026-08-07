@@ -163,6 +163,14 @@ namespace mdlp {
         Metrics metrics;
         size_t num_cut_points = numeric_limits<size_t>::max();
         static indices_t sortIndices(samples_t&, labels_t&);
+
+        // Out of line and [[noreturn]] on purpose. These are the cold paths of
+        // safe_X_access and safe_y_access, which are inline and called once per
+        // element in getCandidate's scan. Building the message inside those
+        // functions made them too big to inline and cost 12% on fit().
+        [[noreturn]] static void throw_indices_empty();
+        [[noreturn]] static void throw_index_out_of_range(const char* array, size_t idx, size_t size);
+        [[noreturn]] static void throw_underflow(size_t a, size_t b);
         // Shared body of both fit() overloads; assumes X and y are already set.
         void fit_impl();
         void computeCutPoints(size_t, size_t, int);
@@ -181,14 +189,14 @@ namespace mdlp {
         inline precision_t safe_X_access(size_t idx) const
         {
             if (indices.empty()) {
-                throw IndexError("Indices array is empty");
+                throw_indices_empty();
             }
             if (idx >= indices.size()) {
-                throw IndexError("Index " + std::to_string(idx) + " out of bounds for indices array of size " + std::to_string(indices.size()));
+                throw_index_out_of_range("indices array", idx, indices.size());
             }
             size_t real_idx = indices[idx];
             if (real_idx >= X.size()) {
-                throw IndexError("Index " + std::to_string(real_idx) + " out of bounds for X array of size " + std::to_string(X.size()));
+                throw_index_out_of_range("X array", real_idx, X.size());
             }
             return X[real_idx];
         }
@@ -202,14 +210,14 @@ namespace mdlp {
         inline label_t safe_y_access(size_t idx) const
         {
             if (indices.empty()) {
-                throw IndexError("Indices array is empty");
+                throw_indices_empty();
             }
             if (idx >= indices.size()) {
-                throw IndexError("Index " + std::to_string(idx) + " out of bounds for indices array of size " + std::to_string(indices.size()));
+                throw_index_out_of_range("indices array", idx, indices.size());
             }
             size_t real_idx = indices[idx];
             if (real_idx >= y.size()) {
-                throw IndexError("Index " + std::to_string(real_idx) + " out of bounds for y array of size " + std::to_string(y.size()));
+                throw_index_out_of_range("y array", real_idx, y.size());
             }
             return y[real_idx];
         }
@@ -224,7 +232,7 @@ namespace mdlp {
         inline size_t safe_subtract(size_t a, size_t b) const
         {
             if (b > a) {
-                throw UnderflowError("Subtraction would underflow: " + std::to_string(a) + " - " + std::to_string(b));
+                throw_underflow(a, b);
             }
             return a - b;
         }

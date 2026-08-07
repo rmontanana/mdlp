@@ -562,20 +562,21 @@ before.
 - [ ] **T8.7 Tag and release — not done.** Tagging and publishing are
   outward-facing and hard to reverse, so they wait for explicit authorization.
 
-**Three limitations found while writing SECURITY.md, documented rather than
-fixed:**
+**Non-finite input is now rejected** at every entry point — `fit`, `transform` and
+the tensor methods, in all three discretizers — with a message naming the index and
+value of the first offender. NaN made the sort undefined behaviour; infinities were
+rejected only by `BinDisc` UNIFORM.
 
-1. **NaN in the input is undefined behaviour.** Both sorts require a strict weak
-   ordering, which NaN comparisons do not provide. It currently returns nonsense
-   rather than crashing, which is not a guarantee. Rejecting NaN would cost an
-   O(n) scan — negligible against `CPPFImdlp::fit` but a meaningful share of
-   `BinDisc::fit (uniform)`, which is 0.15 ms at n = 100 000 — so it is a decision
-   with a real trade-off rather than an obvious fix.
-2. **Infinities are handled inconsistently**: rejected by `BinDisc` UNIFORM via
-   `linspace`, accepted everywhere else.
-3. **Recursion depth is unbounded by default.** Measured 6 671 frames at
-   n = 400 000 on structured data, growing roughly linearly with n. `max_depth`
-   bounds it and a test proves so, but the default is `INT_MAX`.
+The naive implementation cost 14% on `CPPFImdlp::fit` and 16% on `BinDisc::fit`,
+because a `throw` inside the scanning loop blocks vectorization. Written as a
+branch-free reduction with a second pass to locate the offender, the cost is within
+noise.
+
+**One limitation remains, documented rather than fixed:** recursion depth is
+unbounded by default — 6 671 frames measured at n = 400 000 on structured data,
+growing roughly linearly. `max_depth` bounds it and a test proves so, but the
+default is `INT_MAX`. Sentinel values such as `-999` are also out of scope: they
+are finite numbers and the library cannot distinguish them from measurements.
 
 **Verification.** 142 tests pass. Coverage 100%. Debug and release warning-free.
 The sample program runs.

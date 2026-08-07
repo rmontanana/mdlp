@@ -18,8 +18,10 @@
 #include <limits>
 #include <vector>
 #include "gtest/gtest.h"
+#include <string>
 #include "CPPFImdlp.h"
 #include "BinDisc.h"
+#include "PKIDisc.h"
 
 namespace mdlp {
 
@@ -172,16 +174,94 @@ namespace mdlp {
         EXPECT_EQ(X.size(), labels.size());
     }
 
-    // ---- infinities: current behaviour, which is inconsistent -------------- //
+    // ---- non-finite input is rejected everywhere --------------------------- //
 
-    // BinDisc UNIFORM rejects infinities because linspace validates its endpoints.
-    // Nothing else does. This test pins what is actually guaranteed today; the
-    // inconsistency is recorded in SECURITY.md rather than papered over.
-    TEST(Security, UniformStrategyRejectsInfiniteValues)
+    // NaN has no strict weak ordering, so sorting it is undefined behaviour, and
+    // both CPPFImdlp and BinDisc's QUANTILE strategy sort. Until 3.0.0 nothing
+    // rejected it and the library returned nonsense. Infinities were rejected only
+    // by BinDisc UNIFORM, through linspace, and accepted everywhere else.
+    namespace {
+        const float kNaN = std::numeric_limits<float>::quiet_NaN();
+        const float kInf = std::numeric_limits<float>::infinity();
+    }
+
+    TEST(Security, FitRejectsNaN)
     {
-        samples_t X = { 1.0f, 2.0f, std::numeric_limits<float>::infinity(), 4.0f, 5.0f };
-        labels_t y = { 0, 0, 0, 1, 1 };
+        const labels_t y = { 0, 0, 0, 1, 1, 1 };
+        const samples_t X = { 1.0f, 2.0f, kNaN, 4.0f, 5.0f, 6.0f };
+
+        samples_t X_a = X; labels_t y_a = y;
+        EXPECT_THROW(CPPFImdlp().fit(X_a, y_a), ValidationError);
+
+        samples_t X_b = X; labels_t y_b = y;
+        EXPECT_THROW(BinDisc(3, strategy_t::UNIFORM).fit(X_b, y_b), ValidationError);
+
+        samples_t X_c = X; labels_t y_c = y;
+        EXPECT_THROW(BinDisc(3, strategy_t::QUANTILE).fit(X_c, y_c), ValidationError);
+
+        samples_t X_d = X; labels_t y_d = y;
+        EXPECT_THROW(PKIDisc().fit(X_d, y_d), ValidationError);
+    }
+
+    TEST(Security, FitRejectsInfinity)
+    {
+        const labels_t y = { 0, 0, 0, 1, 1, 1 };
+        for (const float bad : { kInf, -kInf }) {
+            const samples_t X = { 1.0f, 2.0f, bad, 4.0f, 5.0f, 6.0f };
+
+            samples_t X_a = X; labels_t y_a = y;
+            EXPECT_THROW(CPPFImdlp().fit(X_a, y_a), ValidationError);
+
+            samples_t X_b = X; labels_t y_b = y;
+            EXPECT_THROW(BinDisc(3, strategy_t::UNIFORM).fit(X_b, y_b), ValidationError);
+
+            samples_t X_c = X; labels_t y_c = y;
+            EXPECT_THROW(BinDisc(3, strategy_t::QUANTILE).fit(X_c, y_c), ValidationError);
+        }
+    }
+
+    // transform() is a separate entry point and was equally unguarded: a NaN there
+    // silently landed in the last bin rather than being reported.
+    TEST(Security, TransformRejectsNonFinite)
+    {
+        samples_t X = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f };
+        labels_t y = { 0, 0, 0, 1, 1, 1 };
+        CPPFImdlp disc;
+        disc.fit(X, y);
+
+        const samples_t with_nan = { 1.0f, kNaN, 3.0f };
+        const samples_t with_inf = { 1.0f, kInf, 3.0f };
+        EXPECT_THROW(disc.transform(with_nan), ValidationError);
+        EXPECT_THROW(disc.transform(with_inf), ValidationError);
+
+        labels_t out;
+        EXPECT_THROW(disc.transform(with_nan, out), ValidationError);
+    }
+
+    // The message must say which sample, since finding one bad value in 100,000
+    // is the whole difficulty.
+    TEST(Security, NonFiniteMessageNamesTheOffendingSample)
+    {
+        samples_t X = { 1.0f, 2.0f, 3.0f, kNaN, 5.0f, 6.0f };
+        labels_t y = { 0, 0, 0, 1, 1, 1 };
+        try {
+            CPPFImdlp().fit(X, y);
+            FAIL() << "expected ValidationError";
+        }
+        catch (const ValidationError& e) {
+            const std::string what = e.what();
+            EXPECT_NE(std::string::npos, what.find("index 3")) << what;
+            EXPECT_NE(std::string::npos, what.find("nan")) << what;
+        }
+    }
+
+    // The tensor entry points funnel into the same fit(), so they inherit it.
+    TEST(Security, TensorEntryPointsRejectNonFinite)
+    {
+        auto X = torch::tensor({ 1.0f, 2.0f, kNaN, 4.0f, 5.0f, 6.0f }, torch::kFloat32);
+        auto y = torch::tensor({ 0, 0, 0, 1, 1, 1 }, torch::kInt32);
         BinDisc disc(3, strategy_t::UNIFORM);
-        EXPECT_THROW(disc.fit(X, y), InvalidParameter);
+        EXPECT_THROW(disc.fit_t(X, y), ValidationError);
+        EXPECT_THROW(disc.fit_transform_t(X, y), ValidationError);
     }
 }

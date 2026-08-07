@@ -188,6 +188,19 @@ namespace mdlp {
         static inline std::string version() { return { project_mdlp_version.begin(), project_mdlp_version.end() }; };
 
     protected:
+        /**
+         * @brief Reject samples that are not finite
+         * @param data Samples to check
+         * @throws ValidationError naming the index and value of the first offender
+         *
+         * NaN has no strict weak ordering, so sorting it is undefined behaviour —
+         * and both `CPPFImdlp` and `BinDisc`'s QUANTILE strategy sort. Infinities
+         * are ordered but poison the interval arithmetic that derives cut points.
+         * Neither is rejected implicitly anywhere useful, so both are rejected
+         * here, at every entry point, before anything else looks at the data.
+         */
+        static void validate_finite(const samples_t& data);
+
         labels_t discretizedData = labels_t();
         cutPoints_t cutPoints; // At least two cutpoints must be provided, the first and the last will be ignored in transform
         // Used in transform. Must have an initializer: a default-constructed

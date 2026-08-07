@@ -45,6 +45,9 @@ namespace mdlp {
         if (X.size() < static_cast<size_t>(n_bins)) {
             throw ValidationError("Input data size (" + std::to_string(X.size()) + ") must be at least n_bins (" + std::to_string(n_bins) + ")");
         }
+        // QUANTILE sorts, and UNIFORM feeds min/max into linspace; neither
+        // tolerates a non-finite sample.
+        validate_finite(X);
     }
     void BinDisc::fit(samples_t& X)
     {

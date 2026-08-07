@@ -33,6 +33,11 @@ These are enforced, with tests:
 **Vector inputs**
 
 - Samples and labels must be the same size and non-empty.
+- **Every sample must be finite.** NaN and ±infinity are rejected by `fit` and by
+  `transform`, in every discretizer and through the tensor entry points, with a
+  message naming the index and the value of the first offender. NaN has no strict
+  weak ordering, so sorting it would be undefined behaviour rather than merely a
+  wrong answer; infinities poison the interval arithmetic that derives cut points.
 - `BinDisc` requires at least as many samples as bins.
 - Every access into the sample and label arrays goes through bounds-checked
   helpers that throw `IndexError` rather than reading out of range.
@@ -49,30 +54,21 @@ Stated plainly rather than implied. None of these is a remote-exploitation
 concern — this is a numeric library with no I/O, no network and no deserialization
 — but they matter if you feed it data you do not control.
 
-### 1. NaN in the input is not rejected, and sorting it is undefined behaviour
+### 1. Coded missing values are still your problem
 
-`CPPFImdlp` sorts with `std::stable_sort` and `BinDisc`'s QUANTILE strategy with
-`std::sort`. Both require a strict weak ordering, which comparisons involving NaN
-do not provide. Passing NaN in the sample data is therefore **undefined
-behaviour**, not merely a wrong answer.
+Non-finite samples are now rejected, but a dataset that encodes "missing" as a
+sentinel *number* — `-999` is common in physics data — passes validation, because
+`-999` is a perfectly finite float.
 
-In practice it currently returns nonsense rather than crashing, but that is not a
-guarantee and must not be relied on.
+MDLP will then spend a cut point separating that block, giving you a bin that means
+"missing" in every feature at once. In one 130 000-row dataset, 468 rows carried
+`-999` across all 50 columns simultaneously, and all 50 features had their minimum
+there, while the dataset's own metadata declared 0% missing.
 
-**Mitigation:** filter or impute NaN before calling `fit`. If your data may contain
-coded missing values — `-999` is common in physics datasets — treat them
-explicitly; MDLP will otherwise spend a cut point separating them and give you a
-bin that means "missing".
+**Mitigation:** filter or impute sentinel values before discretizing. The library
+cannot tell a sentinel from a legitimate measurement.
 
-### 2. Infinities are handled inconsistently
-
-`BinDisc` with `strategy_t::UNIFORM` rejects them, because `linspace` validates its
-endpoints. `CPPFImdlp` and `BinDisc` with QUANTILE accept them and produce output.
-This inconsistency is known and unresolved.
-
-**Mitigation:** filter infinities before calling `fit`.
-
-### 3. Recursion depth is unbounded by default
+### 2. Recursion depth is unbounded by default
 
 `CPPFImdlp::computeCutPoints` recurses once per accepted split, so stack depth
 grows with the number of cut points found — which grows with the sample count.
@@ -100,7 +96,7 @@ CPPFImdlp disc(MDLPConfig{}.withMaxDepth(64));
 
 A test asserts that `max_depth` genuinely bounds the recursion.
 
-### 4. `Metrics` is not thread-safe
+### 3. `Metrics` is not thread-safe
 
 Deliberately. `entropy()` and `informationGain()` memoize, so calls that read like
 queries mutate state. Distinct instances share nothing and may be used
@@ -112,6 +108,8 @@ traffic on every lookup. It was removed and the contract documented instead.
 
 ## Security-relevant changes in 3.0.0
 
+- **NaN and infinity are rejected** at every entry point. They were previously
+  accepted; NaN in particular made the sort undefined behaviour.
 - Non-contiguous tensors no longer read raw memory (see above).
 - Non-CPU tensors are rejected.
 - `Discretizer::direction` was read uninitialized by a default-constructed

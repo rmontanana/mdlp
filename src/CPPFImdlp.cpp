@@ -44,6 +44,22 @@ namespace mdlp {
         return out;
     }
 
+    void CPPFImdlp::throw_indices_empty()
+    {
+        throw IndexError("Indices array is empty");
+    }
+
+    void CPPFImdlp::throw_index_out_of_range(const char* array, size_t idx, size_t size)
+    {
+        throw IndexError("Index " + std::to_string(idx) + " out of bounds for "
+            + array + " of size " + std::to_string(size));
+    }
+
+    void CPPFImdlp::throw_underflow(size_t a, size_t b)
+    {
+        throw UnderflowError("Subtraction would underflow: " + std::to_string(a) + " - " + std::to_string(b));
+    }
+
     size_t CPPFImdlp::compute_max_num_cut_points() const
     {
         // Set the actual maximum number of cut points as a number or as a percentage of the number of samples
@@ -87,6 +103,10 @@ namespace mdlp {
         if (X.empty() || y.empty()) {
             throw ValidationError("X and y must have at least one element");
         }
+        // Must precede the sort: a NaN comparison breaks the strict weak ordering
+        // stable_sort requires, which is undefined behaviour rather than a wrong
+        // answer.
+        validate_finite(X);
         // Sorts the members, not the caller's vectors: after a move the latter no
         // longer hold the data.
         indices = sortIndices(X, y);
