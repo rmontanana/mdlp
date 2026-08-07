@@ -340,6 +340,52 @@ On mfeat-factors, where n is only 2 000, the same change is worth 10.9×
 n = 1 000 synthetically, and confirmation that the O(k) cost the fix introduces is
 not a problem at 10 classes.
 
+### What it is worth on real datasets
+
+The synthetic benchmark measures one feature at a time on generated data. This is
+the whole job on the datasets shipped in `tests/datasets/`: every feature
+discretized, 2.1.3 against 3.0.0, median of three runs, Release `-O3`, on the
+M4 Max.
+
+| Dataset | rows | features | classes | distinct/feature | 2.1.3 | 3.0.0 | speedup |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| iris | 150 | 4 | 3 | — | 0.10 ms | 0.04 ms | 2.5× |
+| heart-statlog | 270 | 13 | 2 | — | 0.57 ms | 0.16 ms | 3.6× |
+| glass | 214 | 9 | 6 | — | 0.85 ms | 0.17 ms | 5.0× |
+| diabetes | 768 | 8 | 2 | 157 | 3.27 ms | 0.48 ms | 6.8× |
+| letter | 20 000 | 16 | 26 | 16 | 342 ms | **37.8 ms** | **9.1×** |
+| mfeat-factors | 2 000 | 216 | 10 | 215 | 795 ms | **68.8 ms** | **11.6×** |
+| kdd_JapaneseVowels | 9 961 | 14 | 9 | 8 487 | 2 009 ms | **29.3 ms** | **68.5×** |
+
+**Row count is not what drives the gain.** `letter` has 20 000 rows and gains 9×;
+`kdd_JapaneseVowels` has half as many and gains 68×.
+
+What drives it is the number of **class boundaries after sorting**, bounded by
+*distinct values × classes* — because that is how many times `getCandidate` used to
+rescan its interval. `letter` has only 16 distinct values per feature, so sorting
+leaves 16 runs with the labels grouped inside each, and there are few boundaries.
+`kdd_JapaneseVowels` holds real-valued coefficients with 8 487 distinct values per
+feature, so nearly every position is a boundary — exactly where the quadratic term
+bit hardest.
+
+**Fine-grained continuous features gain the most.** Already-quantized or
+low-cardinality features gain least. The trend continues at scale: on a 130 064-row,
+50-feature continuous dataset, the measured gain was **600-770× per feature**.
+
+**`PKIDisc` and `BinDisc` are unchanged**, as expected — neither ever had the
+quadratic term. `PKIDisc` measures 4.15 → 4.04 ms on mfeat-factors and 1.22 → 1.32
+on letter, both noise. A pipeline built on `PKIDisc` gets nothing from 3.0.0 in
+time; its benefit is the correctness fixes and the API.
+
+> A first pass at this table reported only 1.58× for `kdd_JapaneseVowels`. The
+> measurement harness took the last column as the class, but that file carries its
+> class in the *first* attribute (`speaker`) — so `coefficient12` was being used as
+> a label, giving 9 846 "classes" instead of 9. With k that large the O(n·k) term
+> of the new implementation dominates and swallows the gain. The error is worth
+> recording because it demonstrates the trade Phase 7 made: O(n²) became O(n·k), so
+> a pathological class count erodes the benefit. At realistic counts (2-26 here) it
+> does not.
+
 ### Confirmed on all three platforms
 
 Re-run after Phase 7 with identical dataset checksums and an identical source
