@@ -1,6 +1,11 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: debug release install test bench bench-report sortbench sortbench-report conan-create viewcoverage
+# Every target here is a command, not a file. `bench` collides with the bench/
+# directory, so this is load-bearing rather than hygiene: without the entry, make
+# would report the directory as up to date and run nothing. Keep this list in step
+# with the targets below.
+.PHONY: debug release install test bench bench-report sortbench sortbench-report \
+        viewcoverage info conan-create conan-upload help
 lcov := lcov
 
 f_debug = build_debug
