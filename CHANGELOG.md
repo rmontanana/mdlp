@@ -73,6 +73,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sensitive and the lookup is a plain `grep`, so the lowercase `cimmeria` inherited
   from the old script matched nothing and `make conan-upload` reported the remote
   as unconfigured.
+- `getversion.py` and `update_coverage.py` moved into `scripts/`, with their paths
+  resolved from the script location rather than the working directory. The
+  Makefile now invokes `python3` explicitly — Debian and Ubuntu ship no `python`
+  binary, so `make test` would have failed there on the interpreter check.
+- `getversion.py` **removed**. Nothing referenced it, and it was a third copy of
+  the version-reading regex already present in `conanfile.py::set_version` and in
+  the Makefile.
+- `conandata.yml` **removed**. It described the conan-center-index pattern, where a
+  recipe downloads a release tarball declared per version — but this recipe uses
+  `exports_sources` and has no `source()` method, so the file was never read. Its
+  three checksums were the literal string `placeholder_sha256_hash`, it declared a
+  patch in a `patches/` directory that does not exist, and it listed versions
+  2.0.0 to 2.1.0 only.
 - `scripts/build_conan.sh` **removed**. It duplicated `make release` and had been
   broken since `conanfile.py` adopted `cmake_layout`: it looked for the generated
   toolchain at the output folder's root, where conan no longer puts it.
