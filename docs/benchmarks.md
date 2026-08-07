@@ -1,159 +1,86 @@
-# Performance baseline — 3.0.0
+# Performance — mdlp 3.0.0
 
-Baseline measurements for the 3.0.0 release, taken before any performance work.
-This is the reference every later phase compares against, so that improvements can
-be reported as measured deltas rather than asserted.
+What the 3.0.0 release is worth, measured rather than asserted, and how the
+measurements were taken.
 
-Corresponds to Phase 0 of [RELEASE_PLAN_V3.md](../RELEASE_PLAN_V3.md).
+Results come first; the methodology that produced them is in
+[Methodology](#methodology), and the raw pre-release baseline is in the appendix.
 
-## Running it
+Corresponds to Phase 0 of [RELEASE_PLAN_V3.md](../RELEASE_PLAN_V3.md); the
+cross-platform comparison lives in
+[benchmarks-platforms.md](benchmarks-platforms.md) and the toolchain diagnostic in
+[benchmarks-sortbench.md](benchmarks-sortbench.md).
 
-```bash
-export PATH="$HOME/miniconda3/bin:$PATH"   # conan
-make bench                                 # full run, ~4 minutes
-make bench LEVEL=quick                     # stops at n=10,000, ~seconds
-```
+## Summary
 
-`make bench` forces a Release build (`-O3`) into `build_bench/` with
-`-DENABLE_BENCHMARK=ON`. The benchmark target is off by default and is never part
-of `make test`. Almost all of a full run is the two largest `CPPFImdlp::fit`
-cells — see the scaling note below.
+**`CPPFImdlp::fit` was O(n²) and is not any more.** Discretizing a 100 000-sample
+feature fell from 8.5 seconds to 16.5 milliseconds — **515×** — and the gain grows
+with n. On the datasets shipped in `tests/datasets/` the whole job runs 2.5× to
+68.5× faster; on a 130 000-row real dataset, 600-770× per feature.
 
-The harness has no external dependencies. Data is generated from class-conditional
-normal distributions with a fixed seed (42), so every run measures identical work.
+The quadratic was confirmed on three machines spanning two instruction sets and
+three compilers before it was fixed, and the fix was confirmed on the same three
+afterwards. Cut points are **bit-identical** to 2.1.3.
 
-`make bench` also stores a machine-readable result under
-`docs/benchmarks/results/`, fingerprinted with the CPU, core topology, RAM, OS,
-compiler and git commit. `LABEL=name` disambiguates two machines with the same CPU.
+**Nothing else moved, and that was predicted.** Move semantics buy memory, not
+throughput — the copies they remove were 0.0001% of a fit. `BinDisc` and `PKIDisc`
+never had the quadratic term and are unchanged.
 
-### Which statistic to use
+Three things remain open and are documented rather than fixed: `transform` is
+4.8× slower on Linux than macOS for reasons that are not the toolchain; libstdc++'s
+`std::sort` is 2.9× slower than libc++'s, which makes `PKIDisc` about 3× slower on
+Linux; and GCC's default generic x86-64 tuning costs 30-35% on Zen 5, recoverable
+with `-march=native`.
 
-Repetition counts are **fixed** and identical on every platform, deliberately. The
-minimum of a sample shrinks as the sample grows, so comparing minima taken with
-different rep counts would systematically favour whichever machine ran more of
-them.
+## What 3.0.0 is worth on real datasets
 
-- **Minimum** — for before/after comparisons on *one* machine. Most stable figure
-  under load.
-- **Median** — for comparisons *across* machines. This is what
-  `docs/benchmarks-platforms.md` reports.
+The synthetic benchmark measures one feature at a time on generated data. This is
+the whole job on the datasets shipped in `tests/datasets/`: every feature
+discretized, 2.1.3 against 3.0.0, median of three runs, Release `-O3`, on the
+M4 Max.
 
-## Comparing across platforms
+| Dataset | rows | features | classes | distinct/feature | 2.1.3 | 3.0.0 | speedup |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| iris | 150 | 4 | 3 | — | 0.10 ms | 0.04 ms | 2.5× |
+| heart-statlog | 270 | 13 | 2 | — | 0.57 ms | 0.16 ms | 3.6× |
+| glass | 214 | 9 | 6 | — | 0.85 ms | 0.17 ms | 5.0× |
+| diabetes | 768 | 8 | 2 | 157 | 3.27 ms | 0.48 ms | 6.8× |
+| letter | 20 000 | 16 | 26 | 16 | 342 ms | **37.8 ms** | **9.1×** |
+| mfeat-factors | 2 000 | 216 | 10 | 215 | 795 ms | **68.8 ms** | **11.6×** |
+| kdd_JapaneseVowels | 9 961 | 14 | 9 | 8 487 | 2 009 ms | **29.3 ms** | **68.5×** |
 
-```bash
-# on each machine
-make bench
-git add docs/benchmarks/results && git commit -m "bench: <machine>" && git push
+**Row count is not what drives the gain.** `letter` has 20 000 rows and gains 9×;
+`kdd_JapaneseVowels` has half as many and gains 68×.
 
-# anywhere, once the results are gathered
-git pull
-make bench-report        # regenerates docs/benchmarks-platforms.md
-```
+What drives it is the number of **class boundaries after sorting**, bounded by
+*distinct values × classes* — because that is how many times `getCandidate` used to
+rescan its interval. `letter` has only 16 distinct values per feature, so sorting
+leaves 16 runs with the labels grouped inside each, and there are few boundaries.
+`kdd_JapaneseVowels` holds real-valued coefficients with 8 487 distinct values per
+feature, so nearly every position is a boundary — exactly where the quadratic term
+bit hardest.
 
-Results are versioned in git, so they accumulate through the normal workflow. Run
-on a **clean working tree** — the driver records whether the tree was dirty and the
-report flags such results as not reproducible from the recorded commit.
+**Fine-grained continuous features gain the most.** Already-quantized or
+low-cardinality features gain least. The trend continues at scale: on a 130 064-row,
+50-feature continuous dataset, the measured gain was **600-770× per feature**.
 
-The generated comparison reports scaling exponents per platform, median times,
-relative speed against a reference platform, and a per-platform noise fingerprint.
-It warns loudly when results span different commits, `--level` settings or library
-versions instead of averaging incomparable numbers.
+**`PKIDisc` and `BinDisc` are unchanged**, as expected — neither ever had the
+quadratic term. `PKIDisc` measures 4.15 → 4.04 ms on mfeat-factors and 1.22 → 1.32
+on letter, both noise. A pipeline built on `PKIDisc` gets nothing from 3.0.0 in
+time; its benefit is the correctness fixes and the API.
 
-Two limits are stated there and repeated here because they are easy to forget:
+> A first pass at this table reported only 1.58× for `kdd_JapaneseVowels`. The
+> measurement harness took the last column as the class, but that file carries its
+> class in the *first* attribute (`speaker`) — so `coefficient12` was being used as
+> a label, giving 9 846 "classes" instead of 9. With k that large the O(n·k) term
+> of the new implementation dominates and swallows the gain. The error is worth
+> recording because it demonstrates the trade Phase 7 made: O(n²) became O(n·k), so
+> a pathological class count erodes the benefit. At realistic counts (2-26 here) it
+> does not.
 
-- **The compiler is not unified.** AppleClang on macOS, GCC on Linux. Every
-  cross-platform difference is hardware *and* toolchain; none of it is a clean CPU
-  comparison.
-- **Anything smaller than a platform's noise figure is not a real difference.**
+## The quadratic, and its removal
 
-No benchmarking runs in CI: GitHub's shared runners vary by more than the effects
-being measured.
-
-### Dataset versions
-
-A shared seed is not enough to make two platforms measure the same work.
-`std::mt19937` is specified down to the bit, but `std::normal_distribution` and
-`std::uniform_int_distribution` are **not** specified to produce the same sequence
-across standard library implementations. libc++ and libstdc++ disagree, so the
-first round of results had each platform discretizing a *different* dataset.
-
-Dataset version 2 generates its data from integer operations and IEEE-754 addition
-only — a 24-bit uniform built by shifting the engine output, and an Irwin-Hall
-normal (twelve uniforms minus six, so no `libm` whose last-ulp behaviour is
-likewise unguaranteed). Each run also records an FNV-1a checksum of the exact
-bytes handed to the library, so `make bench-report` can *state* whether two
-platforms measured the same work rather than assume it.
-
-The report groups results by dataset version and never compares across groups.
-**Version 1 results are retained but their cross-platform absolute times are not
-interpretable**; their scaling exponents remain valid, being computed within a
-single platform.
-
-### Homogeneity is judged on the measured sources
-
-Runs are compared by a hash of `src/` and `bench/`, not by commit SHA. A
-docs-only commit cannot change a timing, and flagging results as incomparable
-because the README moved is noise that trains people to ignore the warning.
-
-### Clock ramp
-
-Each run now spins the CPU for 1.5 s before anything is timed. Without it the
-cells measured first — the small-n ones — are taken at idle clocks: the version 1
-Strix Halo run finished **21.7% faster than it started**, which silently depressed
-its small-n numbers and distorted its scaling ratios. The drift probe now warns in
-both directions.
-
-## Environment
-
-| | |
-|---|---|
-| Machine | Apple M4 Max, 14 cores |
-| OS | macOS 26.5.2 (arm64) |
-| Compiler | Apple clang 21.0.0 (`clang-2100.1.1.101`) |
-| Build | `CMAKE_BUILD_TYPE=Release`, `-O3`, C++17 |
-| libtorch | 2.7.1 (via conan) |
-| Library version reported | 2.1.3 (bump to 3.0.0 is T8.6) |
-| Commit | Phase 3 complete (`3e0fb52`) |
-| Dataset | 3 classes, class-conditional normals, seed 42 |
-
-## Results
-
-All times in milliseconds.
-
-| benchmark | n | reps | min | median | mean |
-|---|---:|---:|---:|---:|---:|
-| CPPFImdlp::fit | 100 | 500 | 0.0149 | 0.0166 | 0.0174 |
-| BinDisc::fit (uniform) | 100 | 500 | 0.0001 | 0.0002 | 0.0002 |
-| BinDisc::fit (quantile) | 100 | 500 | 0.0004 | 0.0005 | 0.0005 |
-| PKIDisc::fit (sqrt) | 100 | 500 | 0.0005 | 0.0005 | 0.0005 |
-| CPPFImdlp::transform | 100 | 500 | 0.0001 | 0.0002 | 0.0002 |
-| BinDisc::transform | 100 | 500 | 0.0001 | 0.0002 | 0.0002 |
-| *(reference)* copy X + y | 100 | 500 | 0.0000 | 0.0000 | 0.0000 |
-| CPPFImdlp::fit | 1 000 | 200 | 0.7795 | 0.8213 | 0.8277 |
-| BinDisc::fit (uniform) | 1 000 | 200 | 0.0013 | 0.0016 | 0.0016 |
-| BinDisc::fit (quantile) | 1 000 | 200 | 0.0048 | 0.0056 | 0.0057 |
-| PKIDisc::fit (sqrt) | 1 000 | 200 | 0.0050 | 0.0057 | 0.0057 |
-| CPPFImdlp::transform | 1 000 | 200 | 0.0020 | 0.0022 | 0.0022 |
-| BinDisc::transform | 1 000 | 200 | 0.0015 | 0.0018 | 0.0017 |
-| *(reference)* copy X + y | 1 000 | 200 | 0.0001 | 0.0001 | 0.0001 |
-| CPPFImdlp::fit | 10 000 | 50 | 78.6715 | 80.7728 | 81.2756 |
-| BinDisc::fit (uniform) | 10 000 | 50 | 0.0067 | 0.0072 | 0.0073 |
-| BinDisc::fit (quantile) | 10 000 | 50 | 0.0593 | 0.0601 | 0.0643 |
-| PKIDisc::fit (sqrt) | 10 000 | 50 | 0.0597 | 0.0656 | 0.0646 |
-| CPPFImdlp::transform | 10 000 | 50 | 0.0349 | 0.0390 | 0.0389 |
-| BinDisc::transform | 10 000 | 50 | 0.0178 | 0.0196 | 0.0227 |
-| *(reference)* copy X + y | 10 000 | 50 | 0.0008 | 0.0011 | 0.0011 |
-| CPPFImdlp::fit | 100 000 | 10 | 8248.06 | 8354.63 | 8354.81 |
-| BinDisc::fit (uniform) | 100 000 | 10 | 0.1056 | 0.1183 | 0.1231 |
-| BinDisc::fit (quantile) | 100 000 | 10 | 1.4817 | 1.4912 | 1.4935 |
-| PKIDisc::fit (sqrt) | 100 000 | 10 | 1.4900 | 1.5122 | 1.5112 |
-| CPPFImdlp::transform | 100 000 | 10 | 0.5707 | 0.5715 | 0.5750 |
-| BinDisc::transform | 100 000 | 10 | 0.3713 | 0.3881 | 0.3909 |
-| *(reference)* copy X + y | 100 000 | 10 | 0.0095 | 0.0095 | 0.0095 |
-
-## Findings
-
-### 1. `CPPFImdlp::fit` is quadratic, not O(n log n)
+### How it was found
 
 This is the headline result, and it was not anticipated by the release plan.
 
@@ -198,7 +125,7 @@ expensive full-interval scans.
 The fix is to compute the entropies incrementally — carry running per-class counts
 as `idx` advances instead of rescanning from `start` each time — which turns
 `getCandidate` into O(n) plus O(k) per step for k classes. **This was implemented
-in Phase 7; see the section below.** It was a Phase 7 item
+in Phase 7; see [The fix, and its measured effect](#the-fix-and-its-measured-effect).** It was a Phase 7 item
 and is worth far more than the "20-30%" the original plan hoped for: at n = 100 000
 the current implementation spends over eight seconds on a single feature.
 
@@ -206,7 +133,7 @@ the current implementation spends over eight seconds on a single feature.
 ~8 s *per feature*. Users with large datasets should prefer `BinDisc` or `PKIDisc`,
 which are four orders of magnitude faster at that size, until Phase 7 lands.
 
-### 1b. Confirmed on three platforms
+### Reproduced on three platforms before the fix
 
 Reproduced on two more machines at dataset version 2. Full tables in
 [benchmarks-platforms.md](benchmarks-platforms.md).
@@ -230,50 +157,7 @@ less than the fit's own resolution, which is itself a useful check.
 The clock ramp did its job: the Strix Halo drifted −21.7% under version 1 and
 +1.9% under version 2.
 
-### 1c. Two toolchain anomalies, now isolated from the data
-
-With the datasets proven identical, these cannot be explained by one platform
-having been given less work. Measurement noise is 0.9–3.5%; the effects below are
-240–520%, so they are real.
-
-**`BinDisc::fit (quantile)` — Linux 3.0–3.2× slower at n = 100 000**, and 4.8–5.2×
-slower at n = 10 000, yet *equal or faster* at n = 1 000 (0.56× on the Strix Halo).
-The crossover sits between n = 1 000 and n = 10 000.
-
-| n | M4 Max | 7950X3D | Ryzen AI Max+ 395 |
-|---:|---:|---:|---:|
-| 1 000 | 0.0053 | 0.0051 (0.96×) | 0.0030 (**0.56×**) |
-| 10 000 | 0.0670 | 0.3233 (**4.83×**) | 0.3508 (**5.24×**) |
-| 100 000 | 1.5063 | 4.5810 (**3.04×**) | 4.8791 (**3.24×**) |
-
-`PKIDisc::fit` mirrors it exactly, as expected since it delegates. The work here is
-essentially one `std::sort` over a by-value copy, so a 5× swing between adjacent
-sizes points at either the sort implementation (libstdc++ vs libc++) or the
-allocator behind the copy — glibc switches to `mmap` for large blocks, macOS does
-not.
-
-**`CPPFImdlp::transform` — Linux 2.4–2.8× slower, but only at n = 100 000.** At
-n = 10 000 the 7950X3D is *faster* (0.73×) and at n = 1 000 the three are level.
-The routine is an `upper_bound` over a handful of cut points plus `push_back` into
-a buffer that already has capacity, so nothing in the algorithm explains a
-size-dependent cliff.
-
-Neither is diagnosable from the result files alone. The next step is a targeted
-micro-benchmark on one Linux machine timing `std::sort` on its own, separated from
-the by-value copy, at n = 1 000 / 10 000 / 100 000. That distinguishes the sort
-implementation from the allocator in one run.
-
-Both anomalies are in unsupervised code paths that are already four orders of
-magnitude cheaper than `CPPFImdlp::fit`, so neither blocks the release.
-
-### 1d. MDLP itself is genuinely faster on the AMD machines
-
-Now that the inputs are verified identical, this comparison can be trusted:
-`CPPFImdlp::fit` runs at **0.67× and 0.68×** of the M4 Max time at n = 100 000, and
-the advantage holds across sizes. Both AMD parts land in the same place, which is
-what one would expect if the effect is real rather than a scheduling artefact.
-
-## Phase 7 result: the quadratic is gone
+### The fix, and its measured effect
 
 `getCandidate()` now carries per-class counts as `idx` advances instead of asking
 `Metrics::entropy` to rescan the interval at every class boundary. Measured on the
@@ -340,53 +224,7 @@ On mfeat-factors, where n is only 2 000, the same change is worth 10.9×
 n = 1 000 synthetically, and confirmation that the O(k) cost the fix introduces is
 not a problem at 10 classes.
 
-### What it is worth on real datasets
-
-The synthetic benchmark measures one feature at a time on generated data. This is
-the whole job on the datasets shipped in `tests/datasets/`: every feature
-discretized, 2.1.3 against 3.0.0, median of three runs, Release `-O3`, on the
-M4 Max.
-
-| Dataset | rows | features | classes | distinct/feature | 2.1.3 | 3.0.0 | speedup |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| iris | 150 | 4 | 3 | — | 0.10 ms | 0.04 ms | 2.5× |
-| heart-statlog | 270 | 13 | 2 | — | 0.57 ms | 0.16 ms | 3.6× |
-| glass | 214 | 9 | 6 | — | 0.85 ms | 0.17 ms | 5.0× |
-| diabetes | 768 | 8 | 2 | 157 | 3.27 ms | 0.48 ms | 6.8× |
-| letter | 20 000 | 16 | 26 | 16 | 342 ms | **37.8 ms** | **9.1×** |
-| mfeat-factors | 2 000 | 216 | 10 | 215 | 795 ms | **68.8 ms** | **11.6×** |
-| kdd_JapaneseVowels | 9 961 | 14 | 9 | 8 487 | 2 009 ms | **29.3 ms** | **68.5×** |
-
-**Row count is not what drives the gain.** `letter` has 20 000 rows and gains 9×;
-`kdd_JapaneseVowels` has half as many and gains 68×.
-
-What drives it is the number of **class boundaries after sorting**, bounded by
-*distinct values × classes* — because that is how many times `getCandidate` used to
-rescan its interval. `letter` has only 16 distinct values per feature, so sorting
-leaves 16 runs with the labels grouped inside each, and there are few boundaries.
-`kdd_JapaneseVowels` holds real-valued coefficients with 8 487 distinct values per
-feature, so nearly every position is a boundary — exactly where the quadratic term
-bit hardest.
-
-**Fine-grained continuous features gain the most.** Already-quantized or
-low-cardinality features gain least. The trend continues at scale: on a 130 064-row,
-50-feature continuous dataset, the measured gain was **600-770× per feature**.
-
-**`PKIDisc` and `BinDisc` are unchanged**, as expected — neither ever had the
-quadratic term. `PKIDisc` measures 4.15 → 4.04 ms on mfeat-factors and 1.22 → 1.32
-on letter, both noise. A pipeline built on `PKIDisc` gets nothing from 3.0.0 in
-time; its benefit is the correctness fixes and the API.
-
-> A first pass at this table reported only 1.58× for `kdd_JapaneseVowels`. The
-> measurement harness took the last column as the class, but that file carries its
-> class in the *first* attribute (`speaker`) — so `coefficient12` was being used as
-> a label, giving 9 846 "classes" instead of 9. With k that large the O(n·k) term
-> of the new implementation dominates and swallows the gain. The error is worth
-> recording because it demonstrates the trade Phase 7 made: O(n²) became O(n·k), so
-> a pathological class count erodes the benefit. At realistic counts (2-26 here) it
-> does not.
-
-### Confirmed on all three platforms
+### Confirmed on all three platforms after the fix
 
 Re-run after Phase 7 with identical dataset checksums and an identical source
 hash (`c5cee47706d5`) on all three machines:
@@ -397,41 +235,9 @@ hash (`c5cee47706d5`) on all three machines:
 | AMD Ryzen 9 7950X3D | 1.96 | **1.21** |
 | AMD Ryzen AI Max+ 395 | 1.93 | **1.23** |
 
-### The Linux advantage on MDLP inverted
-
-This is the most consequential secondary effect, and it was predicted here before
-the measurement existed.
-
-`CPPFImdlp::fit` relative to the M4 Max, at n = 100 000:
-
-| | before Phase 7 | after Phase 7 |
-|---|---:|---:|
-| AMD Ryzen 9 7950X3D | 0.67× (faster) | **1.10× (slower)** |
-| AMD Ryzen AI Max+ 395 | 0.68× (faster) | **1.12× (slower)** |
-
-While `fit` was quadratic, the entropy rescans dwarfed everything and the AMD
-machines' raw throughput won by a third. With that term gone, what remains is
-`std::stable_sort` in `sortIndices` plus linear scans — and the same toolchain
-penalty that shows up in `BinDisc::fit (quantile)` (still 2.9-3.2× slower on Linux)
-now shows through `fit` itself. The quadratic had been masking it.
-
-**In absolute terms this is not worth worrying about**: `fit` at n = 100 000 costs
-16.3 ms on macOS against 17.9-18.1 ms on Linux. Everything got roughly 500×
-cheaper, so a 10% relative gap is 1.7 ms.
-
-**In terms of what to optimise next it matters a lot.** `fit` is now sort-dominated,
-which means the sort is the next lever — and unlike a toolchain switch, a better
-sort would help every platform. Settling whether libstdc++'s `std::stable_sort` is
-the culprit is now worth the standalone experiment, because the answer changes what
-gets optimised rather than merely which compiler to prefer.
-
-The other two anomalies are unchanged and now proportionally larger, since the
-denominator shrank: `CPPFImdlp::transform` is 2.3-2.6× slower on Linux and has gone
-from 0.007% of a fit to about 4%; `BinDisc::fit (quantile)` remains 2.9-3.2× slower.
-
 ### What this changes downstream
 
-The two Linux anomalies recorded above were measured when `CPPFImdlp::fit`
+The two Linux anomalies described under [Cross-platform behaviour](#cross-platform-behaviour) were measured when `CPPFImdlp::fit`
 dominated everything by four orders of magnitude. That is no longer true: at
 n = 100 000 `fit` is now 16.5 ms against `transform`'s 0.63 ms, so `transform` has
 gone from 0.007% of the work to about 4%. The `std::stable_sort` in `sortIndices`
@@ -439,7 +245,9 @@ is now a meaningful share of `fit` itself. **Re-running the cross-platform
 comparison is worthwhile, and the toolchain question is now more relevant than it
 was**, not less.
 
-### 2. Input copying is negligible, which reframes Phase 5
+## Move semantics: a measured null result
+
+### Why no gain was available
 
 The `copy X + y` reference row measures exactly what move semantics (T5.1) would
 eliminate. At n = 100 000 it is **0.0095 ms against 8 248 ms** of `CPPFImdlp::fit`
@@ -457,28 +265,10 @@ strategy does not copy the input at all today — the figure is only a scale
 reference. `BinDisc::fit (quantile)` genuinely copies to sort, and there a move
 overload could avoid the copy when the caller surrenders its data.
 
-### 3. The unsupervised discretizers scale as expected
+### What was measured
 
-`BinDisc::fit (uniform)` is linear (a single min/max pass): 10× the data costs
-about 10-16× the time. `BinDisc::fit (quantile)` and `PKIDisc::fit` are dominated
-by a sort and scale close to n log n. `transform` is linear for both. Nothing here
-needs attention.
-
-`PKIDisc::fit (sqrt)` tracks `BinDisc::fit (quantile)` almost exactly, as expected
-— it selects a bin count and delegates.
-
-## Implications for the remaining phases
-
-| Phase | What the baseline says |
-|---|---|
-| 5 — move semantics | Justify on memory and ergonomics. No throughput gain is available; T5.3 should report the measured null result rather than hunt for a delta. |
-| 7 — performance | Retarget onto `getCandidate`'s quadratic entropy recomputation. This is the only finding of real magnitude, and it dwarfs everything else in the plan. |
-| 8 — docs | Any complexity claim written into `ARCHITECTURE.md` must match this table. MDLP is O(n²) today. |
-
-## Phase 5 — measured impact of move semantics
-
-Measured after T5.1 and T5.2 landed, on the same machine. The Phase 0 table above
-stays frozen as the reference; these are the new rows.
+Measured after T5.1 and T5.2 landed, on the same machine. The Phase 0 table in the
+appendix stays frozen as the reference; these are the new rows.
 
 ### Run-to-run variance comes first
 
@@ -555,6 +345,93 @@ throughput**. All rows sit within the ≤5% regression ceiling. The plan's origi
 report is that it did not come from here.
 
 The performance work that matters is still Phase 7 — the quadratic `getCandidate`.
+
+## Cross-platform behaviour
+
+### The unsupervised discretizers scale as expected
+
+`BinDisc::fit (uniform)` is linear (a single min/max pass): 10× the data costs
+about 10-16× the time. `BinDisc::fit (quantile)` and `PKIDisc::fit` are dominated
+by a sort and scale close to n log n. `transform` is linear for both. Nothing here
+needs attention.
+
+`PKIDisc::fit (sqrt)` tracks `BinDisc::fit (quantile)` almost exactly, as expected
+— it selects a bin count and delegates.
+
+### MDLP was faster on the AMD machines — until Phase 7
+
+Now that the inputs are verified identical, this comparison can be trusted:
+`CPPFImdlp::fit` runs at **0.67× and 0.68×** of the M4 Max time at n = 100 000, and
+the advantage holds across sizes. Both AMD parts land in the same place, which is
+what one would expect if the effect is real rather than a scheduling artefact.
+
+### The Linux advantage on MDLP inverted
+
+This is the most consequential secondary effect, and it was predicted here before
+the measurement existed.
+
+`CPPFImdlp::fit` relative to the M4 Max, at n = 100 000:
+
+| | before Phase 7 | after Phase 7 |
+|---|---:|---:|
+| AMD Ryzen 9 7950X3D | 0.67× (faster) | **1.10× (slower)** |
+| AMD Ryzen AI Max+ 395 | 0.68× (faster) | **1.12× (slower)** |
+
+While `fit` was quadratic, the entropy rescans dwarfed everything and the AMD
+machines' raw throughput won by a third. With that term gone, what remains is
+`std::stable_sort` in `sortIndices` plus linear scans — and the same toolchain
+penalty that shows up in `BinDisc::fit (quantile)` (still 2.9-3.2× slower on Linux)
+now shows through `fit` itself. The quadratic had been masking it.
+
+**In absolute terms this is not worth worrying about**: `fit` at n = 100 000 costs
+16.3 ms on macOS against 17.9-18.1 ms on Linux. Everything got roughly 500×
+cheaper, so a 10% relative gap is 1.7 ms.
+
+**In terms of what to optimise next it matters a lot.** `fit` is now sort-dominated,
+which means the sort is the next lever — and unlike a toolchain switch, a better
+sort would help every platform. Settling whether libstdc++'s `std::stable_sort` is
+the culprit is now worth the standalone experiment, because the answer changes what
+gets optimised rather than merely which compiler to prefer.
+
+The other two anomalies are unchanged and now proportionally larger, since the
+denominator shrank: `CPPFImdlp::transform` is 2.3-2.6× slower on Linux and has gone
+from 0.007% of a fit to about 4%; `BinDisc::fit (quantile)` remains 2.9-3.2× slower.
+
+### Two toolchain anomalies
+
+With the datasets proven identical, these cannot be explained by one platform
+having been given less work. Measurement noise is 0.9–3.5%; the effects below are
+240–520%, so they are real.
+
+**`BinDisc::fit (quantile)` — Linux 3.0–3.2× slower at n = 100 000**, and 4.8–5.2×
+slower at n = 10 000, yet *equal or faster* at n = 1 000 (0.56× on the Strix Halo).
+The crossover sits between n = 1 000 and n = 10 000.
+
+| n | M4 Max | 7950X3D | Ryzen AI Max+ 395 |
+|---:|---:|---:|---:|
+| 1 000 | 0.0053 | 0.0051 (0.96×) | 0.0030 (**0.56×**) |
+| 10 000 | 0.0670 | 0.3233 (**4.83×**) | 0.3508 (**5.24×**) |
+| 100 000 | 1.5063 | 4.5810 (**3.04×**) | 4.8791 (**3.24×**) |
+
+`PKIDisc::fit` mirrors it exactly, as expected since it delegates. The work here is
+essentially one `std::sort` over a by-value copy, so a 5× swing between adjacent
+sizes points at either the sort implementation (libstdc++ vs libc++) or the
+allocator behind the copy — glibc switches to `mmap` for large blocks, macOS does
+not.
+
+**`CPPFImdlp::transform` — Linux 2.4–2.8× slower, but only at n = 100 000.** At
+n = 10 000 the 7950X3D is *faster* (0.73×) and at n = 1 000 the three are level.
+The routine is an `upper_bound` over a handful of cut points plus `push_back` into
+a buffer that already has capacity, so nothing in the algorithm explains a
+size-dependent cliff.
+
+Neither is diagnosable from the result files alone. The next step is a targeted
+micro-benchmark on one Linux machine timing `std::sort` on its own, separated from
+the by-value copy, at n = 1 000 / 10 000 / 100 000. That distinguishes the sort
+implementation from the allocator in one run.
+
+Both anomalies are in unsupervised code paths that are already four orders of
+magnitude cheaper than `CPPFImdlp::fit`, so neither blocks the release.
 
 ## Toolchain diagnostic (`make sortbench`)
 
@@ -637,40 +514,6 @@ That remains the only finding with no easy remedy, since libtorch's ABI rules ou
 libc++, and it is what makes `BinDisc::fit (quantile)` — and `PKIDisc`, which
 always selects QUANTILE — around 3× slower on Linux than on macOS.
 
-### Superseded: the GCC-version conclusion was wrong
-
-An earlier revision of this document concluded that GCC 16 fixed what GCC 15 did
-badly. **That was wrong**, and upgrading the Strix Halo refuted it. Kept here
-because the reasoning error is worth not repeating.
-
-The reasoning that produced it: the two Linux machines differed in verdicts, and
-they differed in both hardware and compiler release. Clang measured within 4-13%
-across them, which looked like a hardware control, so the GCC gap was attributed to
-the release. The data supported only the weaker claim — *GCC behaves differently on
-these two machines* — and the version was one candidate, not the answer.
-
-Holding GCC constant settles it. `stable_sort<index>` at n = 100 000, the GCC
-column:
-
-| Machine | GCC 15 | GCC 16 |
-|---|---:|---:|
-| Ryzen AI Max+ 395 | 9.787 / 9.799 | **9.763 / 9.761** |
-| Ryzen 9 7950X3D | — | **6.190** |
-
-The upgrade changed nothing on the Strix Halo — 0.4%, well inside noise. Yet the
-*same* GCC 16 and the *same* libstdc++ 20260515 produce 6.19 ms on the 7950X3D
-against 9.76 ms on the Strix Halo, 58% apart, while clang lands within 13% of
-itself on both machines.
-
-So GCC's code is fine on one machine and slow on the other, at identical versions.
-What is left is the hardware (Zen 4 against Zen 5) or the system configuration, and
-this diagnostic has not yet distinguished them. A `gcc_native` build
-(`-march=native`) has been added to `run.sh`: GCC's default target is generic
-x86-64, so if its scheduling is what hurts on Zen 5, tuning for the real CPU should
-close the gap. If it does not, codegen is not the variable either.
-
-That run has since happened, and the answer is above: GCC's default target.
-
 ### The one finding that holds everywhere: libstdc++'s `std::sort`
 
 Independent of machine, compiler and compiler version:
@@ -733,8 +576,206 @@ selected into a *function pointer*, which cannot be inlined; a variant with the
 branch hoisted out of the loop measures identically on clang (0.2302 vs 0.2308 ms).
 Whether GCC behaves the same is exactly what the Linux run will show.
 
-## Regression policy
+### Superseded: the GCC-version conclusion was wrong
+
+An earlier revision of this document concluded that GCC 16 fixed what GCC 15 did
+badly. **That was wrong**, and upgrading the Strix Halo refuted it. Kept here
+because the reasoning error is worth not repeating.
+
+The reasoning that produced it: the two Linux machines differed in verdicts, and
+they differed in both hardware and compiler release. Clang measured within 4-13%
+across them, which looked like a hardware control, so the GCC gap was attributed to
+the release. The data supported only the weaker claim — *GCC behaves differently on
+these two machines* — and the version was one candidate, not the answer.
+
+Holding GCC constant settles it. `stable_sort<index>` at n = 100 000, the GCC
+column:
+
+| Machine | GCC 15 | GCC 16 |
+|---|---:|---:|
+| Ryzen AI Max+ 395 | 9.787 / 9.799 | **9.763 / 9.761** |
+| Ryzen 9 7950X3D | — | **6.190** |
+
+The upgrade changed nothing on the Strix Halo — 0.4%, well inside noise. Yet the
+*same* GCC 16 and the *same* libstdc++ 20260515 produce 6.19 ms on the 7950X3D
+against 9.76 ms on the Strix Halo, 58% apart, while clang lands within 13% of
+itself on both machines.
+
+So GCC's code is fine on one machine and slow on the other, at identical versions.
+What is left is the hardware (Zen 4 against Zen 5) or the system configuration, and
+this diagnostic has not yet distinguished them. A `gcc_native` build
+(`-march=native`) has been added to `run.sh`: GCC's default target is generic
+x86-64, so if its scheduling is what hurts on Zen 5, tuning for the real CPU should
+close the gap. If it does not, codegen is not the variable either.
+
+That run has since happened, and the answer is at the top of this section: GCC's
+default target.
+
+## Methodology
+
+### Running it
+
+```bash
+export PATH="$HOME/miniconda3/bin:$PATH"   # conan
+make bench                                 # full run, ~4 minutes
+make bench LEVEL=quick                     # stops at n=10,000, ~seconds
+```
+
+`make bench` forces a Release build (`-O3`) into `build_bench/` with
+`-DENABLE_BENCHMARK=ON`. The benchmark target is off by default and is never part
+of `make test`. Almost all of a full run is the two largest `CPPFImdlp::fit`
+cells — see [How it was found](#how-it-was-found).
+
+The harness has no external dependencies. Data is generated from class-conditional
+normal distributions with a fixed seed (42), so every run measures identical work.
+
+`make bench` also stores a machine-readable result under
+`docs/benchmarks/results/`, fingerprinted with the CPU, core topology, RAM, OS,
+compiler and git commit. `LABEL=name` disambiguates two machines with the same CPU.
+
+### Which statistic to use
+
+Repetition counts are **fixed** and identical on every platform, deliberately. The
+minimum of a sample shrinks as the sample grows, so comparing minima taken with
+different rep counts would systematically favour whichever machine ran more of
+them.
+
+- **Minimum** — for before/after comparisons on *one* machine. Most stable figure
+  under load.
+- **Median** — for comparisons *across* machines. This is what
+  `docs/benchmarks-platforms.md` reports.
+
+### Comparing across platforms
+
+```bash
+# on each machine
+make bench
+git add docs/benchmarks/results && git commit -m "bench: <machine>" && git push
+
+# anywhere, once the results are gathered
+git pull
+make bench-report        # regenerates docs/benchmarks-platforms.md
+```
+
+Results are versioned in git, so they accumulate through the normal workflow. Run
+on a **clean working tree** — the driver records whether the tree was dirty and the
+report flags such results as not reproducible from the recorded commit.
+
+The generated comparison reports scaling exponents per platform, median times,
+relative speed against a reference platform, and a per-platform noise fingerprint.
+It warns loudly when results span different commits, `--level` settings or library
+versions instead of averaging incomparable numbers.
+
+Two limits are stated there and repeated here because they are easy to forget:
+
+- **The compiler is not unified.** AppleClang on macOS, GCC on Linux. Every
+  cross-platform difference is hardware *and* toolchain; none of it is a clean CPU
+  comparison.
+- **Anything smaller than a platform's noise figure is not a real difference.**
+
+No benchmarking runs in CI: GitHub's shared runners vary by more than the effects
+being measured.
+
+### Dataset versions
+
+A shared seed is not enough to make two platforms measure the same work.
+`std::mt19937` is specified down to the bit, but `std::normal_distribution` and
+`std::uniform_int_distribution` are **not** specified to produce the same sequence
+across standard library implementations. libc++ and libstdc++ disagree, so the
+first round of results had each platform discretizing a *different* dataset.
+
+Dataset version 2 generates its data from integer operations and IEEE-754 addition
+only — a 24-bit uniform built by shifting the engine output, and an Irwin-Hall
+normal (twelve uniforms minus six, so no `libm` whose last-ulp behaviour is
+likewise unguaranteed). Each run also records an FNV-1a checksum of the exact
+bytes handed to the library, so `make bench-report` can *state* whether two
+platforms measured the same work rather than assume it.
+
+The report groups results by dataset version and never compares across groups.
+**Version 1 results are retained but their cross-platform absolute times are not
+interpretable**; their scaling exponents remain valid, being computed within a
+single platform.
+
+### Homogeneity is judged on the measured sources
+
+Runs are compared by a hash of `src/` and `bench/`, not by commit SHA. A
+docs-only commit cannot change a timing, and flagging results as incomparable
+because the README moved is noise that trains people to ignore the warning.
+
+### Clock ramp
+
+Each run now spins the CPU for 1.5 s before anything is timed. Without it the
+cells measured first — the small-n ones — are taken at idle clocks: the version 1
+Strix Halo run finished **21.7% faster than it started**, which silently depressed
+its small-n numbers and distorted its scaling ratios. The drift probe now warns in
+both directions.
+
+### Environment of the baseline run
+
+| | |
+|---|---|
+| Machine | Apple M4 Max, 14 cores |
+| OS | macOS 26.5.2 (arm64) |
+| Compiler | Apple clang 21.0.0 (`clang-2100.1.1.101`) |
+| Build | `CMAKE_BUILD_TYPE=Release`, `-O3`, C++17 |
+| libtorch | 2.7.1 (via conan) |
+| Library version reported | 2.1.3 (bump to 3.0.0 is T8.6) |
+| Commit | Phase 3 complete (`3e0fb52`) |
+| Dataset | 3 classes, class-conditional normals, seed 42 |
+
+### Regression policy
 
 The success criteria in the release plan allow at most a **5% regression** against
-the minimum times in this table. Re-run `make bench` on the same machine before
+the minimum times in the Phase 0 appendix table. Re-run `make bench` on the same
+machine before
 tagging 3.0.0 and record the comparison here.
+
+## Appendix — the Phase 0 baseline table
+
+All times in milliseconds.
+
+| benchmark | n | reps | min | median | mean |
+|---|---:|---:|---:|---:|---:|
+| CPPFImdlp::fit | 100 | 500 | 0.0149 | 0.0166 | 0.0174 |
+| BinDisc::fit (uniform) | 100 | 500 | 0.0001 | 0.0002 | 0.0002 |
+| BinDisc::fit (quantile) | 100 | 500 | 0.0004 | 0.0005 | 0.0005 |
+| PKIDisc::fit (sqrt) | 100 | 500 | 0.0005 | 0.0005 | 0.0005 |
+| CPPFImdlp::transform | 100 | 500 | 0.0001 | 0.0002 | 0.0002 |
+| BinDisc::transform | 100 | 500 | 0.0001 | 0.0002 | 0.0002 |
+| *(reference)* copy X + y | 100 | 500 | 0.0000 | 0.0000 | 0.0000 |
+| CPPFImdlp::fit | 1 000 | 200 | 0.7795 | 0.8213 | 0.8277 |
+| BinDisc::fit (uniform) | 1 000 | 200 | 0.0013 | 0.0016 | 0.0016 |
+| BinDisc::fit (quantile) | 1 000 | 200 | 0.0048 | 0.0056 | 0.0057 |
+| PKIDisc::fit (sqrt) | 1 000 | 200 | 0.0050 | 0.0057 | 0.0057 |
+| CPPFImdlp::transform | 1 000 | 200 | 0.0020 | 0.0022 | 0.0022 |
+| BinDisc::transform | 1 000 | 200 | 0.0015 | 0.0018 | 0.0017 |
+| *(reference)* copy X + y | 1 000 | 200 | 0.0001 | 0.0001 | 0.0001 |
+| CPPFImdlp::fit | 10 000 | 50 | 78.6715 | 80.7728 | 81.2756 |
+| BinDisc::fit (uniform) | 10 000 | 50 | 0.0067 | 0.0072 | 0.0073 |
+| BinDisc::fit (quantile) | 10 000 | 50 | 0.0593 | 0.0601 | 0.0643 |
+| PKIDisc::fit (sqrt) | 10 000 | 50 | 0.0597 | 0.0656 | 0.0646 |
+| CPPFImdlp::transform | 10 000 | 50 | 0.0349 | 0.0390 | 0.0389 |
+| BinDisc::transform | 10 000 | 50 | 0.0178 | 0.0196 | 0.0227 |
+| *(reference)* copy X + y | 10 000 | 50 | 0.0008 | 0.0011 | 0.0011 |
+| CPPFImdlp::fit | 100 000 | 10 | 8248.06 | 8354.63 | 8354.81 |
+| BinDisc::fit (uniform) | 100 000 | 10 | 0.1056 | 0.1183 | 0.1231 |
+| BinDisc::fit (quantile) | 100 000 | 10 | 1.4817 | 1.4912 | 1.4935 |
+| PKIDisc::fit (sqrt) | 100 000 | 10 | 1.4900 | 1.5122 | 1.5112 |
+| CPPFImdlp::transform | 100 000 | 10 | 0.5707 | 0.5715 | 0.5750 |
+| BinDisc::transform | 100 000 | 10 | 0.3713 | 0.3881 | 0.3909 |
+| *(reference)* copy X + y | 100 000 | 10 | 0.0095 | 0.0095 | 0.0095 |
+
+## Appendix — what the baseline predicted
+
+The Phase 0 baseline was taken before any performance work, precisely so later
+claims could be checked rather than asserted. Its three predictions and what
+actually happened:
+
+| Prediction from the baseline | Outcome |
+|---|---|
+| Move semantics would yield no throughput; justify them on memory and ergonomics | **Held.** Measured within noise at every size; reported as a null result |
+| The only gain of real magnitude was `getCandidate`'s quadratic entropy recomputation | **Held.** Removing it was worth 515× at n = 100 000; nothing else moved |
+| Any complexity claim in `ARCHITECTURE.md` must match measurement — MDLP was O(n²), not the O(n log n) the old docs asserted | **Applied.** `ARCHITECTURE.md` now states the measured exponent of 1.17-1.23 |
+
+The value of the exercise was not the predictions themselves but that they were
+written down before the work, in a form that could have been shown wrong.
