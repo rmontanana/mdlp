@@ -57,7 +57,10 @@ include_directories(
 )
 
 add_library(fimdlp src/CPPFImdlp.cpp src/Metrics.cpp src/BinDisc.cpp src/Discretizer.cpp src/PKIDisc.cpp)
-target_link_libraries(fimdlp PRIVATE torch::torch)
+# PUBLIC, not PRIVATE: Discretizer.h includes <torch/torch.h>, so libtorch is part
+# of this library's interface. Declaring it PRIVATE meant consumers of the packaged
+# library got headers they could not compile.
+target_link_libraries(fimdlp PUBLIC torch::torch)
 # The library's own sources build warning-clean; dependencies are not held to it.
 target_compile_options(fimdlp PRIVATE -Wall -Wextra)
 

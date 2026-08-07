@@ -127,11 +127,29 @@ info: ## Show project information
 	@echo ""
 	@printf "   $(YELLOW)Parallel Jobs:   $(GREEN)$(JOBS)$(NC)\n"
 
-conan-create: ## Create the conan package
-	@echo ">>> Creating the conan package..."
-	conan create . --build=missing -tf "" -s:a build_type=Release 
+# Release runs test_package, which compiles a consumer against the installed
+# headers. That is the only check that the *packaged* library is usable, and it
+# was being skipped with -tf "" while both it and the package were broken.
+# Debug still skips it: one consumer check per create is enough.
+conan-create: ## Create the conan packages (Release runs test_package)
+	@echo ">>> Creating the conan package (Release)..."
+	conan create . --build=missing -s:a build_type=Release
+	@echo ">>> Creating the conan package (Debug)..."
 	conan create . --build=missing -tf "" -s:a build_type=Debug -o "&:enable_testing=False"
 	@echo ">>> Done"
+
+conan-upload: ## Upload the created packages to the Cimmeria remote
+	@version=$$(grep -A2 "project(fimdlp" CMakeLists.txt | sed -n 's/.*VERSION \([0-9.]*\).*/\1/p' | head -1); \
+	if [ -z "$$version" ]; then echo ">>> Could not read the version from CMakeLists.txt"; exit 1; fi; \
+	if ! conan remote list | grep -q "cimmeria"; then \
+		echo ">>> Remote 'cimmeria' is not configured. To set it up:"; \
+		echo "    conan remote add cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria"; \
+		echo "    conan remote login cimmeria <username>"; \
+		exit 1; \
+	fi; \
+	echo ">>> Uploading fimdlp/$$version to cimmeria..."; \
+	conan upload fimdlp/$$version --remote=cimmeria; \
+	echo ">>> Done"
 
 help: ## Show help message
 	@IFS=$$'\n' ; \

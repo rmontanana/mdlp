@@ -39,12 +39,12 @@ Or use the helper:
 ## Creating a package
 
 ```bash
-conan create . --build=missing -tf "" -s:a build_type=Release
+make conan-create
 ```
 
-`make conan-create` builds both Release and Debug packages. The helper script
-`./scripts/create_package.sh` also runs `test_package` and uploads if the remote is
-configured.
+That builds a Release and a Debug package. The Release one runs `test_package`,
+which compiles a consumer against the *installed* headers — the only check that the
+packaged library is usable rather than merely buildable in place.
 
 The version is **not** written in the recipe. `conanfile.py::set_version` reads it
 by regex from the `project(fimdlp VERSION ...)` line in `CMakeLists.txt`, so
@@ -55,8 +55,11 @@ bumping `CMakeLists.txt` is the only edit a release needs.
 ```bash
 conan remote add cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
 conan remote login cimmeria <username>
-conan upload fimdlp/3.0.0 --remote=cimmeria
+make conan-upload
 ```
+
+`make conan-upload` reads the version from `CMakeLists.txt` and refuses to run if
+the remote is not configured.
 
 ## Consuming the package
 

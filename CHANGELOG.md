@@ -59,6 +59,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/create_package.sh` had the version hardcoded to `2.1.0` and had gone
   stale across two releases; it now reads it from `CMakeLists.txt`, the same source
   `conanfile.py` uses.
+- **The published conan package did not compile for consumers.** `Discretizer.h`
+  includes `<torch/torch.h>`, but libtorch was linked `PRIVATE` and required
+  without `transitive_headers`, so anyone consuming `fimdlp/2.1.x` got headers
+  they could not build. Both are fixed, and `test_package` — which had never
+  compiled, and was being skipped with `-tf ""` — now exercises the real public
+  API and runs as part of `make conan-create`.
+- `scripts/create_package.sh` **removed**, folded into `make conan-create` and the
+  new `make conan-upload`. The two paths disagreed on whether to run
+  `test_package` and produced different package sets.
 - `TECHNICAL_ANALYSIS_REPORT.md` **removed**. It was the origin of this release and
   most of its findings were delivered here, but it had become actively misleading —
   it declared unfixed HIGH-risk memory-safety defects that 3.0.0 fixed. Its content
