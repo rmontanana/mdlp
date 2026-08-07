@@ -676,4 +676,56 @@ Recorded so `RELEASE_PLAN_2.2.0.md` can be deleted without losing anything.
 
 ---
 
-*Consolidated 2026-08-04 against verified baseline `e143bbc`.*
+## Appendix C — What replaced TECHNICAL_ANALYSIS_REPORT.md
+
+`TECHNICAL_ANALYSIS_REPORT.md` was the origin of this whole effort: the 2.2.0 plan
+was built from its findings, and this release delivered most of them. It has been
+**deleted**, because by 3.0.0 it had stopped being merely dated and become actively
+wrong — it opened with *"Overall Security Risk: MEDIUM"* and listed unfixed
+HIGH-risk memory-safety defects that this release fixed. A reader finding it in the
+repository would have been misled about the state of the code.
+
+**Where its content went:**
+
+| Section | Replaced by |
+|---|---|
+| Architecture, design patterns, class hierarchy | `ARCHITECTURE.md` |
+| Security analysis and vulnerabilities | `SECURITY.md` |
+| Performance considerations | `docs/benchmarks.md` |
+| Code quality issues | Fixed; see D1-D7 in §4 |
+| Recommendations | Became this plan |
+
+**What it asked for and got:** tensor validation, bounds checking, underflow
+protection, consistent exception types, comprehensive input validation, and
+performance benchmarks.
+
+**Two of its recommendations were deliberately rejected**, recorded here so nobody
+re-implements them from the deleted document:
+
+1. *"Add mutex protection to the Metrics class."* The opposite was done. The mutex
+   guarded only the caches and left the data members unguarded, advertising a
+   thread-safety guarantee it did not deliver while costing lock traffic on every
+   lookup. It was removed and the single-threaded contract documented instead.
+2. *"Separate supervised and unsupervised interfaces."* Rejected. The uniform
+   `fit(X, y)` is the library's central design commitment — it lets an
+   experimentation platform drive every discretizer through one code path — and is
+   restated in §2.
+
+**What it flagged that is still open**, carried forward rather than lost:
+
+- **Memory and leak testing** — never run.
+- **Fuzzing** — never run. Noted in `SECURITY.md`.
+- **Concurrent access testing** — not written. Less pressing now that `Metrics` is
+  documented as single-threaded, but the contract is untested.
+- **CMake presets** for the common configurations — the Makefile still manages
+  build directories by hand.
+- **Flexible dependency version constraints** — `libtorch/2.7.1` is pinned exactly.
+- **Decomposing `computeCutPoints()`** — `getCandidate` was rewritten in Phase 7 but
+  the recursive driver was not broken up.
+
+All six are 3.1.0 candidates.
+
+---
+
+*Consolidated 2026-08-04 against verified baseline `e143bbc`; updated through the
+3.0.0 release.*

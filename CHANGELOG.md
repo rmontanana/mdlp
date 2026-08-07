@@ -49,6 +49,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `strategy_t` and `compute_strategy_t` moved to `typesFImdlp.h` so the config
   header can name them. Including `BinDisc.h` or `PKIDisc.h` still brings them in.
 
+### Documentation
+
+- `SECURITY.md`, `ARCHITECTURE.md` and `MIGRATION.md` added.
+- `CONAN_README.md` rewritten. It documented `libtorch/2.4.1` and `catch2` as
+  dependencies — the project uses libtorch 2.7.1 and GoogleTest — pointed at a
+  `tests/lib/Files/` directory that no longer exists, quoted `conan upload --all`
+  (Conan 1.x syntax), and carried an example that would not compile.
+- `scripts/create_package.sh` had the version hardcoded to `2.1.0` and had gone
+  stale across two releases; it now reads it from `CMakeLists.txt`, the same source
+  `conanfile.py` uses.
+- `TECHNICAL_ANALYSIS_REPORT.md` **removed**. It was the origin of this release and
+  most of its findings were delivered here, but it had become actively misleading —
+  it declared unfixed HIGH-risk memory-safety defects that 3.0.0 fixed. Its content
+  now lives in `ARCHITECTURE.md`, `SECURITY.md` and `docs/benchmarks.md`; what it
+  flagged that remains open is recorded in Appendix C of `RELEASE_PLAN_V3.md`.
+
 ### Changed — exceptions (breaking)
 
 - **New exception hierarchy in `src/Exceptions.h`.** `InvalidParameter`,
