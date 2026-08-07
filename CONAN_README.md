@@ -54,13 +54,18 @@ bumping `CMakeLists.txt` is the only edit a release needs.
 ## Publishing to Cimmeria
 
 ```bash
-conan remote add cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
-conan remote login cimmeria <username>
+conan remote add Cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
+conan remote login Cimmeria <username>
 make conan-upload
 ```
 
 `make conan-upload` reads the version from `CMakeLists.txt` and refuses to run if
 the remote is not configured.
+
+The remote name is **`Cimmeria`, capitalised**, matching the last path segment of
+its URL. Conan remote names are case sensitive and the lookup in `make
+conan-upload` is a plain `grep`, so a lowercase `cimmeria` silently fails to match
+and the target reports the remote as unconfigured.
 
 ## Consuming the package
 

@@ -68,6 +68,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/create_package.sh` **removed**, folded into `make conan-create` and the
   new `make conan-upload`. The two paths disagreed on whether to run
   `test_package` and produced different package sets.
+- The Cimmeria remote is referenced as **`Cimmeria`**, capitalised, everywhere:
+  the Makefile, `CONAN_README.md` and the CI workflow. Conan remote names are case
+  sensitive and the lookup is a plain `grep`, so the lowercase `cimmeria` inherited
+  from the old script matched nothing and `make conan-upload` reported the remote
+  as unconfigured.
 - `scripts/build_conan.sh` **removed**. It duplicated `make release` and had been
   broken since `conanfile.py` adopted `cmake_layout`: it looked for the generated
   toolchain at the output folder's root, where conan no longer puts it.

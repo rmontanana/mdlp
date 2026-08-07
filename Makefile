@@ -141,14 +141,14 @@ conan-create: ## Create the conan packages (Release runs test_package)
 conan-upload: ## Upload the created packages to the Cimmeria remote
 	@version=$$(grep -A2 "project(fimdlp" CMakeLists.txt | sed -n 's/.*VERSION \([0-9.]*\).*/\1/p' | head -1); \
 	if [ -z "$$version" ]; then echo ">>> Could not read the version from CMakeLists.txt"; exit 1; fi; \
-	if ! conan remote list | grep -q "cimmeria"; then \
-		echo ">>> Remote 'cimmeria' is not configured. To set it up:"; \
-		echo "    conan remote add cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria"; \
-		echo "    conan remote login cimmeria <username>"; \
+	if ! conan remote list | grep -q "Cimmeria"; then \
+		echo ">>> Remote 'Cimmeria' is not configured. To set it up:"; \
+		echo "    conan remote add Cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria"; \
+		echo "    conan remote login Cimmeria <username>"; \
 		exit 1; \
 	fi; \
-	echo ">>> Uploading fimdlp/$$version to cimmeria..."; \
-	conan upload fimdlp/$$version --remote=cimmeria; \
+	echo ">>> Uploading fimdlp/$$version to Cimmeria..."; \
+	conan upload fimdlp/$$version --remote=Cimmeria; \
 	echo ">>> Done"
 
 help: ## Show help message
