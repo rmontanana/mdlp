@@ -21,20 +21,21 @@ make debug      # Debug + tests + coverage
 make release    # Release, -O3
 ```
 
-To drive conan directly:
+To drive conan directly, note that `conanfile.py` uses `cmake_layout`, so the
+generated toolchain lands under `build/<build_type>/generators/` inside the output
+folder rather than at its root:
 
 ```bash
-conan install . --output-folder=build_conan --build=missing
-cd build_conan
-cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
-cmake --build .
+conan install . --output-folder=build_out --build=missing -s build_type=Release
+cmake -S . -B build_out \
+      -DCMAKE_TOOLCHAIN_FILE=build_out/build/Release/generators/conan_toolchain.cmake \
+      -DCMAKE_BUILD_TYPE=Release
+cmake --build build_out
 ```
 
-Or use the helper:
-
-```bash
-./scripts/build_conan.sh
-```
+That path is exactly what `make release` does. There is no wrapper script: the one
+that existed pointed at the pre-`cmake_layout` toolchain location and had stopped
+working.
 
 ## Creating a package
 

@@ -68,6 +68,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/create_package.sh` **removed**, folded into `make conan-create` and the
   new `make conan-upload`. The two paths disagreed on whether to run
   `test_package` and produced different package sets.
+- `scripts/build_conan.sh` **removed**. It duplicated `make release` and had been
+  broken since `conanfile.py` adopted `cmake_layout`: it looked for the generated
+  toolchain at the output folder's root, where conan no longer puts it.
 - `TECHNICAL_ANALYSIS_REPORT.md` **removed**. It was the origin of this release and
   most of its findings were delivered here, but it had become actively misleading —
   it declared unfixed HIGH-risk memory-safety defects that 3.0.0 fixed. Its content
