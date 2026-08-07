@@ -65,13 +65,13 @@ test: ## Build Debug version and run tests
 	@echo "--- Lcov generate coverage.info"
 	@genhtml $(f_debug)/tests/coverage.info --demangle-cpp --output-directory $(f_debug)/tests/coverage --ignore-errors category,category --title "Discretizer mdlp Coverage Report" -s -k -f --legend >/dev/null
 	@echo "* Coverage report is generated at $(f_debug)/tests/coverage/index.html"
-	@which python || (echo ">>> Please install python"; exit 1)
+	@which $(python3) >/dev/null || (echo ">>> Please install python3"; exit 1)
 	@if [ ! -f $(f_debug)/tests/coverage.info ]; then \
 		echo ">>> No coverage.info file found!"; \
 		exit 1; \
 	fi
 	@echo ">>> Updating coverage badge..."
-	@env python update_coverage.py $(f_debug)/tests
+	@$(python3) scripts/update_coverage.py $(f_debug)/tests
 	@echo ">>> Done"  
 
 # Benchmarks

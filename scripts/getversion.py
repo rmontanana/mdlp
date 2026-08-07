@@ -27,7 +27,7 @@ def get_version_from_cmakelists(cmakelists_path):
     
 def main():
     # Get the path to the CMakeLists.txt file
-    cmakelists_path = Path(__file__).parent / "CMakeLists.txt"
+    cmakelists_path = Path(__file__).resolve().parent.parent / "CMakeLists.txt"
     
     # Check if the file exists
     if not cmakelists_path.exists():

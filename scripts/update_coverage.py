@@ -6,8 +6,12 @@
 
 import subprocess
 import sys
+from pathlib import Path
 
-readme_file = "README.md"
+# Resolved from this file's location rather than the working directory, so the
+# script works from anywhere now that it no longer sits beside README.md.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+readme_file = REPO_ROOT / "README.md"
 print("Updating coverage...")
 # Generate badge line
 output = subprocess.check_output(
