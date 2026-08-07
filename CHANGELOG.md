@@ -86,6 +86,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   three checksums were the literal string `placeholder_sha256_hash`, it declared a
   patch in a `patches/` directory that does not exist, and it listed versions
   2.0.0 to 2.1.0 only.
+- `test_consumer/` **removed**. It duplicated what `test_package/` does — checking
+  that a consumer can build against the package — but nothing invoked it, no
+  instructions existed for running it by hand, and it still required
+  `fimdlp/2.0.1`, four releases behind. `test_package/` does the same check
+  automatically on every `conan create` and covers more of the API.
 - `scripts/build_conan.sh` **removed**. It duplicated `make release` and had been
   broken since `conanfile.py` adopted `cmake_layout`: it looked for the generated
   toolchain at the output folder's root, where conan no longer puts it.
