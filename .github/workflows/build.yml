@@ -31,7 +31,7 @@ jobs:
       - name: Setup Conan profileson
         run: |
           conan profile detect --force
-          conan remote add cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
+          conan remote add Cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
       - name: Install dependencies with Conan
         run: |
           conan install . --build=missing -of build_debug -s build_type=Debug -o enable_testing=True

@@ -6,6 +6,8 @@
 
 #include <fstream>
 #include <iostream>
+#include <type_traits>
+#include <utility>
 #include <ArffFiles.hpp>
 #include "gtest/gtest.h"
 #include "Metrics.h"
@@ -118,11 +120,11 @@ namespace mdlp {
 
     TEST_F(TestFImdlp, FitErrorMinLength)
     {
-        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(2, 10, 0), invalid_argument, "min_length must be greater than 2");
+        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(2, 10, 0), invalid_argument, "min_length must be at least 3, got 2");
     }
     TEST_F(TestFImdlp, FitErrorMaxDepth)
     {
-        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 0, 0), invalid_argument, "max_depth must be greater than 0");
+        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 0, 0), invalid_argument, "max_depth must be at least 1, got 0");
     }
 
     TEST_F(TestFImdlp, JoinFit)
@@ -138,14 +140,14 @@ namespace mdlp {
 
     TEST_F(TestFImdlp, FitErrorMinCutPoints)
     {
-        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 10, -1), invalid_argument, "proposed_cuts must be non-negative");
+        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 10, -1), invalid_argument, "proposed_cuts must be non-negative, got -1");
     }
     TEST_F(TestFImdlp, FitErrorMaxCutPoints)
     {
         auto test = CPPFImdlp(3, 1, 8);
         samples_t X_ = { 1, 2, 2, 3, 4, 2, 3 };
         labels_t y_ = { 0, 0, 1, 2, 3, 4, 5 };
-        EXPECT_THROW_WITH_MESSAGE(test.fit(X_, y_), invalid_argument, "wrong proposed num_cuts value");
+        EXPECT_THROW_WITH_MESSAGE(test.fit(X_, y_), invalid_argument, "proposed_cuts (8) cannot exceed the number of samples (7)");
     }
 
     TEST_F(TestFImdlp, SortIndices)
@@ -381,7 +383,7 @@ namespace mdlp {
         indices = { 0, 1 }; // shorter than expected
 
         // This should trigger the first exception in safe_X_access (idx >= indices.size())
-        EXPECT_THROW_WITH_MESSAGE(safe_X_access(2), std::out_of_range, "Index out of bounds for indices array");
+        EXPECT_THROW_WITH_MESSAGE(safe_X_access(2), std::out_of_range, "Index 2 out of bounds for indices array of size 2");
     }
 
     TEST_F(TestFImdlp, SafeXAccessXOutOfBounds)
@@ -392,7 +394,7 @@ namespace mdlp {
         indices = { 0, 1, 5 }; // indices[2] = 5 is out of bounds for X
 
         // This should trigger the second exception in safe_X_access (real_idx >= X.size())
-        EXPECT_THROW_WITH_MESSAGE(safe_X_access(2), std::out_of_range, "Index out of bounds for X array");
+        EXPECT_THROW_WITH_MESSAGE(safe_X_access(2), std::out_of_range, "Index 5 out of bounds for X array of size 2");
     }
 
     TEST_F(TestFImdlp, SafeYAccessIndexOutOfBounds)
@@ -403,7 +405,7 @@ namespace mdlp {
         indices = { 0, 1 }; // shorter than expected
 
         // This should trigger the first exception in safe_y_access (idx >= indices.size())
-        EXPECT_THROW_WITH_MESSAGE(safe_y_access(2), std::out_of_range, "Index out of bounds for indices array");
+        EXPECT_THROW_WITH_MESSAGE(safe_y_access(2), std::out_of_range, "Index 2 out of bounds for indices array of size 2");
     }
 
     TEST_F(TestFImdlp, SafeYAccessYOutOfBounds)
@@ -414,7 +416,7 @@ namespace mdlp {
         indices = { 0, 1, 5 }; // indices[2] = 5 is out of bounds for y
 
         // This should trigger the second exception in safe_y_access (real_idx >= y.size())
-        EXPECT_THROW_WITH_MESSAGE(safe_y_access(2), std::out_of_range, "Index out of bounds for y array");
+        EXPECT_THROW_WITH_MESSAGE(safe_y_access(2), std::out_of_range, "Index 5 out of bounds for y array of size 2");
     }
 
     TEST_F(TestFImdlp, SafeXAccessEmptyIndices)
@@ -442,7 +444,7 @@ namespace mdlp {
     TEST_F(TestFImdlp, SafeSubtractUnderflow)
     {
         // Test safe_subtract with underflow condition (b > a)
-        EXPECT_THROW_WITH_MESSAGE(safe_subtract(3, 5), std::underflow_error, "Subtraction would cause underflow");
+        EXPECT_THROW_WITH_MESSAGE(safe_subtract(3, 5), std::underflow_error, "Subtraction would underflow: 3 - 5");
     }
     TEST_F(TestFImdlp, TestHeartStatLog)
     {
@@ -467,5 +469,100 @@ namespace mdlp {
             std::cout << value << " ";
         }
         std::cout << std::endl;
+    }
+
+    // T5.1: the rvalue fit() must adopt the caller's allocation rather than copy
+    // it. std::vector move assignment with std::allocator transfers the buffer, so
+    // comparing data() pointers is a guarantee, not an implementation detail.
+    TEST_F(TestFImdlp, FitMoveAdoptsTheCallersBuffer)
+    {
+        samples_t source_X = { 4.7f, 4.7f, 4.8f, 4.8f, 4.9f, 5.1f, 5.2f, 5.3f, 5.7f, 6.0f };
+        labels_t source_y = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
+        const precision_t* X_buffer = source_X.data();
+        const label_t* y_buffer = source_y.data();
+
+        fit(std::move(source_X), std::move(source_y));
+
+        EXPECT_EQ(X_buffer, X.data()) << "X should hold the caller's allocation";
+        EXPECT_EQ(y_buffer, y.data()) << "y should hold the caller's allocation";
+    }
+
+    TEST_F(TestFImdlp, FitMoveMatchesFitCopy)
+    {
+        const samples_t X_source = { 4.7f, 4.7f, 4.8f, 4.8f, 4.9f, 5.1f, 5.2f, 5.3f, 5.7f, 6.0f };
+        const labels_t y_source = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
+
+        samples_t X_copy = X_source;
+        labels_t y_copy = y_source;
+        CPPFImdlp by_copy;
+        by_copy.fit(X_copy, y_copy);
+
+        samples_t X_moved = X_source;
+        labels_t y_moved = y_source;
+        CPPFImdlp by_move;
+        by_move.fit(std::move(X_moved), std::move(y_moved));
+
+        EXPECT_EQ(by_copy.getCutPoints(), by_move.getCutPoints());
+        EXPECT_EQ(by_copy.get_depth(), by_move.get_depth());
+
+        samples_t probe = X_source;
+        EXPECT_EQ(by_copy.transform(probe), by_move.transform(probe));
+    }
+
+    // The base class provides a default rvalue fit() that forwards to the copying
+    // overload, so moving through a Discretizer& works for every subclass.
+    TEST_F(TestFImdlp, FitMoveThroughBaseReference)
+    {
+        const samples_t X_source = { 4.7f, 4.7f, 4.8f, 4.8f, 4.9f, 5.1f, 5.2f, 5.3f, 5.7f, 6.0f };
+        const labels_t y_source = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
+
+        CPPFImdlp concrete;
+        Discretizer& polymorphic = concrete;
+        samples_t X_moved = X_source;
+        labels_t y_moved = y_source;
+        polymorphic.fit(std::move(X_moved), std::move(y_moved));
+
+        samples_t X_copy = X_source;
+        labels_t y_copy = y_source;
+        CPPFImdlp reference;
+        reference.fit(X_copy, y_copy);
+
+        EXPECT_EQ(reference.getCutPoints(), concrete.getCutPoints());
+    }
+
+    // CPPFImdlp holds a Metrics by value. While Metrics contained a std::mutex it
+    // was neither copyable nor movable, which silently deleted CPPFImdlp's copy
+    // and move constructors too. Moving is a prerequisite for the move-semantics
+    // work tracked as T5.1.
+    TEST(FImdlp, IsCopyableAndMovable)
+    {
+        static_assert(std::is_copy_constructible_v<CPPFImdlp>, "CPPFImdlp must be copy constructible");
+        static_assert(std::is_copy_assignable_v<CPPFImdlp>, "CPPFImdlp must be copy assignable");
+        static_assert(std::is_move_constructible_v<CPPFImdlp>, "CPPFImdlp must be move constructible");
+        static_assert(std::is_move_assignable_v<CPPFImdlp>, "CPPFImdlp must be move assignable");
+
+        samples_t X = { 4.7f, 4.7f, 4.7f, 4.8f, 4.8f, 4.9f, 5.1f, 5.2f, 5.3f, 5.7f };
+        labels_t y = { 1, 1, 1, 1, 1, 1, 2, 2, 2, 2 };
+
+        CPPFImdlp original;
+        original.fit(X, y);
+        const auto expected = original.getCutPoints();
+
+        // A copy must reproduce the source's results without sharing its state.
+        CPPFImdlp copied(original);
+        EXPECT_EQ(expected, copied.getCutPoints());
+        const labels_t original_labels = original.transform(X);
+        EXPECT_EQ(original_labels, copied.transform(X));
+
+        // The moved-to object must be fully usable, cut points and transform alike.
+        CPPFImdlp moved(std::move(original));
+        EXPECT_EQ(expected, moved.getCutPoints());
+        EXPECT_EQ(original_labels, moved.transform(X));
+
+        // Refitting the copy on different data must leave the moved-to object alone.
+        samples_t other_X = { 1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f, 3.0f, 3.0f, 3.0f, 3.0f };
+        labels_t other_y = { 0, 0, 0, 1, 1, 1, 2, 2, 2, 2 };
+        copied.fit(other_X, other_y);
+        EXPECT_EQ(expected, moved.getCutPoints());
     }
 }

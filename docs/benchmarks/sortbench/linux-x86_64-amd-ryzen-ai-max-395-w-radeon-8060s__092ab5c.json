@@ -1,0 +1,327 @@
+{
+  "schema": 1,
+  "kind": "sortbench",
+  "platform": {
+    "os": "Linux",
+    "os_description": "Fedora Linux 44 (Toolbx Container Image)",
+    "kernel": "7.1.5-101.fc43.x86_64",
+    "arch": "x86_64",
+    "cpu": "AMD RYZEN AI MAX+ 395 w/ Radeon 8060S",
+    "cpu_count": 32,
+    "cores": null,
+    "ram_bytes": 33255047168,
+    "ram_gib": 31,
+    "label": null,
+    "slug": "linux-x86_64-amd-ryzen-ai-max-395-w-radeon-8060s"
+  },
+  "git": {
+    "commit": "092ab5c",
+    "dirty": false
+  },
+  "source_hash": "67353824e507",
+  "recorded_at": "2026-08-06T19:40:46+00:00",
+  "builds": [
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515"
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515"
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108"
+    }
+  ],
+  "results": [
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515",
+      "shape": "sort<float>",
+      "n": 1000,
+      "min_ms": 0.0041,
+      "median_ms": 0.0042
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515",
+      "shape": "stable_sort<index>",
+      "n": 1000,
+      "min_ms": 0.0129,
+      "median_ms": 0.0131
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515",
+      "shape": "transform(fnptr)",
+      "n": 1000,
+      "min_ms": 0.003,
+      "median_ms": 0.003
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515",
+      "shape": "transform(direct)",
+      "n": 1000,
+      "min_ms": 0.0022,
+      "median_ms": 0.0023
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515",
+      "shape": "sort<float>",
+      "n": 10000,
+      "min_ms": 0.5187,
+      "median_ms": 0.5257
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515",
+      "shape": "stable_sort<index>",
+      "n": 10000,
+      "min_ms": 0.6812,
+      "median_ms": 0.6908
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515",
+      "shape": "transform(fnptr)",
+      "n": 10000,
+      "min_ms": 0.1066,
+      "median_ms": 0.1091
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515",
+      "shape": "transform(direct)",
+      "n": 10000,
+      "min_ms": 0.0223,
+      "median_ms": 0.0231
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515",
+      "shape": "sort<float>",
+      "n": 100000,
+      "min_ms": 6.9076,
+      "median_ms": 7.2619
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515",
+      "shape": "stable_sort<index>",
+      "n": 100000,
+      "min_ms": 8.8639,
+      "median_ms": 9.7631
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515",
+      "shape": "transform(fnptr)",
+      "n": 100000,
+      "min_ms": 1.6043,
+      "median_ms": 1.6127
+    },
+    {
+      "label": "gcc_libstdcxx",
+      "toolchain": "GCC 16 / libstdc++ 20260515",
+      "shape": "transform(direct)",
+      "n": 100000,
+      "min_ms": 1.6242,
+      "median_ms": 1.6383
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515",
+      "shape": "sort<float>",
+      "n": 1000,
+      "min_ms": 0.0032,
+      "median_ms": 0.0032
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515",
+      "shape": "stable_sort<index>",
+      "n": 1000,
+      "min_ms": 0.0076,
+      "median_ms": 0.0078
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515",
+      "shape": "transform(fnptr)",
+      "n": 1000,
+      "min_ms": 0.0018,
+      "median_ms": 0.0018
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515",
+      "shape": "transform(direct)",
+      "n": 1000,
+      "min_ms": 0.0017,
+      "median_ms": 0.0017
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515",
+      "shape": "sort<float>",
+      "n": 10000,
+      "min_ms": 0.3518,
+      "median_ms": 0.3558
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515",
+      "shape": "stable_sort<index>",
+      "n": 10000,
+      "min_ms": 0.4676,
+      "median_ms": 0.4725
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515",
+      "shape": "transform(fnptr)",
+      "n": 10000,
+      "min_ms": 0.0319,
+      "median_ms": 0.0548
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515",
+      "shape": "transform(direct)",
+      "n": 10000,
+      "min_ms": 0.0212,
+      "median_ms": 0.0217
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515",
+      "shape": "sort<float>",
+      "n": 100000,
+      "min_ms": 4.8199,
+      "median_ms": 4.8334
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515",
+      "shape": "stable_sort<index>",
+      "n": 100000,
+      "min_ms": 6.6842,
+      "median_ms": 6.7104
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515",
+      "shape": "transform(fnptr)",
+      "n": 100000,
+      "min_ms": 1.1608,
+      "median_ms": 1.164
+    },
+    {
+      "label": "clang_libstdcxx",
+      "toolchain": "Clang 22 / libstdc++ 20260515",
+      "shape": "transform(direct)",
+      "n": 100000,
+      "min_ms": 1.1718,
+      "median_ms": 1.178
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108",
+      "shape": "sort<float>",
+      "n": 1000,
+      "min_ms": 0.0044,
+      "median_ms": 0.0044
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108",
+      "shape": "stable_sort<index>",
+      "n": 1000,
+      "min_ms": 0.0167,
+      "median_ms": 0.0168
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108",
+      "shape": "transform(fnptr)",
+      "n": 1000,
+      "min_ms": 0.0018,
+      "median_ms": 0.0018
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108",
+      "shape": "transform(direct)",
+      "n": 1000,
+      "min_ms": 0.002,
+      "median_ms": 0.002
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108",
+      "shape": "sort<float>",
+      "n": 10000,
+      "min_ms": 0.0585,
+      "median_ms": 0.0588
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108",
+      "shape": "stable_sort<index>",
+      "n": 10000,
+      "min_ms": 0.4634,
+      "median_ms": 0.4704
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108",
+      "shape": "transform(fnptr)",
+      "n": 10000,
+      "min_ms": 0.035,
+      "median_ms": 0.0414
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108",
+      "shape": "transform(direct)",
+      "n": 10000,
+      "min_ms": 0.0832,
+      "median_ms": 0.1032
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108",
+      "shape": "sort<float>",
+      "n": 100000,
+      "min_ms": 1.6766,
+      "median_ms": 1.6817
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108",
+      "shape": "stable_sort<index>",
+      "n": 100000,
+      "min_ms": 7.0103,
+      "median_ms": 7.0414
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108",
+      "shape": "transform(fnptr)",
+      "n": 100000,
+      "min_ms": 1.1735,
+      "median_ms": 1.1779
+    },
+    {
+      "label": "clang_libcxx",
+      "toolchain": "Clang 22 / libc++ 220108",
+      "shape": "transform(direct)",
+      "n": 100000,
+      "min_ms": 1.1837,
+      "median_ms": 1.1933
+    }
+  ]
+}

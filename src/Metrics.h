@@ -8,23 +8,101 @@
 #define CCMETRICS_H
 
 #include "typesFImdlp.h"
-#include <mutex>
 
 namespace mdlp {
+    /**
+     * @brief Entropy and information gain over a labelled sample in index order
+     *
+     * Metrics evaluates entropy and information gain on half-open intervals
+     * [start, end) of an index array, which supplies the order in which the
+     * labels are visited. Results are memoized per interval.
+     *
+     * ## Ownership
+     *
+     * Metrics holds its own copies of the labels and the index order. Earlier
+     * versions stored references, which C++ cannot rebind: setData() assigned
+     * *through* them, silently overwriting the vectors passed at construction
+     * instead of switching to the new ones. Owning the data also keeps the class
+     * copyable and movable, which a reference or pointer member pointing into a
+     * sibling object could not offer safely.
+     *
+     * ## Thread safety
+     *
+     * Metrics is **not** thread-safe, and callers must synchronize externally to
+     * share one instance across threads. Note that entropy() and
+     * informationGain() mutate internal state even though they read like queries:
+     * both memoize their results.
+     *
+     * Distinct instances share nothing and may be used concurrently without any
+     * synchronization.
+     *
+     * Earlier versions held a mutex around the caches. That advertised a
+     * guarantee the class did not deliver — the data members stayed unguarded, so
+     * a concurrent setData() still raced — while costing lock traffic on every
+     * lookup in what is a single-threaded recursion in
+     * CPPFImdlp::computeCutPoints(). The lock is gone and the contract is now
+     * stated plainly instead.
+     */
     class Metrics {
     protected:
-        labels_t& y;
-        indices_t& indices;
-        int numClasses;
-        mutable std::mutex cache_mutex;
+        labels_t y;
+        indices_t indices;
         cacheEnt_t entropyCache = cacheEnt_t();
         cacheIg_t igCache = cacheIg_t();
     public:
-        Metrics(labels_t&, indices_t&);
-        void setData(const labels_t&, const indices_t&);
-        int computeNumClasses(size_t, size_t);
-        precision_t entropy(size_t, size_t);
-        precision_t informationGain(size_t, size_t, size_t);
+        Metrics() = default;
+
+        /**
+         * @brief Construct with the labels and index order to evaluate
+         * @param y Labels; copied
+         * @param indices Visit order into y; copied
+         */
+        Metrics(const labels_t& y, const indices_t& indices);
+
+        /**
+         * @brief Replace the labels and index order, discarding memoized results
+         * @param y New labels; copied
+         * @param indices New visit order into y; copied
+         *
+         * The vectors passed here are copied, never aliased, so the caller keeps
+         * full ownership of the originals and they are left untouched.
+         */
+        void setData(const labels_t& y, const indices_t& indices);
+
+        /**
+         * @brief Count distinct labels in [start, end)
+         * @return Number of distinct labels, or 0 if the interval is out of range
+         */
+        int computeNumClasses(size_t start, size_t end) const;
+
+        /**
+         * @brief Entropy of a class distribution given as per-class counts
+         * @param counts Occurrences indexed by label; zero entries are skipped
+         * @param nElements Total number of elements, i.e. the sum of counts
+         * @return Entropy in bits
+         *
+         * Shared by entropy() and by CPPFImdlp::getCandidate(), which carries its
+         * counts incrementally. Keeping one implementation is what guarantees the
+         * two cannot drift apart: identical iteration order and identical types
+         * make the results bit-identical, not merely close.
+         *
+         * Trailing zero counts are harmless, so a caller may size its array to the
+         * widest label in a *containing* interval and still get the same answer.
+         */
+        static precision_t entropyFromCounts(const labels_t& counts, int nElements);
+
+        /**
+         * @brief Entropy of [start, end)
+         * @return Entropy in bits, or 0 for intervals shorter than 2 or out of range
+         * @note Memoizes; not const.
+         */
+        precision_t entropy(size_t start, size_t end);
+
+        /**
+         * @brief Information gain of splitting [start, end) at cut
+         * @note Memoizes; not const.
+         */
+        precision_t informationGain(size_t start, size_t cut, size_t end);
     };
 }
 #endif

@@ -13,24 +13,51 @@
 
 namespace mdlp {
 
+    // Both constructors funnel through the config one, so validation lives in a
+    // single place (MDLPConfig::validate) instead of being duplicated here.
     CPPFImdlp::CPPFImdlp(size_t min_length_, int max_depth_, float proposed) :
-        Discretizer(),
-        min_length(min_length_),
-        max_depth(max_depth_),
-        proposed_cuts(proposed)
+        CPPFImdlp(MDLPConfig{}
+            .withMinLength(min_length_)
+            .withMaxDepth(max_depth_)
+            .withProposedCuts(proposed))
     {
-        // Input validation for constructor parameters
-        if (min_length_ < 3) {
-            throw std::invalid_argument("min_length must be greater than 2");
-        }
-        if (max_depth_ < 1) {
-            throw std::invalid_argument("max_depth must be greater than 0");
-        }
-        if (proposed < 0.0f) {
-            throw std::invalid_argument("proposed_cuts must be non-negative");
-        }
+    }
 
+    CPPFImdlp::CPPFImdlp(const MDLPConfig& config) :
+        Discretizer(),
+        min_length(config.min_length),
+        max_depth(config.max_depth),
+        proposed_cuts(config.proposed_cuts)
+    {
+        config.validate();
         direction = bound_dir_t::RIGHT;
+    }
+
+    labels_t CPPFImdlp::discretize(const samples_t& X, const labels_t& y, const MDLPConfig& config)
+    {
+        CPPFImdlp disc(config);
+        samples_t X_copy = X;
+        labels_t y_copy = y;
+        disc.fit(std::move(X_copy), std::move(y_copy));
+        labels_t out;
+        disc.transform(X, out);
+        return out;
+    }
+
+    void CPPFImdlp::throw_indices_empty()
+    {
+        throw IndexError("Indices array is empty");
+    }
+
+    void CPPFImdlp::throw_index_out_of_range(const char* array, size_t idx, size_t size)
+    {
+        throw IndexError("Index " + std::to_string(idx) + " out of bounds for "
+            + array + " of size " + std::to_string(size));
+    }
+
+    void CPPFImdlp::throw_underflow(size_t a, size_t b)
+    {
+        throw UnderflowError("Subtraction would underflow: " + std::to_string(a) + " - " + std::to_string(b));
     }
 
     size_t CPPFImdlp::compute_max_num_cut_points() const
@@ -40,7 +67,7 @@ namespace mdlp {
             return numeric_limits<size_t>::max();
         }
         if (proposed_cuts > static_cast<precision_t>(X.size())) {
-            throw invalid_argument("wrong proposed num_cuts value");
+            throw InvalidParameter("proposed_cuts (" + detail::str(proposed_cuts) + ") cannot exceed the number of samples (" + std::to_string(X.size()) + ")");
         }
         if (proposed_cuts < 1)
             return static_cast<size_t>(round(static_cast<precision_t>(X.size()) * proposed_cuts));
@@ -51,17 +78,38 @@ namespace mdlp {
     {
         X = X_;
         y = y_;
+        fit_impl();
+    }
+
+    void CPPFImdlp::fit(samples_t&& X_, labels_t&& y_)
+    {
+        X = std::move(X_);
+        y = std::move(y_);
+        fit_impl();
+    }
+
+    void CPPFImdlp::fit_impl()
+    {
+        // Validation order is load-bearing: compute_max_num_cut_points() rejects
+        // an out-of-range proposed_cuts before the size checks run, and tests
+        // depend on which message comes out.
         num_cut_points = compute_max_num_cut_points();
         depth = 0;
         discretizedData.clear();
         cutPoints.clear();
         if (X.size() != y.size()) {
-            throw std::invalid_argument("X and y must have the same size: " + std::to_string(X.size()) + " != " + std::to_string(y.size()));
+            throw ValidationError("X and y must have the same size: " + std::to_string(X.size()) + " != " + std::to_string(y.size()));
         }
         if (X.empty() || y.empty()) {
-            throw invalid_argument("X and y must have at least one element");
+            throw ValidationError("X and y must have at least one element");
         }
-        indices = sortIndices(X_, y_);
+        // Must precede the sort: a NaN comparison breaks the strict weak ordering
+        // stable_sort requires, which is undefined behaviour rather than a wrong
+        // answer.
+        validate_finite(X);
+        // Sorts the members, not the caller's vectors: after a move the latter no
+        // longer hold the data.
+        indices = sortIndices(X, y);
         metrics.setData(y, indices);
         computeCutPoints(0, X.size(), 1);
         sort(cutPoints.begin(), cutPoints.end());
@@ -144,9 +192,6 @@ namespace mdlp {
         size_t candidate = numeric_limits<size_t>::max();
         size_t elements = safe_subtract(end, start);
         bool sameValues = true;
-        precision_t entropy_left;
-        precision_t entropy_right;
-        precision_t minEntropy;
         // Check if all the values of the variable in the interval are the same
         for (size_t idx = start + 1; idx < end; idx++) {
             if (safe_X_access(idx) != safe_X_access(start)) {
@@ -156,13 +201,52 @@ namespace mdlp {
         }
         if (sameValues)
             return candidate;
-        minEntropy = metrics.entropy(start, end);
+
+        // Class counts carried incrementally across the scan.
+        //
+        // This loop used to call metrics.entropy(start, idx) and
+        // metrics.entropy(idx, end) at every class boundary. Each of those is a
+        // distinct cache key, so every one was a miss that rescanned its whole
+        // interval — O(n) work at O(n) boundaries, which made fit() quadratic and
+        // cost 8.5 seconds for a single feature of 100,000 samples (measured on
+        // three platforms; see docs/benchmarks.md).
+        //
+        // Moving one element from the right side to the left as idx advances
+        // keeps both distributions up to date in O(1), leaving only the O(k)
+        // entropy evaluation per boundary for k classes.
+        label_t max_label = 0;
+        for (size_t idx = start; idx < end; idx++) {
+            const label_t label = safe_y_access(idx);
+            if (label > max_label) {
+                max_label = label;
+            }
+        }
+        // Sized to the widest label in the whole interval, so both sides share a
+        // layout. Trailing zeros are skipped by entropyFromCounts, which is what
+        // makes each side's result identical to entropy() over the same range.
+        labels_t counts_left(static_cast<size_t>(max_label) + 1, 0);
+        labels_t counts_right(static_cast<size_t>(max_label) + 1, 0);
+        int n_left = 0;
+        int n_right = 0;
+        for (size_t idx = start; idx < end; idx++) {
+            counts_right[static_cast<size_t>(safe_y_access(idx))]++;
+            n_right++;
+        }
+
+        precision_t minEntropy = metrics.entropy(start, end);
         for (size_t idx = start + 1; idx < end; idx++) {
+            const auto moved = static_cast<size_t>(safe_y_access(idx - 1));
+            counts_left[moved]++;
+            n_left++;
+            counts_right[moved]--;
+            n_right--;
             // Cutpoints are always on boundaries (definition 2)
             if (safe_y_access(idx) == safe_y_access(idx - 1))
                 continue;
-            entropy_left = precision_t(idx - start) / static_cast<precision_t>(elements) * metrics.entropy(start, idx);
-            entropy_right = precision_t(end - idx) / static_cast<precision_t>(elements) * metrics.entropy(idx, end);
+            const precision_t entropy_left = precision_t(idx - start) / static_cast<precision_t>(elements)
+                * Metrics::entropyFromCounts(counts_left, n_left);
+            const precision_t entropy_right = precision_t(end - idx) / static_cast<precision_t>(elements)
+                * Metrics::entropyFromCounts(counts_right, n_right);
             if (entropy_left + entropy_right < minEntropy) {
                 minEntropy = entropy_left + entropy_right;
                 candidate = idx;
@@ -202,7 +286,7 @@ namespace mdlp {
         std::iota(idx.begin(), idx.end(), 0);
         stable_sort(idx.begin(), idx.end(), [&X_, &y_](size_t i1, size_t i2) {
             if (i1 >= X_.size() || i2 >= X_.size() || i1 >= y_.size() || i2 >= y_.size()) {
-                throw std::out_of_range("Index out of bounds in sort comparison");
+                throw IndexError("Index out of bounds in sort comparison");
             }
             if (X_[i1] == X_[i2])
                 return y_[i1] < y_[i2];

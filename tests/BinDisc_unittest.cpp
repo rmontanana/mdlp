@@ -12,6 +12,8 @@
 #include "BinDisc.h"
 #include "Experiments.hpp"
 #include <cmath>
+#include <type_traits>
+#include <utility>
 
 #define EXPECT_THROW_WITH_MESSAGE(stmt, etype, whatstring) EXPECT_THROW( \
 try { \
@@ -415,14 +417,14 @@ namespace mdlp {
     {
         // Test when data size is smaller than n_bins
         samples_t X = { 1.0, 2.0 }; // Only 2 elements for 3 bins
-        EXPECT_THROW_WITH_MESSAGE(fit(X), std::invalid_argument, "Input data size must be at least equal to n_bins");
+        EXPECT_THROW_WITH_MESSAGE(fit(X), std::invalid_argument, "Input data size (2) must be at least n_bins (3)");
     }
 
     TEST_F(TestBinDisc3Q, FitDataSizeTooSmall)
     {
         // Test when data size is smaller than n_bins
         samples_t X = { 1.0, 2.0 }; // Only 2 elements for 3 bins
-        EXPECT_THROW_WITH_MESSAGE(fit(X), std::invalid_argument, "Input data size must be at least equal to n_bins");
+        EXPECT_THROW_WITH_MESSAGE(fit(X), std::invalid_argument, "Input data size (2) must be at least n_bins (3)");
     }
 
     TEST_F(TestBinDisc3U, FitWithYEmptyX)
@@ -436,7 +438,7 @@ namespace mdlp {
     TEST_F(TestBinDisc3U, LinspaceInvalidNumPoints)
     {
         // Test linspace with num < 2
-        EXPECT_THROW_WITH_MESSAGE(linspace(0.0f, 1.0f, 1), std::invalid_argument, "Number of points must be at least 2 for linspace");
+        EXPECT_THROW_WITH_MESSAGE(linspace(0.0f, 1.0f, 1), std::invalid_argument, "linspace: num must be at least 2, got 1");
     }
 
     TEST_F(TestBinDisc3U, LinspaceNaNValues)
@@ -469,5 +471,84 @@ namespace mdlp {
         samples_t data = { 1.0f, 2.0f, 3.0f };
         std::vector<precision_t> empty_percentiles = {};
         EXPECT_THROW_WITH_MESSAGE(percentile(data, empty_percentiles), std::invalid_argument, "Percentiles cannot be empty");
+    }
+}
+
+namespace mdlp {
+    // T5.1: only QUANTILE benefits (it sorts a copy today), but both strategies
+    // must give identical results either way.
+    TEST(BinDiscMove, QuantileMoveMatchesCopy)
+    {
+        const samples_t X_source = { 5.0f, 1.0f, 9.0f, 3.0f, 7.0f, 2.0f, 8.0f, 4.0f, 6.0f, 0.0f };
+        const labels_t y_source = { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 };
+
+        samples_t X_copy = X_source;
+        labels_t y_copy = y_source;
+        BinDisc by_copy(4, strategy_t::QUANTILE);
+        by_copy.fit(X_copy, y_copy);
+
+        samples_t X_moved = X_source;
+        labels_t y_moved = y_source;
+        BinDisc by_move(4, strategy_t::QUANTILE);
+        by_move.fit(std::move(X_moved), std::move(y_moved));
+
+        EXPECT_EQ(by_copy.getCutPoints(), by_move.getCutPoints());
+
+        samples_t probe = X_source;
+        EXPECT_EQ(by_copy.transform(probe), by_move.transform(probe));
+    }
+
+    TEST(BinDiscMove, UniformMoveMatchesCopy)
+    {
+        const samples_t X_source = { 5.0f, 1.0f, 9.0f, 3.0f, 7.0f, 2.0f, 8.0f, 4.0f, 6.0f, 0.0f };
+        const labels_t y_source = { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 };
+
+        samples_t X_copy = X_source;
+        labels_t y_copy = y_source;
+        BinDisc by_copy(4, strategy_t::UNIFORM);
+        by_copy.fit(X_copy, y_copy);
+
+        samples_t X_moved = X_source;
+        labels_t y_moved = y_source;
+        BinDisc by_move(4, strategy_t::UNIFORM);
+        by_move.fit(std::move(X_moved), std::move(y_moved));
+
+        EXPECT_EQ(by_copy.getCutPoints(), by_move.getCutPoints());
+    }
+
+    // The samples-only overload also has an rvalue form.
+    TEST(BinDiscMove, SamplesOnlyMoveMatchesCopy)
+    {
+        const samples_t X_source = { 5.0f, 1.0f, 9.0f, 3.0f, 7.0f, 2.0f, 8.0f, 4.0f, 6.0f, 0.0f };
+
+        samples_t X_copy = X_source;
+        BinDisc by_copy(4, strategy_t::QUANTILE);
+        by_copy.fit(X_copy);
+
+        samples_t X_moved = X_source;
+        BinDisc by_move(4, strategy_t::QUANTILE);
+        by_move.fit(std::move(X_moved));
+
+        EXPECT_EQ(by_copy.getCutPoints(), by_move.getCutPoints());
+    }
+
+    TEST(BinDiscMove, RvalueFitRejectsEmptyX)
+    {
+        BinDisc disc(4, strategy_t::QUANTILE);
+        samples_t empty_X;
+        labels_t y = { 0, 1, 0, 1 };
+        EXPECT_THROW_WITH_MESSAGE(disc.fit(std::move(empty_X), std::move(y)),
+            std::invalid_argument, "X cannot be empty");
+    }
+
+    // min_bins became `static constexpr`; a const non-static member would have
+    // deleted these operators for BinDisc and PKIDisc.
+    TEST(BinDiscMove, IsCopyableAndMovable)
+    {
+        static_assert(std::is_copy_constructible_v<BinDisc>, "BinDisc must be copy constructible");
+        static_assert(std::is_copy_assignable_v<BinDisc>, "BinDisc must be copy assignable");
+        static_assert(std::is_move_constructible_v<BinDisc>, "BinDisc must be move constructible");
+        static_assert(std::is_move_assignable_v<BinDisc>, "BinDisc must be move assignable");
+        SUCCEED();
     }
 }

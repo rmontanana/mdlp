@@ -35,9 +35,11 @@ build_Debug
 build_Release
 build_debug
 build_release
+build_bench
 **/lcoverage
 .idea
 cmake-*
 **/CMakeFiles
 **/gcovr-report
 CMakeUserPresets.json
+scripts/__pycache__/

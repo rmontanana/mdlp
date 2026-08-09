@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(fimdlp
-    VERSION 2.1.3
+    VERSION 3.0.0
     LANGUAGES CXX
     DESCRIPTION "Discretization algorithm based on the paper by Fayyad & Irani Multi-Interval Discretization of Continuous-Valued Attributes for Classification Learning."
     HOMEPAGE_URL "https://github.com/rmontanana/mdlp"
@@ -14,8 +14,10 @@ find_package(Torch CONFIG REQUIRED)
 
 # Options
 # -------
-option(ENABLE_TESTING OFF)
-option(COVERAGE       OFF)
+option(ENABLE_TESTING   OFF)
+option(COVERAGE         OFF)
+# Benchmarks are Release-only and off by default: they must never slow `make test`.
+option(ENABLE_BENCHMARK OFF)
 
 add_subdirectory(config)
 
@@ -44,13 +46,23 @@ endif()
 message(STATUS "Building sample")
 add_subdirectory(sample)
 
+if (ENABLE_BENCHMARK)
+    message(STATUS "Benchmarks are enabled")
+    add_subdirectory(bench)
+endif()
+
 include_directories(
     ${fimdlp_SOURCE_DIR}/src
     ${CMAKE_BINARY_DIR}/configured_files/include
 )
 
 add_library(fimdlp src/CPPFImdlp.cpp src/Metrics.cpp src/BinDisc.cpp src/Discretizer.cpp src/PKIDisc.cpp)
-target_link_libraries(fimdlp PRIVATE torch::torch)
+# PUBLIC, not PRIVATE: Discretizer.h includes <torch/torch.h>, so libtorch is part
+# of this library's interface. Declaring it PRIVATE meant consumers of the packaged
+# library got headers they could not compile.
+target_link_libraries(fimdlp PUBLIC torch::torch)
+# The library's own sources build warning-clean; dependencies are not held to it.
+target_compile_options(fimdlp PRIVATE -Wall -Wextra)
 
 # Installation
 # ------------

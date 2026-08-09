@@ -1,155 +1,151 @@
-# Conan Package for fimdlp
+# Conan packaging for fimdlp
 
-This directory contains the Conan package configuration for the fimdlp library.
+How the library is packaged and consumed with Conan 2.
 
 ## Dependencies
 
-The package manages the following dependencies:
+Declared in `conanfile.py`:
 
-### Build Requirements
+| Package | Role |
+|---|---|
+| `libtorch/2.7.1` | Tensor types used by the `*_t` entry points. **Required** — every public header pulls in `torch/torch.h` |
+| `arff-files/1.2.1` | ARFF loading, used by the tests and the sample |
+| `gtest/1.16.0` | Test framework, only when `enable_testing=True` |
 
-- **libtorch/2.4.1** - PyTorch C++ library for tensor operations
+## Building
 
-### Test Requirements (when testing enabled)
-
-- **catch2/3.8.1** - Modern C++ testing framework
-- **arff-files** - ARFF file format support (included locally in tests/lib/Files/)
-
-## Building with Conan
-
-### 1. Install Dependencies and Build
+The Makefile targets are the normal route and handle conan for you:
 
 ```bash
-# Install dependencies
-conan install . --output-folder=build --build=missing
-
-# Build the project
-cd build
-cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
-cmake --build .
+make debug      # Debug + tests + coverage
+make release    # Release, -O3
 ```
 
-### 2. Using the Build Script
+To drive conan directly, note that `conanfile.py` uses `cmake_layout`, so the
+generated toolchain lands under `build/<build_type>/generators/` inside the output
+folder rather than at its root:
 
 ```bash
-# Build release version
-./scripts/build_conan.sh
-
-# Build with tests
-./scripts/build_conan.sh --test
+conan install . --output-folder=build_out --build=missing -s build_type=Release
+cmake -S . -B build_out \
+      -DCMAKE_TOOLCHAIN_FILE=build_out/build/Release/generators/conan_toolchain.cmake \
+      -DCMAKE_BUILD_TYPE=Release
+cmake --build build_out
 ```
 
-## Creating a Package
+That path is exactly what `make release` does. There is no wrapper script: the one
+that existed pointed at the pre-`cmake_layout` toolchain location and had stopped
+working.
 
-### 1. Create Package Locally
+## Creating a package
 
 ```bash
-conan create . --profile:build=default --profile:host=default
+make conan-create
 ```
 
-### 2. Create Package with Options
+That builds a Release and a Debug package. The Release one runs `test_package`,
+which compiles a consumer against the *installed* headers — the only check that the
+packaged library is usable rather than merely buildable in place.
+
+The version is **not** written in the recipe. `conanfile.py::set_version` reads it
+by regex from the `project(fimdlp VERSION ...)` line in `CMakeLists.txt`, so
+bumping `CMakeLists.txt` is the only edit a release needs.
+
+## Publishing to Cimmeria
 
 ```bash
-# Create with testing enabled
-conan create . -o enable_testing=True --profile:build=default --profile:host=default
-
-# Create shared library version
-conan create . -o shared=True --profile:build=default --profile:host=default
+conan remote add Cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
+conan remote login Cimmeria <username>
+make conan-upload
 ```
 
-### 3. Using the Package Creation Script
+`make conan-upload` reads the version from `CMakeLists.txt` and refuses to run if
+the remote is not configured.
 
-```bash
-./scripts/create_package.sh
-```
+The remote name is **`Cimmeria`, capitalised**, matching the last path segment of
+its URL. Conan remote names are case sensitive and the lookup in `make
+conan-upload` is a plain `grep`, so a lowercase `cimmeria` silently fails to match
+and the target reports the remote as unconfigured.
 
-## Uploading to Cimmeria
+## Consuming the package
 
-### 1. Configure Remote
-
-```bash
-# Add Cimmeria remote
-conan remote add cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
-
-# Login to Cimmeria
-conan remote login cimmeria <username>
-```
-
-### 2. Upload Package
-
-```bash
-# Upload the package
-conan upload fimdlp/2.1.0 --remote=cimmeria --all
-
-# Or use the script (will configure remote instructions if not set up)
-./scripts/create_package.sh
-```
-
-## Using the Package
-
-### In conanfile.txt
+`conanfile.txt`:
 
 ```ini
 [requires]
-fimdlp/2.1.0
+fimdlp/3.0.0
 
 [generators]
 CMakeDeps
 CMakeToolchain
 ```
 
-### In conanfile.py
+`conanfile.py`:
 
 ```python
 def requirements(self):
-    self.requires("fimdlp/2.1.0")
+    self.requires("fimdlp/3.0.0")
 ```
 
-### In CMakeLists.txt
+`CMakeLists.txt`:
 
 ```cmake
 find_package(fimdlp REQUIRED)
 target_link_libraries(your_target fimdlp::fimdlp)
 ```
 
-## Package Options
+## Package options
 
 | Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| shared | True/False | False | Build shared library |
-| fPIC | True/False | True | Position independent code |
-| enable_testing | True/False | False | Enable test suite |
-| enable_sample | True/False | False | Build sample program |
+|---|---|---|---|
+| `shared` | True/False | False | Build a shared library |
+| `fPIC` | True/False | True | Position independent code (removed on Windows) |
+| `enable_testing` | True/False | False | Build and run the test suite |
+| `enable_sample` | True/False | False | Build the sample program |
 
-## Example Usage
+## Example
 
 ```cpp
 #include <fimdlp/CPPFImdlp.h>
-#include <fimdlp/Metrics.h>
+#include <fimdlp/DiscretizerConfig.h>
 
-int main() {
-    // Create MDLP discretizer
-    CPPFImdlp discretizer;
-    
-    // Calculate entropy
-    Metrics metrics;
-    std::vector<int> labels = {0, 1, 0, 1, 1};
-    double entropy = metrics.entropy(labels);
-    
+#include <iostream>
+#include <vector>
+
+int main()
+{
+    mdlp::samples_t X = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f };
+    mdlp::labels_t  y = { 0, 0, 0, 1, 1, 1 };
+
+    // One call, result returned by value.
+    const auto bins = mdlp::CPPFImdlp::discretize(X, y);
+
+    // Or keep the model to transform more data later.
+    mdlp::CPPFImdlp disc(mdlp::MDLPConfig{}.withMaxDepth(10));
+    disc.fit(X, y);
+    const auto cuts = disc.getCutPoints();
+
+    for (const auto bin : bins) {
+        std::cout << bin << ' ';
+    }
+    std::cout << "\ncut points: " << cuts.size() << '\n';
     return 0;
 }
 ```
 
-## Testing
-
-The package includes comprehensive tests that can be enabled with:
-
-```bash
-conan create . -o enable_testing=True
-```
+Everything lives in namespace `mdlp`. See [MIGRATION.md](MIGRATION.md) for the 3.0.0
+API and [ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit together.
 
 ## Requirements
 
-- C++17 compatible compiler
+- C++17 compiler
 - CMake 3.20 or later
 - Conan 2.0 or later
+
+## A note on libtorch
+
+`Discretizer.h` includes `torch/torch.h`, so **every** consumer links libtorch even
+if it only uses the `std::vector` API. That coupling is wider than it needs to be
+and has a practical consequence: because libtorch arrives prebuilt against
+libstdc++, the library cannot be built against libc++ without rebuilding libtorch
+from source. See the note at the end of [ARCHITECTURE.md](ARCHITECTURE.md).

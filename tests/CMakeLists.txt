@@ -36,6 +36,30 @@ target_link_libraries(PKIDisc_unittest GTest::gtest_main torch::torch)
 target_compile_options(PKIDisc_unittest PRIVATE --coverage)
 target_link_options(PKIDisc_unittest PRIVATE --coverage)
 
+add_executable(Exceptions_unittest Exceptions_unittest.cpp
+${fimdlp_SOURCE_DIR}/src/CPPFImdlp.cpp ${fimdlp_SOURCE_DIR}/src/Metrics.cpp ${fimdlp_SOURCE_DIR}/src/BinDisc.cpp ${fimdlp_SOURCE_DIR}/src/Discretizer.cpp)
+target_link_libraries(Exceptions_unittest GTest::gtest_main torch::torch)
+target_compile_options(Exceptions_unittest PRIVATE --coverage)
+target_link_options(Exceptions_unittest PRIVATE --coverage)
+
+add_executable(Config_unittest Config_unittest.cpp
+${fimdlp_SOURCE_DIR}/src/CPPFImdlp.cpp ${fimdlp_SOURCE_DIR}/src/Metrics.cpp ${fimdlp_SOURCE_DIR}/src/BinDisc.cpp ${fimdlp_SOURCE_DIR}/src/PKIDisc.cpp ${fimdlp_SOURCE_DIR}/src/Discretizer.cpp)
+target_link_libraries(Config_unittest GTest::gtest_main torch::torch)
+target_compile_options(Config_unittest PRIVATE --coverage)
+target_link_options(Config_unittest PRIVATE --coverage)
+
+add_executable(Security_unittest Security_unittest.cpp
+${fimdlp_SOURCE_DIR}/src/CPPFImdlp.cpp ${fimdlp_SOURCE_DIR}/src/Metrics.cpp ${fimdlp_SOURCE_DIR}/src/BinDisc.cpp ${fimdlp_SOURCE_DIR}/src/PKIDisc.cpp ${fimdlp_SOURCE_DIR}/src/Discretizer.cpp)
+target_link_libraries(Security_unittest GTest::gtest_main torch::torch)
+target_compile_options(Security_unittest PRIVATE --coverage)
+target_link_options(Security_unittest PRIVATE --coverage)
+
+add_executable(RealDatasets_unittest RealDatasets_unittest.cpp
+${fimdlp_SOURCE_DIR}/src/CPPFImdlp.cpp ${fimdlp_SOURCE_DIR}/src/Metrics.cpp ${fimdlp_SOURCE_DIR}/src/Discretizer.cpp)
+target_link_libraries(RealDatasets_unittest GTest::gtest_main torch::torch)
+target_compile_options(RealDatasets_unittest PRIVATE --coverage)
+target_link_options(RealDatasets_unittest PRIVATE --coverage)
+
 include(GoogleTest)
 
 gtest_discover_tests(Metrics_unittest)
@@ -43,3 +67,7 @@ gtest_discover_tests(FImdlp_unittest)
 gtest_discover_tests(BinDisc_unittest)
 gtest_discover_tests(Discretizer_unittest)
 gtest_discover_tests(PKIDisc_unittest)
+gtest_discover_tests(RealDatasets_unittest)
+gtest_discover_tests(Exceptions_unittest)
+gtest_discover_tests(Config_unittest)
+gtest_discover_tests(Security_unittest)

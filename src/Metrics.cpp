@@ -7,16 +7,14 @@
 #include "Metrics.h"
 #include <set>
 #include <cmath>
-#include <iostream>
 
 using namespace std;
 namespace mdlp {
-    Metrics::Metrics(labels_t& y_, indices_t& indices_) : y(y_), indices(indices_),
-        numClasses(computeNumClasses(0, indices_.size()))
+    Metrics::Metrics(const labels_t& y_, const indices_t& indices_) : y(y_), indices(indices_)
     {
     }
 
-    int Metrics::computeNumClasses(size_t start, size_t end)
+    int Metrics::computeNumClasses(size_t start, size_t end) const
     {
         set<int> nClasses;
         if (indices.empty() || start >= indices.size() || end > indices.size()) {
@@ -32,36 +30,30 @@ namespace mdlp {
 
     void Metrics::setData(const labels_t& y_, const indices_t& indices_)
     {
-        std::lock_guard<std::mutex> lock(cache_mutex);
-        indices = indices_;
+        // Copies, never aliases: the caller's vectors are left untouched.
         y = y_;
-        numClasses = computeNumClasses(0, indices.size());
+        indices = indices_;
         entropyCache.clear();
         igCache.clear();
     }
 
     precision_t Metrics::entropy(size_t start, size_t end)
     {
-        if (end - start < 2)
+        // end <= start must be tested first: the subtraction is unsigned, so an
+        // inverted interval would wrap to a huge value and slip past the guard.
+        if (end <= start || end - start < 2)
             return 0;
 
-        // Check cache first with read lock
-        {
-            std::lock_guard<std::mutex> lock(cache_mutex);
-            if (entropyCache.find({ start, end }) != entropyCache.end()) {
-                return entropyCache[{start, end}];
-            }
+        if (const auto cached = entropyCache.find({ start, end }); cached != entropyCache.end()) {
+            return cached->second;
         }
 
-        // Compute entropy outside of lock
-        precision_t p;
-        precision_t ventropy = 0;
         int nElements = 0;
-        
+
         if (indices.empty() || start >= indices.size() || end > indices.size()) {
             return 0;
         }
-        
+
         // First pass: find max label to size counts array properly
         size_t max_label = 0;
         for (size_t i = start; i < end; ++i) {
@@ -73,9 +65,9 @@ namespace mdlp {
                 max_label = label;
             }
         }
-        
+
         labels_t counts(max_label + 1, 0);
-        
+
         // Second pass: count occurrences
         for (size_t i = start; i < end; ++i) {
             if (i >= indices.size()) break;
@@ -85,33 +77,33 @@ namespace mdlp {
             counts[label]++;
             nElements++;
         }
+        const precision_t ventropy = entropyFromCounts(counts, nElements);
+
+        entropyCache[{start, end}] = ventropy;
+        return ventropy;
+    }
+
+    precision_t Metrics::entropyFromCounts(const labels_t& counts, int nElements)
+    {
+        precision_t ventropy = 0;
+        if (nElements <= 0) {
+            return ventropy;
+        }
         for (auto count : counts) {
             if (count > 0) {
-                p = static_cast<precision_t>(count) / static_cast<precision_t>(nElements);
+                const precision_t p = static_cast<precision_t>(count) / static_cast<precision_t>(nElements);
                 ventropy -= p * log2(p);
             }
         }
-
-        // Update cache with write lock
-        {
-            std::lock_guard<std::mutex> lock(cache_mutex);
-            entropyCache[{start, end}] = ventropy;
-        }
-
         return ventropy;
     }
 
     precision_t Metrics::informationGain(size_t start, size_t cut, size_t end)
     {
-        // Check cache first with read lock
-        {
-            std::lock_guard<std::mutex> lock(cache_mutex);
-            if (igCache.find(make_tuple(start, cut, end)) != igCache.end()) {
-                return igCache[make_tuple(start, cut, end)];
-            }
+        if (const auto cached = igCache.find(make_tuple(start, cut, end)); cached != igCache.end()) {
+            return cached->second;
         }
 
-        // Compute information gain outside of lock
         precision_t iGain;
         precision_t entropyInterval;
         precision_t entropyLeft;
@@ -128,12 +120,7 @@ namespace mdlp {
                 static_cast<precision_t>(nElementsRight) * entropyRight) /
             static_cast<precision_t>(nElements);
 
-        // Update cache with write lock
-        {
-            std::lock_guard<std::mutex> lock(cache_mutex);
-            igCache[make_tuple(start, cut, end)] = iGain;
-        }
-
+        igCache[make_tuple(start, cut, end)] = iGain;
         return iGain;
     }
 

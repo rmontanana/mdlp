@@ -50,8 +50,12 @@ class FimdlpConan(ConanFile):
             self.options.rm_safe("fPIC")
     
     def requirements(self):
-        # PyTorch dependency for tensor operations
-        self.requires("libtorch/2.7.1")
+        # PyTorch dependency for tensor operations.
+        # transitive_headers because Discretizer.h includes <torch/torch.h>, so any
+        # consumer needs libtorch's include path to compile fimdlp's own headers;
+        # transitive_libs because they then need to link it too. Without these the
+        # published package fails to compile in test_package.
+        self.requires("libtorch/2.7.1", transitive_headers=True, transitive_libs=True)
         
     def build_requirements(self):
         self.requires("arff-files/1.2.1") # for tests and sample

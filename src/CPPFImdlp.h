@@ -13,6 +13,8 @@
 #include <string>
 #include "Metrics.h"
 #include "Discretizer.h"
+#include "Exceptions.h"
+#include "DiscretizerConfig.h"
 
 namespace mdlp {
     /**
@@ -82,11 +84,37 @@ namespace mdlp {
          * @param max_depth_ Maximum recursion depth (default: unlimited)
          * @param proposed Number of proposed cuts (default: 0 = no limit)
          * 
-         * @throws std::invalid_argument if min_length < 3
-         * @throws std::invalid_argument if max_depth < 1
-         * @throws std::invalid_argument if proposed < 0
+         * @throws InvalidParameter (also a `std::invalid_argument`) if min_length < 3,
+         *         max_depth < 1, or proposed < 0
          */
         CPPFImdlp(size_t min_length_, int max_depth_, float proposed);
+
+        /**
+         * @brief Construct from a named configuration
+         * @param config Parameters; validated exactly as the positional form is
+         * @throws InvalidParameter if any parameter is out of range
+         *
+         * @code
+         * CPPFImdlp disc(MDLPConfig{}.withMinLength(5).withMaxDepth(10));
+         * @endcode
+         */
+        explicit CPPFImdlp(const MDLPConfig& config);
+
+        /**
+         * @brief Fit and transform in one call, returning an owned result
+         * @param X Input samples
+         * @param y Labels
+         * @param config Parameters; defaults to the library defaults
+         * @return Discretized labels, by value
+         *
+         * Sugar for the three-line fit/transform dance, and safe in a way the
+         * member `fit_transform` is not: that returns a reference into the
+         * discretizer's own storage, so calling it on a temporary
+         * (`CPPFImdlp().fit_transform(X, y)`) leaves a dangling reference. This
+         * returns a value and owns nothing afterwards.
+         */
+        static labels_t discretize(const samples_t& X, const labels_t& y,
+            const MDLPConfig& config = {});
 
         virtual ~CPPFImdlp() = default;
 
@@ -103,6 +131,19 @@ namespace mdlp {
         void fit(samples_t& X_, labels_t& y_) override;
 
         /**
+         * @brief Fit the discretizer, adopting the caller's buffers
+         * @param X_ Input samples; surrendered by the caller
+         * @param y_ Labels; surrendered by the caller
+         *
+         * Same result as the copying overload, without duplicating X_ and y_ into
+         * this object. Note that Metrics still keeps its own copy of the labels,
+         * so this halves rather than eliminates the extra memory.
+         *
+         * @warning If this throws, X_ and y_ have already been moved from.
+         */
+        void fit(samples_t&& X_, labels_t&& y_) override;
+
+        /**
          * @brief Get the maximum depth reached during fitting
          * @return Maximum recursion depth
          */
@@ -116,9 +157,22 @@ namespace mdlp {
         indices_t indices = indices_t();
         samples_t X = samples_t();
         labels_t y = labels_t();
-        Metrics metrics = Metrics(y, indices);
+        // Default-constructed: fit() calls metrics.setData(y, indices) before any
+        // evaluation. It must not be constructed from this object's own y/indices,
+        // which would make the class unsafe to copy or move.
+        Metrics metrics;
         size_t num_cut_points = numeric_limits<size_t>::max();
         static indices_t sortIndices(samples_t&, labels_t&);
+
+        // Out of line and [[noreturn]] on purpose. These are the cold paths of
+        // safe_X_access and safe_y_access, which are inline and called once per
+        // element in getCandidate's scan. Building the message inside those
+        // functions made them too big to inline and cost 12% on fit().
+        [[noreturn]] static void throw_indices_empty();
+        [[noreturn]] static void throw_index_out_of_range(const char* array, size_t idx, size_t size);
+        [[noreturn]] static void throw_underflow(size_t a, size_t b);
+        // Shared body of both fit() overloads; assumes X and y are already set.
+        void fit_impl();
         void computeCutPoints(size_t, size_t, int);
         void resizeCutPoints();
         bool mdlp(size_t, size_t, size_t);
@@ -130,19 +184,19 @@ namespace mdlp {
          * @brief Safely access X array with bounds checking
          * @param idx Index in the indices array
          * @return Value from X array
-         * @throws std::out_of_range if index is out of bounds
+         * @throws IndexError (also a `std::out_of_range`) if the index is out of bounds
          */
         inline precision_t safe_X_access(size_t idx) const
         {
             if (indices.empty()) {
-                throw std::out_of_range("Indices array is empty");
+                throw_indices_empty();
             }
             if (idx >= indices.size()) {
-                throw std::out_of_range("Index out of bounds for indices array");
+                throw_index_out_of_range("indices array", idx, indices.size());
             }
             size_t real_idx = indices[idx];
             if (real_idx >= X.size()) {
-                throw std::out_of_range("Index out of bounds for X array");
+                throw_index_out_of_range("X array", real_idx, X.size());
             }
             return X[real_idx];
         }
@@ -151,19 +205,19 @@ namespace mdlp {
          * @brief Safely access y array with bounds checking
          * @param idx Index in the indices array
          * @return Value from y array
-         * @throws std::out_of_range if index is out of bounds
+         * @throws IndexError (also a `std::out_of_range`) if the index is out of bounds
          */
         inline label_t safe_y_access(size_t idx) const
         {
             if (indices.empty()) {
-                throw std::out_of_range("Indices array is empty");
+                throw_indices_empty();
             }
             if (idx >= indices.size()) {
-                throw std::out_of_range("Index out of bounds for indices array");
+                throw_index_out_of_range("indices array", idx, indices.size());
             }
             size_t real_idx = indices[idx];
             if (real_idx >= y.size()) {
-                throw std::out_of_range("Index out of bounds for y array");
+                throw_index_out_of_range("y array", real_idx, y.size());
             }
             return y[real_idx];
         }
@@ -173,12 +227,12 @@ namespace mdlp {
          * @param a First value
          * @param b Value to subtract
          * @return Result of a - b
-         * @throws std::underflow_error if b > a
+         * @throws UnderflowError (also a `std::underflow_error`) if b > a
          */
         inline size_t safe_subtract(size_t a, size_t b) const
         {
             if (b > a) {
-                throw std::underflow_error("Subtraction would cause underflow");
+                throw_underflow(a, b);
             }
             return a - b;
         }

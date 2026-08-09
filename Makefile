@@ -1,10 +1,16 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: debug release install test conan-create viewcoverage
+# Every target here is a command, not a file. `bench` collides with the bench/
+# directory, so this is load-bearing rather than hygiene: without the entry, make
+# would report the directory as up to date and run nothing. Keep this list in step
+# with the targets below.
+.PHONY: debug release install test bench bench-report sortbench sortbench-report \
+        viewcoverage info conan-create conan-upload help
 lcov := lcov
 
 f_debug = build_debug
 f_release = build_release
+f_bench = build_bench
 genhtml = genhtml
 docscdir = docs
 
@@ -59,23 +65,45 @@ test: ## Build Debug version and run tests
 	@cp -r tests/datasets $(f_debug)/tests/datasets
 	@cd $(f_debug)/tests && ctest --output-on-failure -j 8
 	@echo ">>> Generating coverage report..."
-	@cd $(f_debug)/tests && $(lcov) --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch --ignore-errors inconsistent --output-file coverage.info >/dev/null 2>&1; \
-	$(lcov) --remove coverage.info '/usr/*' --output-file coverage.info >/dev/null 2>&1; \
-	$(lcov) --remove coverage.info 'lib/*' --output-file coverage.info >/dev/null 2>&1; \
-	$(lcov) --remove coverage.info 'libtorch/*' --output-file coverage.info >/dev/null 2>&1; \
-	$(lcov) --remove coverage.info 'tests/*' --output-file coverage.info >/dev/null 2>&1; \
-	$(lcov) --remove coverage.info 'gtest/*' --output-file coverage.info >/dev/null 2>&1; \
-	$(lcov) --remove coverage.info '*/.conan2/*' --ignore-errors unused --output-file coverage.info >/dev/null 2>&1;
-	@genhtml $(f_debug)/tests/coverage.info --demangle-cpp --output-directory $(f_debug)/tests/coverage --title "Discretizer mdlp Coverage Report" -s -k -f --legend
+	@cd $(f_debug)/tests && $(lcov) --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch,mismatch --ignore-errors inconsistent,inconsistent --ignore-errors gcov,gcov --output-file coverage.info >/dev/null; \
+	$(lcov) --remove coverage.info '/usr/*' 'v1/*' 'lib/*' 'libtorch/*' 'tests/*' 'gtest/*' '*/.conan2/*' '/Applications/*' --ignore-errors unused,unused --output-file coverage.info >/dev/null
+	@echo "--- Lcov generate coverage.info"
+	@genhtml $(f_debug)/tests/coverage.info --demangle-cpp --output-directory $(f_debug)/tests/coverage --ignore-errors category,category --title "Discretizer mdlp Coverage Report" -s -k -f --legend >/dev/null
 	@echo "* Coverage report is generated at $(f_debug)/tests/coverage/index.html"
-	@which python || (echo ">>> Please install python"; exit 1)
+	@which $(python3) >/dev/null || (echo ">>> Please install python3"; exit 1)
 	@if [ ! -f $(f_debug)/tests/coverage.info ]; then \
 		echo ">>> No coverage.info file found!"; \
 		exit 1; \
 	fi
 	@echo ">>> Updating coverage badge..."
-	@env python update_coverage.py $(f_debug)/tests
-	@echo ">>> Done"
+	@$(python3) scripts/update_coverage.py $(f_debug)/tests
+	@echo ">>> Done"  
+
+# Benchmarks
+# ----------
+# LEVEL=quick stops at n=10,000 (seconds); LEVEL=full adds n=100,000 (minutes).
+# LABEL disambiguates machines with the same CPU, e.g. LABEL=studio.
+LEVEL ?= full
+LABEL ?=
+python3 := python3
+
+bench: ## Build and run the benchmarks, storing the result (LEVEL=quick|full, LABEL=name)
+	@echo ">>> Building benchmarks (Release)..."
+	@if [ -d $(f_bench) ]; then rm -fr $(f_bench); fi
+	@conan install . --build=missing -of $(f_bench) -s build_type=Release -o enable_testing=False
+	@cmake -S . -B $(f_bench) -DCMAKE_TOOLCHAIN_FILE=$(f_bench)/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BENCHMARK=ON
+	@cmake --build $(f_bench) --config Release -j $(JOBS)
+	@echo ">>> Running benchmarks..."
+	@$(python3) scripts/benchmarks.py run --level $(LEVEL) $(if $(LABEL),--label $(LABEL),)
+
+bench-report: ## Regenerate the cross-platform benchmark comparison
+	@$(python3) scripts/benchmarks.py report
+
+sortbench: ## Toolchain diagnostic: compare std::sort/stable_sort across compilers and stdlibs
+	@bash bench/sortbench/run.sh
+
+sortbench-report: ## Regenerate the cross-machine toolchain comparison
+	@$(python3) scripts/benchmarks.py sortbench-report
 
 viewcoverage: ## View the html coverage report
 	@which $(genhtml) >/dev/null || (echo ">>> Please install lcov (genhtml not found)"; exit 1)
@@ -104,11 +132,29 @@ info: ## Show project information
 	@echo ""
 	@printf "   $(YELLOW)Parallel Jobs:   $(GREEN)$(JOBS)$(NC)\n"
 
-conan-create: ## Create the conan package
-	@echo ">>> Creating the conan package..."
-	conan create . --build=missing -tf "" -s:a build_type=Release 
+# Release runs test_package, which compiles a consumer against the installed
+# headers. That is the only check that the *packaged* library is usable, and it
+# was being skipped with -tf "" while both it and the package were broken.
+# Debug still skips it: one consumer check per create is enough.
+conan-create: ## Create the conan packages (Release runs test_package)
+	@echo ">>> Creating the conan package (Release)..."
+	conan create . --build=missing -s:a build_type=Release
+	@echo ">>> Creating the conan package (Debug)..."
 	conan create . --build=missing -tf "" -s:a build_type=Debug -o "&:enable_testing=False"
 	@echo ">>> Done"
+
+conan-upload: ## Upload the created packages to the Cimmeria remote
+	@version=$$(grep -A2 "project(fimdlp" CMakeLists.txt | sed -n 's/.*VERSION \([0-9.]*\).*/\1/p' | head -1); \
+	if [ -z "$$version" ]; then echo ">>> Could not read the version from CMakeLists.txt"; exit 1; fi; \
+	if ! conan remote list | grep -q "Cimmeria"; then \
+		echo ">>> Remote 'Cimmeria' is not configured. To set it up:"; \
+		echo "    conan remote add Cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria"; \
+		echo "    conan remote login Cimmeria <username>"; \
+		exit 1; \
+	fi; \
+	echo ">>> Uploading fimdlp/$$version to Cimmeria..."; \
+	conan upload fimdlp/$$version --remote=Cimmeria; \
+	echo ">>> Done"
 
 help: ## Show help message
 	@IFS=$$'\n' ; \
