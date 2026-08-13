@@ -35,7 +35,7 @@ define build_target
 	@if [ -d $(2) ]; then rm -fr $(2); fi
 	@conan install . --build=missing -of $(2) -s build_type=$(1) $(4)
 	@cmake -S . -B $(2) -DCMAKE_TOOLCHAIN_FILE=$(2)/build/$(1)/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=$(1) -D$(3)
-	@cmake --build $(2) --config $(1) -j 8
+	@cmake --build $(2) --config $(1) -j $(JOBS)
 endef
 
 define status_file_folder
@@ -61,13 +61,13 @@ release: ## Build Release version of the library
 
 install: ## Install the library
 	@echo ">>> Installing the project..."
-	@cmake --build $(f_release) --target install -j 8		
+	@cmake --build $(f_release) --target install -j $(JOBS)
 
 test: ## Build Debug version and run tests
 	@echo ">>> Building Debug version and running tests..."
 	@$(MAKE) debug;
 	@cp -r tests/datasets $(f_debug)/tests/datasets
-	@cd $(f_debug)/tests && ctest --output-on-failure -j 8
+	@cd $(f_debug)/tests && ctest --output-on-failure -j $(JOBS)
 	@echo ">>> Generating coverage report..."
 	@cd $(f_debug)/tests && $(lcov) --capture --directory ../ --demangle-cpp --ignore-errors source,source --ignore-errors mismatch,mismatch --ignore-errors inconsistent,inconsistent --ignore-errors gcov,gcov --output-file coverage.info >/dev/null; \
 	$(lcov) --remove coverage.info '/usr/*' 'v1/*' 'lib/*' 'libtorch/*' 'tests/*' 'gtest/*' '*/.conan2/*' '/Applications/*' --ignore-errors unused,unused --output-file coverage.info >/dev/null
