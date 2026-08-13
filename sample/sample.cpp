@@ -12,7 +12,7 @@
 #include <cstring>
 #include <getopt.h>
 #include <torch/torch.h>
-#include <ArffFiles.hpp>
+#include <ArffFiles/ArffFiles.hpp>
 #include "Discretizer.h"
 #include "CPPFImdlp.h"
 #include "BinDisc.h"
@@ -97,7 +97,7 @@ tuple<string, string, int, int, float> parse_arguments(int argc, char** argv)
 void process_file(const string& path, const string& file_name, bool class_last, int max_depth, int min_length,
     float max_cutpoints)
 {
-    ArffFiles file;
+    ArffFiles::ArffFiles file;
 
     file.load(path + file_name + ".arff", class_last);
     const auto attributes = file.getAttributes();
@@ -170,7 +170,7 @@ void process_all_files(const map<string, bool>& datasets, const string& path, in
     printf("%-20s %4s %4s\n", "Dataset", "Feat", "Cuts Time(ms)");
     printf("==================== ==== ==== ========\n");
     for (const auto& dataset : datasets) {
-        ArffFiles file;
+        ArffFiles::ArffFiles file;
         file.load(path + dataset.first + ".arff", dataset.second);
         auto attributes = file.getAttributes();
         std::vector<mdlp::samples_t>& X = file.getX();

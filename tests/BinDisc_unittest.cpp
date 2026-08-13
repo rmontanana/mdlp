@@ -8,7 +8,7 @@
 #include <string>
 #include <iostream>
 #include "gtest/gtest.h"
-#include <ArffFiles.hpp>
+#include <ArffFiles/ArffFiles.hpp>
 #include "BinDisc.h"
 #include "Experiments.hpp"
 #include <cmath>

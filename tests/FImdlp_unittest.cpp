@@ -8,7 +8,7 @@
 #include <iostream>
 #include <type_traits>
 #include <utility>
-#include <ArffFiles.hpp>
+#include <ArffFiles/ArffFiles.hpp>
 #include "gtest/gtest.h"
 #include "Metrics.h"
 #include "CPPFImdlp.h"
@@ -88,7 +88,7 @@ namespace mdlp {
         void test_dataset(CPPFImdlp& test, const string& filename, vector<cutPoints_t>& expected,
             vector<int>& depths) const
         {
-            ArffFiles file;
+            ArffFiles::ArffFiles file;
             file.load(data_path + filename + ".arff", true);
             vector<samples_t>& X = file.getX();
             labels_t& y = file.getY();
@@ -359,7 +359,7 @@ namespace mdlp {
             4, 0, 3, 0, 1, 4, 3, 5, 0, 0, 4, 1, 1, 0, 4, 4, 1, 3, 1, 3, 1, 5,
             1, 1, 0, 3, 5, 4, 3, 4, 4, 4, 0, 4, 4, 3, 0, 3, 5, 3
         };
-        ArffFiles file;
+        ArffFiles::ArffFiles file;
         file.load(data_path + "iris.arff", true);
         vector<samples_t>& X = file.getX();
         labels_t& y = file.getY();
@@ -448,7 +448,7 @@ namespace mdlp {
     }
     TEST_F(TestFImdlp, TestHeartStatLog)
     {
-        ArffFiles file;
+        ArffFiles::ArffFiles file;
         file.load(data_path + "heart-statlog.arff", true);
         vector<samples_t>& X = file.getX();
         labels_t& y = file.getY();

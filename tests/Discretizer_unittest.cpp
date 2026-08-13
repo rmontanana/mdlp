@@ -7,7 +7,7 @@
 #include <fstream>
 #include <string>
 #include <iostream>
-#include <ArffFiles.hpp>
+#include <ArffFiles/ArffFiles.hpp>
 #include "gtest/gtest.h"
 #include "Discretizer.h"
 #include "BinDisc.h"
@@ -45,7 +45,7 @@ namespace mdlp {
     }
     TEST(Discretizer, BinIrisUniform)
     {
-        ArffFiles file;
+        ArffFiles::ArffFiles file;
         Discretizer* disc = new BinDisc(4, strategy_t::UNIFORM);
         file.load(data_path + "iris.arff", true);
         vector<samples_t>& X = file.getX();
@@ -58,7 +58,7 @@ namespace mdlp {
     }
     TEST(Discretizer, BinIrisQuantile)
     {
-        ArffFiles file;
+        ArffFiles::ArffFiles file;
         Discretizer* disc = new BinDisc(4, strategy_t::QUANTILE);
         file.load(data_path + "iris.arff", true);
         vector<samples_t>& X = file.getX();
@@ -71,7 +71,7 @@ namespace mdlp {
 
     TEST(Discretizer, BinIrisQuantileTorch)
     {
-        ArffFiles file;
+        ArffFiles::ArffFiles file;
         Discretizer* disc = new BinDisc(4, strategy_t::QUANTILE);
         file.load(data_path + "iris.arff", true);
         auto X = file.getX();
@@ -88,7 +88,7 @@ namespace mdlp {
     }
     TEST(Discretizer, BinIrisQuantileTorchFit_transform)
     {
-        ArffFiles file;
+        ArffFiles::ArffFiles file;
         Discretizer* disc = new BinDisc(4, strategy_t::QUANTILE);
         file.load(data_path + "iris.arff", true);
         auto X = file.getX();
@@ -266,7 +266,7 @@ namespace mdlp {
             4, 0, 3, 0, 1, 4, 3, 5, 0, 0, 4, 1, 1, 0, 4, 4, 1, 3, 1, 3, 1, 5,
             1, 1, 0, 3, 5, 4, 3, 4, 4, 4, 0, 4, 4, 3, 0, 3, 5, 3
         };
-        ArffFiles file;
+        ArffFiles::ArffFiles file;
         Discretizer* disc = new CPPFImdlp();
         file.load(data_path + "iris.arff", true);
         vector<samples_t>& X = file.getX();

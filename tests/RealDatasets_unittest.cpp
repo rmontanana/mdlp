@@ -26,7 +26,7 @@
 #include <set>
 #include <string>
 #include <vector>
-#include <ArffFiles.hpp>
+#include <ArffFiles/ArffFiles.hpp>
 #include "gtest/gtest.h"
 #include "CPPFImdlp.h"
 
@@ -102,7 +102,7 @@ namespace mdlp {
 
     static void runDataset(const DatasetSpec& spec)
     {
-        ArffFiles file;
+        ArffFiles::ArffFiles file;
         file.load(real_data_path() + spec.file, spec.class_last);
         std::vector<samples_t>& X = file.getX();
         labels_t& y = file.getY();

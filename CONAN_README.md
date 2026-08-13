@@ -9,7 +9,7 @@ Declared in `conanfile.py`:
 | Package | Role |
 |---|---|
 | `libtorch/2.7.1` | Tensor types used by the `*_t` entry points. **Required** — every public header pulls in `torch/torch.h` |
-| `arff-files/1.2.1` | ARFF loading, used by the tests and the sample |
+| `arff-files/2.0.0` | ARFF loading, used by the tests and the sample |
 | `gtest/1.16.0` | Test framework, only when `enable_testing=True` |
 
 ## Building

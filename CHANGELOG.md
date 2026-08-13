@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated ArffFiles library to version 2.0.0. It only affects the tests and the
+  sample: the header moved to `<ArffFiles/ArffFiles.hpp>` and the reader is now
+  `ArffFiles::ArffFiles` (an alias of `ArffFiles::BasicArffFiles<float>`). The
+  published fimdlp package is unaffected — arff-files is not a dependency of the
+  library itself.
 - `make` / `make help` now print the library name and version in the header, and
   the Makefile reads the version from `CMakeLists.txt` in a single place.
 
