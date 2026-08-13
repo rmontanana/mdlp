@@ -14,6 +14,10 @@ f_bench = build_bench
 genhtml = genhtml
 docscdir = docs
 
+# The unbalanced parenthesis of "project(fimdlp" would break make's own paren
+# matching inside $(shell ...), so the pattern is anchored on "project" instead.
+version := $(shell grep -A2 "^project" CMakeLists.txt | sed -n 's/.*VERSION \([0-9.]*\).*/\1/p' | head -1)
+
 # Set the number of parallel jobs to the number of available processors minus 7
 CPUS := $(shell getconf _NPROCESSORS_ONLN 2>/dev/null \
                  || nproc --all 2>/dev/null \
@@ -117,8 +121,7 @@ viewcoverage: ## View the html coverage report
 	@echo ">>> Done";
 
 info: ## Show project information
-	@version=$$(grep -A1 "project(fimdlp" CMakeLists.txt | grep "VERSION" | sed 's/.*VERSION \([0-9.]*\).*/\1/'); \
-	printf "$(GREEN)FImdlp Library: $(YELLOW)ver. $$version$(NC)\n"
+	@printf "$(GREEN)FImdlp Library: $(YELLOW)ver. $(version)$(NC)\n"
 	@echo ""
 	@printf "$(GREEN)Project folders:$(NC)\n"
 	$(call status_file_folder, $(f_release), "Build\ Release")
@@ -144,21 +147,22 @@ conan-create: ## Create the conan packages (Release runs test_package)
 	@echo ">>> Done"
 
 conan-upload: ## Upload the created packages to the Cimmeria remote
-	@version=$$(grep -A2 "project(fimdlp" CMakeLists.txt | sed -n 's/.*VERSION \([0-9.]*\).*/\1/p' | head -1); \
-	if [ -z "$$version" ]; then echo ">>> Could not read the version from CMakeLists.txt"; exit 1; fi; \
+	@if [ -z "$(version)" ]; then echo ">>> Could not read the version from CMakeLists.txt"; exit 1; fi; \
 	if ! conan remote list | grep -q "Cimmeria"; then \
 		echo ">>> Remote 'Cimmeria' is not configured. To set it up:"; \
 		echo "    conan remote add Cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria"; \
 		echo "    conan remote login Cimmeria <username>"; \
 		exit 1; \
 	fi; \
-	echo ">>> Uploading fimdlp/$$version to Cimmeria..."; \
-	conan upload fimdlp/$$version --remote=Cimmeria; \
+	echo ">>> Uploading fimdlp/$(version) to Cimmeria..."; \
+	conan upload fimdlp/$(version) --remote=Cimmeria; \
 	echo ">>> Done"
 
 help: ## Show help message
 	@IFS=$$'\n' ; \
 	help_lines=(`grep -Fh "##" $(MAKEFILE_LIST) | grep -Fv fgrep | sed -e 's/\\$$//' | sed -e 's/##/:/'`); \
+	printf "%s\n" "FImdlp library v$(version)"; \
+	printf "%s\n\n" "Discretization algorithms (MDLP, k-bins, PKID) for continuous attributes"; \
 	printf "%s\n\n" "Usage: make [task]"; \
 	printf "%-20s %s\n" "task" "help" ; \
 	printf "%-20s %s\n" "------" "----" ; \
