@@ -403,6 +403,36 @@ namespace mdlp {
         EXPECT_EQ(computed, expected);
     }
 
+    // transform() picks std::lower_bound when `direction` is LEFT and
+    // std::upper_bound otherwise. No discretizer in the library ever assigns
+    // LEFT -- all three set RIGHT, which is also the default -- so the branch is
+    // reachable only through the protected member, which is an extension point
+    // for subclasses defined outside the library. The two bounds differ only for
+    // a sample sitting exactly on a cut point, so that is what this pins down.
+    class BoundDirectionDiscretizer : public Discretizer {
+    public:
+        BoundDirectionDiscretizer(cutPoints_t cuts, bound_dir_t dir)
+        {
+            cutPoints = std::move(cuts);
+            direction = dir;
+        }
+        void fit(samples_t&, labels_t&) override {}
+    };
+
+    TEST(Discretizer, LeftBoundPlacesExactCutPointsInTheLowerBin)
+    {
+        // transform ignores the first and last cut point, so the bins are split
+        // at 2.0 and 3.0.
+        const cutPoints_t cuts = { 0.0f, 2.0f, 3.0f, 9.0f };
+        const samples_t on_the_boundary = { 2.0f, 3.0f };
+
+        BoundDirectionDiscretizer left(cuts, bound_dir_t::LEFT);
+        BoundDirectionDiscretizer right(cuts, bound_dir_t::RIGHT);
+
+        EXPECT_EQ(left.transform(on_the_boundary), (labels_t{ 0, 1 }));
+        EXPECT_EQ(right.transform(on_the_boundary), (labels_t{ 1, 2 }));
+    }
+
     // Regression: fit_t/transform_t/fit_transform_t validated rank, dtype and
     // element count but not contiguity, then walked data_ptr() + numel(). A 1-D
     // non-contiguous view (a column of a 2-D dataset) was therefore read as raw
