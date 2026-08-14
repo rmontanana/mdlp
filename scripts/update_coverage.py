@@ -16,10 +16,19 @@ print("Updating coverage...")
 if len(sys.argv) < 2:
     print("Usage: update_coverage.py <directory containing coverage.info>")
     sys.exit(1)
-# Generate badge line. Argument list rather than a shell string: the path comes
-# from the command line, and under shell=True a value like "x; rm -rf ~" would
-# run as a command.
-coverage_info = Path(sys.argv[1]) / "coverage.info"
+# The directory comes from the command line, so constrain it before it reaches
+# a subprocess: it must resolve to a real coverage.info inside this repository.
+# Resolving first means "../.." and symlinks cannot escape the containment check.
+coverage_dir = Path(sys.argv[1]).resolve()
+if REPO_ROOT not in coverage_dir.parents and coverage_dir != REPO_ROOT:
+    print(f"⛔Refusing to read outside the repository: {coverage_dir}")
+    sys.exit(1)
+coverage_info = coverage_dir / "coverage.info"
+if not coverage_info.is_file():
+    print(f"⛔No coverage.info found in {coverage_dir}")
+    sys.exit(1)
+# Argument list rather than a shell string: under shell=True a value like
+# "x; rm -rf ~" would run as a command.
 output = subprocess.check_output(
     ["lcov", "--summary", str(coverage_info)],
 )
