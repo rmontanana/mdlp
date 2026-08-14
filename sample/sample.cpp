@@ -112,8 +112,16 @@ void process_file(const std::string& path, const std::string& file_name, bool cl
     std::cout << "Data: " << std::endl;
     std::vector<mdlp::samples_t>& X = file.getX();
     mdlp::labels_t& y = file.getY();
-    for (int i = 0; i < 5; i++) {
-        for (auto feature : X) {
+    // The dataset is named on the command line, so nothing here guarantees its
+    // shape: derive the row count from the data rather than assuming there are
+    // at least five rows.
+    size_t rows = y.size();
+    for (const auto& feature : X) {
+        rows = std::min(rows, feature.size());
+    }
+    const size_t preview = std::min<size_t>(5, rows);
+    for (size_t i = 0; i < preview; i++) {
+        for (const auto& feature : X) {
             std::cout << std::fixed << std::setprecision(1) << feature[i] << " ";
         }
         std::cout << y[i] << std::endl;
@@ -141,7 +149,13 @@ void process_file(const std::string& path, const std::string& file_name, bool cl
     std::cout << "Transformed data (vector)..: " << std::endl;
     test.fit(X[0], y);
     auto data = test.transform(X[0]);
-    for (int i = 130; i < 135; i++) {
+    // These three previews were hard-coded to rows 130..134, which reads past
+    // the end of any dataset smaller than iris -- the torch one aborted outright
+    // on a six-row file. Every result below is derived from X[0], so one range
+    // over the last five rows of whatever was loaded serves all of them.
+    const size_t transformed = std::min(X[0].size(), data.size());
+    const size_t tail = transformed > 5 ? transformed - 5 : 0;
+    for (size_t i = tail; i < transformed; i++) {
         std::cout << std::fixed << std::setprecision(1) << X[0][i] << " " << data[i] << std::endl;
     }
     auto Xt = torch::tensor(X[0], torch::kFloat32);
@@ -149,7 +163,7 @@ void process_file(const std::string& path, const std::string& file_name, bool cl
     //test.fit_t(Xt, yt);
     auto result = test.fit_transform_t(Xt, yt);
     std::cout << "Transformed data (torch)...: " << std::endl;
-    for (int i = 130; i < 135; i++) {
+    for (size_t i = tail; i < transformed; i++) {
         std::cout << std::fixed << std::setprecision(1) << Xt[i].item<mdlp::precision_t>() << " " << result[i].item<int>() << std::endl;
     }
     auto disc = mdlp::BinDisc(3);
@@ -157,7 +171,7 @@ void process_file(const std::string& path, const std::string& file_name, bool cl
     disc.fit_t(Xt, yt);
     auto res_t = disc.transform_t(Xt);
     std::cout << "Transformed data (BinDisc)...: " << std::endl;
-    for (int i = 130; i < 135; i++) {
+    for (size_t i = tail; i < transformed; i++) {
         std::cout << std::fixed << std::setprecision(1) << Xt[i].item<mdlp::precision_t>() << " " << res_v[i] << " " << res_t[i].item<int>() << std::endl;
     }
 }
