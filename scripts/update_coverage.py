@@ -13,10 +13,24 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 readme_file = REPO_ROOT / "README.md"
 print("Updating coverage...")
-# Generate badge line
+if len(sys.argv) < 2:
+    print("Usage: update_coverage.py <directory containing coverage.info>")
+    sys.exit(1)
+# The directory comes from the command line, so constrain it before it reaches
+# a subprocess: it must resolve to a real coverage.info inside this repository.
+# Resolving first means "../.." and symlinks cannot escape the containment check.
+coverage_dir = Path(sys.argv[1]).resolve()
+if REPO_ROOT not in coverage_dir.parents and coverage_dir != REPO_ROOT:
+    print(f"⛔Refusing to read outside the repository: {coverage_dir}")
+    sys.exit(1)
+coverage_info = coverage_dir / "coverage.info"
+if not coverage_info.is_file():
+    print(f"⛔No coverage.info found in {coverage_dir}")
+    sys.exit(1)
+# Argument list rather than a shell string: under shell=True a value like
+# "x; rm -rf ~" would run as a command.
 output = subprocess.check_output(
-    "lcov --summary " + sys.argv[1] + "/coverage.info",
-    shell=True,
+    ["lcov", "--summary", str(coverage_info)],
 )
 value = output.decode("utf-8").strip()
 percentage = 0

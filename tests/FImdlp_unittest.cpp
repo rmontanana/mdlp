@@ -319,6 +319,25 @@ namespace mdlp {
 
     }
 
+    // compute_max_num_cut_points() rounds proposed_cuts * X.size() when the
+    // proposal is a fraction, so a small enough fraction floors to zero and fit()
+    // skips the trimming loop. Documents today's behaviour: zero is read as "no
+    // limit" rather than "no cut points", so the result matches an unlimited fit.
+    TEST(FImdlpCuts, FractionalCutsRoundingToZeroLeaveTheCutPointsUntrimmed)
+    {
+        samples_t X = { 4.7f, 4.7f, 4.7f, 4.7f, 4.8f, 4.8f, 4.8f, 4.8f, 4.9f, 4.95f,
+                        5.7f, 5.3f, 5.2f, 5.1f, 5.0f, 5.6f, 5.1f, 6.0f, 5.1f, 5.9f };
+        labels_t y = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 };
+
+        auto rounds_to_zero = CPPFImdlp(3, 10, 0.01f);  // round(20 * 0.01) == 0
+        rounds_to_zero.fit(X, y);
+
+        auto unlimited = CPPFImdlp(3, 10, 0.0f);
+        unlimited.fit(X, y);
+
+        EXPECT_EQ(rounds_to_zero.getCutPoints(), unlimited.getCutPoints());
+    }
+
     TEST_F(TestFImdlp, MaxCutPointsFloat)
     {
         // Set min_length to 75
