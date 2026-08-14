@@ -48,7 +48,7 @@ namespace mdlp {
         ArffFiles::ArffFiles file;
         Discretizer* disc = new BinDisc(4, strategy_t::UNIFORM);
         file.load(data_path + "iris.arff", true);
-        vector<samples_t>& X = file.getX();
+        std::vector<samples_t>& X = file.getX();
         auto y = labels_t();
         disc->fit(X[0], y);
         auto Xt = disc->transform(X[0]);
@@ -61,7 +61,7 @@ namespace mdlp {
         ArffFiles::ArffFiles file;
         Discretizer* disc = new BinDisc(4, strategy_t::QUANTILE);
         file.load(data_path + "iris.arff", true);
-        vector<samples_t>& X = file.getX();
+        std::vector<samples_t>& X = file.getX();
         auto y = labels_t();
         disc->fit(X[0], y);
         auto Xt = disc->transform(X[0]);
@@ -269,7 +269,7 @@ namespace mdlp {
         ArffFiles::ArffFiles file;
         Discretizer* disc = new CPPFImdlp();
         file.load(data_path + "iris.arff", true);
-        vector<samples_t>& X = file.getX();
+        std::vector<samples_t>& X = file.getX();
         labels_t& y = file.getY();
         disc->fit(X[1], y);
         auto computed = disc->transform(X[1]);

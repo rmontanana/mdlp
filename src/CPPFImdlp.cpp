@@ -64,7 +64,7 @@ namespace mdlp {
     {
         // Set the actual maximum number of cut points as a number or as a percentage of the number of samples
         if (proposed_cuts == 0) {
-            return numeric_limits<size_t>::max();
+            return std::numeric_limits<size_t>::max();
         }
         if (proposed_cuts > static_cast<precision_t>(X.size())) {
             throw InvalidParameter("proposed_cuts (" + detail::str(proposed_cuts) + ") cannot exceed the number of samples (" + std::to_string(X.size()) + ")");
@@ -125,7 +125,7 @@ namespace mdlp {
         cutPoints.insert(cutPoints.begin(), *vmin);
     }
 
-    pair<precision_t, size_t> CPPFImdlp::valueCutPoint(size_t start, size_t cut, size_t end)
+    std::pair<precision_t, size_t> CPPFImdlp::valueCutPoint(size_t start, size_t cut, size_t end)
     {
         size_t n;
         size_t m;
@@ -168,13 +168,13 @@ namespace mdlp {
     void CPPFImdlp::computeCutPoints(size_t start, size_t end, int depth_)
     {
         size_t cut;
-        pair<precision_t, size_t> result;
+        std::pair<precision_t, size_t> result;
         // Check if the interval length and the depth are Ok
         if (end < start || safe_subtract(end, start) < min_length || depth_ > max_depth)
             return;
         depth = depth_ > depth ? depth_ : depth;
         cut = getCandidate(start, end);
-        if (cut == numeric_limits<size_t>::max())
+        if (cut == std::numeric_limits<size_t>::max())
             return;
         if (mdlp(start, cut, end)) {
             result = valueCutPoint(start, cut, end);
@@ -189,7 +189,7 @@ namespace mdlp {
     {
         /* Definition 1: A binary discretization for A is determined by selecting the cut point TA for which
         E(A, TA; S) is minimal amongst all the candidate cut points. */
-        size_t candidate = numeric_limits<size_t>::max();
+        size_t candidate = std::numeric_limits<size_t>::max();
         size_t elements = safe_subtract(end, start);
         bool sameValues = true;
         // Check if all the values of the variable in the interval are the same

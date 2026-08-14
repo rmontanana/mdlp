@@ -25,7 +25,7 @@ namespace mdlp {
          * 
          * The strategy defaults to SQRT which provides good results for most datasets.
          */
-        PKIDisc(compute_strategy_t compute_strategy_ = compute_strategy_t::SQRT);
+        explicit PKIDisc(compute_strategy_t compute_strategy_ = compute_strategy_t::SQRT);
         ~PKIDisc() = default;
         /**
          * @brief Fit the discretizer to data
