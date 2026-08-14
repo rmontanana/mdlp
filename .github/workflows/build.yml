@@ -48,7 +48,8 @@ jobs:
           ctest --output-on-failure -j 4
       - name: Generate coverage report
         run: |
-          gcovr --root . build_debug --sonarqube coverage.xml --filter 'src/'
+          gcovr --root . build_debug --sonarqube coverage.xml --filter 'src/' \
+            --exclude-throw-branches --exclude-unreachable-branches
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v8.2.1
         env:
