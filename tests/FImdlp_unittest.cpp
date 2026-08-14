@@ -29,7 +29,7 @@ namespace mdlp {
 
         TestFImdlp() : CPPFImdlp() {}
 
-        string data_path;
+        std::string data_path;
 
         void SetUp() override
         {
@@ -40,10 +40,10 @@ namespace mdlp {
             data_path = set_data_path();
         }
 
-        static string set_data_path()
+        static std::string set_data_path()
         {
-            string path = "datasets/";
-            ifstream file(path + "iris.arff");
+            std::string path = "datasets/";
+            std::ifstream file(path + "iris.arff");
             if (file.is_open()) {
                 file.close();
                 return path;
@@ -71,9 +71,9 @@ namespace mdlp {
             }
         }
 
-        bool test_result(const samples_t& X_, size_t cut, float midPoint, size_t limit, const string& title)
+        bool test_result(const samples_t& X_, size_t cut, float midPoint, size_t limit, const std::string& title)
         {
-            pair<precision_t, size_t> result;
+            std::pair<precision_t, size_t> result;
             labels_t y_ = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
             X = X_;
             y = y_;
@@ -85,12 +85,12 @@ namespace mdlp {
             return true;
         }
 
-        void test_dataset(CPPFImdlp& test, const string& filename, vector<cutPoints_t>& expected,
-            vector<int>& depths) const
+        void test_dataset(CPPFImdlp& test, const std::string& filename, std::vector<cutPoints_t>& expected,
+            std::vector<int>& depths) const
         {
             ArffFiles::ArffFiles file;
             file.load(data_path + filename + ".arff", true);
-            vector<samples_t>& X = file.getX();
+            std::vector<samples_t>& X = file.getX();
             labels_t& y = file.getY();
             auto attributes = file.getAttributes();
             for (auto feature = 0; feature < attributes.size(); feature++) {
@@ -108,23 +108,23 @@ namespace mdlp {
     {
         X = samples_t();
         y = labels_t();
-        EXPECT_THROW_WITH_MESSAGE(fit(X, y), invalid_argument, "X and y must have at least one element");
+        EXPECT_THROW_WITH_MESSAGE(fit(X, y), std::invalid_argument, "X and y must have at least one element");
     }
 
     TEST_F(TestFImdlp, FitErrorDifferentSize)
     {
         X = { 1, 2, 3 };
         y = { 1, 2 };
-        EXPECT_THROW_WITH_MESSAGE(fit(X, y), invalid_argument, "X and y must have the same size: " + std::to_string(X.size()) + " != " + std::to_string(y.size()));
+        EXPECT_THROW_WITH_MESSAGE(fit(X, y), std::invalid_argument, "X and y must have the same size: " + std::to_string(X.size()) + " != " + std::to_string(y.size()));
     }
 
     TEST_F(TestFImdlp, FitErrorMinLength)
     {
-        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(2, 10, 0), invalid_argument, "min_length must be at least 3, got 2");
+        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(2, 10, 0), std::invalid_argument, "min_length must be at least 3, got 2");
     }
     TEST_F(TestFImdlp, FitErrorMaxDepth)
     {
-        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 0, 0), invalid_argument, "max_depth must be at least 1, got 0");
+        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 0, 0), std::invalid_argument, "max_depth must be at least 1, got 0");
     }
 
     TEST_F(TestFImdlp, JoinFit)
@@ -140,14 +140,14 @@ namespace mdlp {
 
     TEST_F(TestFImdlp, FitErrorMinCutPoints)
     {
-        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 10, -1), invalid_argument, "proposed_cuts must be non-negative, got -1");
+        EXPECT_THROW_WITH_MESSAGE(CPPFImdlp(3, 10, -1), std::invalid_argument, "proposed_cuts must be non-negative, got -1");
     }
     TEST_F(TestFImdlp, FitErrorMaxCutPoints)
     {
         auto test = CPPFImdlp(3, 1, 8);
         samples_t X_ = { 1, 2, 2, 3, 4, 2, 3 };
         labels_t y_ = { 0, 0, 1, 2, 3, 4, 5 };
-        EXPECT_THROW_WITH_MESSAGE(test.fit(X_, y_), invalid_argument, "proposed_cuts (8) cannot exceed the number of samples (7)");
+        EXPECT_THROW_WITH_MESSAGE(test.fit(X_, y_), std::invalid_argument, "proposed_cuts (8) cannot exceed the number of samples (7)");
     }
 
     TEST_F(TestFImdlp, SortIndices)
@@ -180,7 +180,7 @@ namespace mdlp {
 
     TEST_F(TestFImdlp, TestShortDatasets)
     {
-        vector<precision_t> computed;
+        std::vector<precision_t> computed;
         X = { 1 };
         y = { 1 };
         fit(X, y);
@@ -210,7 +210,7 @@ namespace mdlp {
     {
         fit(X, y);
         cutPoints_t expected = { 4.7, 5.05, 6.0 };
-        vector<precision_t> computed = getCutPoints();
+        std::vector<precision_t> computed = getCutPoints();
         EXPECT_EQ(computed.size(), expected.size());
         for (unsigned long i = 0; i < computed.size(); i++) {
             EXPECT_NEAR(computed[i], expected[i], precision);
@@ -219,13 +219,13 @@ namespace mdlp {
 
     TEST_F(TestFImdlp, TestIris)
     {
-        vector<cutPoints_t> expected = {
+        std::vector<cutPoints_t> expected = {
                 {4.3, 5.45f, 5.75f, 7.9},
                 {2, 2.75f, 2.85f, 2.95f, 3.05f, 3.35f, 4.4},
                 {1, 2.45f, 4.75f, 5.05f, 6.9},
                 {0.1, 0.8f,  1.75f, 2.5}
         };
-        vector<int> depths = { 3, 5, 4, 3 };
+        std::vector<int> depths = { 3, 5, 4, 3 };
         auto test = CPPFImdlp();
         test_dataset(test, "iris", expected, depths);
     }
@@ -266,13 +266,13 @@ namespace mdlp {
     {
         // Set max_depth to 1
         auto test = CPPFImdlp(3, 1, 0);
-        vector<cutPoints_t> expected = {
+        std::vector<cutPoints_t> expected = {
                 {4.3, 5.45f, 7.9},
                 {2, 3.35f, 4.4},
                 {1, 2.45f, 6.9},
                 {0.1, 0.8f, 2.5}
         };
-        vector<int> depths = { 1, 1, 1, 1 };
+        std::vector<int> depths = { 1, 1, 1, 1 };
         test_dataset(test, "iris", expected, depths);
     }
 
@@ -280,13 +280,13 @@ namespace mdlp {
     {
         auto test = CPPFImdlp(75, 100, 0);
         // Set min_length to 75
-        vector<cutPoints_t> expected = {
+        std::vector<cutPoints_t> expected = {
                 {4.3, 5.45f, 5.75f, 7.9},
                 {2, 2.85f, 3.35f, 4.4},
                 {1, 2.45f, 4.75f, 6.9},
                 {0.1, 0.8f,  1.75f, 2.5}
         };
-        vector<int> depths = { 3, 2, 2, 2 };
+        std::vector<int> depths = { 3, 2, 2, 2 };
         test_dataset(test, "iris", expected, depths);
     }
 
@@ -294,13 +294,13 @@ namespace mdlp {
     {
         // Set min_length to 75
         auto test = CPPFImdlp(75, 2, 0);
-        vector<cutPoints_t> expected = {
+        std::vector<cutPoints_t> expected = {
                 {4.3, 5.45f, 5.75f, 7.9},
                 {2, 2.85f, 3.35f, 4.4},
                 {1, 2.45f, 4.75f, 6.9},
                 {0.1, 0.8f,  1.75f, 2.5}
         };
-        vector<int> depths = { 2, 2, 2, 2 };
+        std::vector<int> depths = { 2, 2, 2, 2 };
         test_dataset(test, "iris", expected, depths);
     }
 
@@ -308,13 +308,13 @@ namespace mdlp {
     {
         // Set min_length to 75
         auto test = CPPFImdlp(75, 2, 1);
-        vector<cutPoints_t> expected = {
+        std::vector<cutPoints_t> expected = {
                 {4.3, 5.45f, 7.9},
                 {2, 2.85f, 4.4},
                 {1, 2.45f, 6.9},
                 {0.1, 0.8f, 2.5}
         };
-        vector<int> depths = { 2, 2, 2, 2 };
+        std::vector<int> depths = { 2, 2, 2, 2 };
         test_dataset(test, "iris", expected, depths);
 
     }
@@ -323,19 +323,19 @@ namespace mdlp {
     {
         // Set min_length to 75
         auto test = CPPFImdlp(75, 2, 0.2f);
-        vector<cutPoints_t> expected = {
+        std::vector<cutPoints_t> expected = {
                 {4.3, 5.45f, 5.75f, 7.9},
                 {2, 2.85f, 3.35f, 4.4},
                 {1, 2.45f, 4.75f, 6.9},
                 {0.1, 0.8f,  1.75f, 2.5}
         };
-        vector<int> depths = { 2, 2, 2, 2 };
+        std::vector<int> depths = { 2, 2, 2, 2 };
         test_dataset(test, "iris", expected, depths);
     }
 
     TEST_F(TestFImdlp, ProposedCuts)
     {
-        vector<pair<float, size_t>> proposed_list = { {0.1f,  2},
+        std::vector<std::pair<float, size_t>> proposed_list = { {0.1f,  2},
                                                      {0.5f,  10},
                                                      {0.07f, 1},
                                                      {1.0f,  1},
@@ -343,7 +343,7 @@ namespace mdlp {
         size_t expected;
         size_t computed;
         for (auto proposed_item : proposed_list) {
-            tie(proposed_cuts, expected) = proposed_item;
+            std::tie(proposed_cuts, expected) = proposed_item;
             computed = compute_max_num_cut_points();
             ASSERT_EQ(expected, computed);
         }
@@ -361,7 +361,7 @@ namespace mdlp {
         };
         ArffFiles::ArffFiles file;
         file.load(data_path + "iris.arff", true);
-        vector<samples_t>& X = file.getX();
+        std::vector<samples_t>& X = file.getX();
         labels_t& y = file.getY();
         fit(X[1], y);
         auto computed = transform(X[1]);
@@ -450,7 +450,7 @@ namespace mdlp {
     {
         ArffFiles::ArffFiles file;
         file.load(data_path + "heart-statlog.arff", true);
-        vector<samples_t>& X = file.getX();
+        std::vector<samples_t>& X = file.getX();
         labels_t& y = file.getY();
         auto attributes = file.getAttributes();
         auto xd = fit_transform(X[3], y);

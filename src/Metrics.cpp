@@ -8,7 +8,6 @@
 #include <set>
 #include <cmath>
 
-using namespace std;
 namespace mdlp {
     Metrics::Metrics(const labels_t& y_, const indices_t& indices_) : y(y_), indices(indices_)
     {
@@ -16,7 +15,7 @@ namespace mdlp {
 
     int Metrics::computeNumClasses(size_t start, size_t end) const
     {
-        set<int> nClasses;
+        std::set<int> nClasses;
         if (indices.empty() || start >= indices.size() || end > indices.size()) {
             return 0;
         }
@@ -92,7 +91,7 @@ namespace mdlp {
         for (auto count : counts) {
             if (count > 0) {
                 const precision_t p = static_cast<precision_t>(count) / static_cast<precision_t>(nElements);
-                ventropy -= p * log2(p);
+                ventropy -= p * std::log2(p);
             }
         }
         return ventropy;
@@ -100,7 +99,7 @@ namespace mdlp {
 
     precision_t Metrics::informationGain(size_t start, size_t cut, size_t end)
     {
-        if (const auto cached = igCache.find(make_tuple(start, cut, end)); cached != igCache.end()) {
+        if (const auto cached = igCache.find(std::make_tuple(start, cut, end)); cached != igCache.end()) {
             return cached->second;
         }
 
@@ -120,7 +119,7 @@ namespace mdlp {
                 static_cast<precision_t>(nElementsRight) * entropyRight) /
             static_cast<precision_t>(nElements);
 
-        igCache[make_tuple(start, cut, end)] = iGain;
+        igCache[std::make_tuple(start, cut, end)] = iGain;
         return iGain;
     }
 

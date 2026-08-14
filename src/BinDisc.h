@@ -15,7 +15,7 @@
 namespace mdlp {
     class BinDisc : public Discretizer {
     public:
-        BinDisc(int n_bins = MIN_BINS, strategy_t strategy = strategy_t::UNIFORM);
+        explicit BinDisc(int n_bins = MIN_BINS, strategy_t strategy = strategy_t::UNIFORM);
 
         /**
          * @brief Construct from a named configuration

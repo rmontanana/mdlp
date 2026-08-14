@@ -152,7 +152,7 @@ namespace mdlp {
     protected:
         size_t min_length = 3;
         int depth = 0;
-        int max_depth = numeric_limits<int>::max();
+        int max_depth = std::numeric_limits<int>::max();
         float proposed_cuts = 0;
         indices_t indices = indices_t();
         samples_t X = samples_t();
@@ -161,7 +161,7 @@ namespace mdlp {
         // evaluation. It must not be constructed from this object's own y/indices,
         // which would make the class unsafe to copy or move.
         Metrics metrics;
-        size_t num_cut_points = numeric_limits<size_t>::max();
+        size_t num_cut_points = std::numeric_limits<size_t>::max();
         static indices_t sortIndices(samples_t&, labels_t&);
 
         // Out of line and [[noreturn]] on purpose. These are the cold paths of
@@ -178,7 +178,7 @@ namespace mdlp {
         bool mdlp(size_t, size_t, size_t);
         size_t getCandidate(size_t, size_t);
         size_t compute_max_num_cut_points() const;
-        pair<precision_t, size_t> valueCutPoint(size_t, size_t, size_t);
+        std::pair<precision_t, size_t> valueCutPoint(size_t, size_t, size_t);
 
         /**
          * @brief Safely access X array with bounds checking

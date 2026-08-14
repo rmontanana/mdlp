@@ -17,7 +17,7 @@
 #include "CPPFImdlp.h"
 #include "BinDisc.h"
 
-const string PATH = "tests/datasets/";
+const std::string PATH = "tests/datasets/";
 
 /* print a description of all supported options */
 void usage(const char* path)
@@ -39,14 +39,14 @@ void usage(const char* path)
     std::cout << "  -n, --min_length=INT\t interval min_length pased to discretizer. Default = 3" << std::endl;
 }
 
-tuple<string, string, int, int, float> parse_arguments(int argc, char** argv)
+std::tuple<std::string, std::string, int, int, float> parse_arguments(int argc, char** argv)
 {
-    string file_name;
-    string path = PATH;
-    int max_depth = numeric_limits<int>::max();
+    std::string file_name;
+    std::string path = PATH;
+    int max_depth = std::numeric_limits<int>::max();
     int min_length = 3;
     float max_cutpoints = 0;
-    const vector<struct option> long_options = {
+    const std::vector<struct option> long_options = {
             {"help",          no_argument,       nullptr, 'h'},
             {"file",          required_argument, nullptr, 'f'},
             {"path",          required_argument, nullptr, 'p'},
@@ -64,16 +64,16 @@ tuple<string, string, int, int, float> parse_arguments(int argc, char** argv)
                 usage(argv[0]);
                 exit(0);
             case 'f':
-                file_name = string(optarg);
+                file_name = std::string(optarg);
                 break;
             case 'm':
-                max_depth = stoi(optarg);
+                max_depth = std::stoi(optarg);
                 break;
             case 'n':
-                min_length = stoi(optarg);
+                min_length = std::stoi(optarg);
                 break;
             case 'c':
-                max_cutpoints = stof(optarg);
+                max_cutpoints = std::stof(optarg);
                 break;
             case 'p':
                 path = optarg;
@@ -94,7 +94,7 @@ tuple<string, string, int, int, float> parse_arguments(int argc, char** argv)
     return make_tuple(file_name, path, max_depth, min_length, max_cutpoints);
 }
 
-void process_file(const string& path, const string& file_name, bool class_last, int max_depth, int min_length,
+void process_file(const std::string& path, const std::string& file_name, bool class_last, int max_depth, int min_length,
     float max_cutpoints)
 {
     ArffFiles::ArffFiles file;
@@ -105,7 +105,7 @@ void process_file(const string& path, const string& file_name, bool class_last, 
     std::cout << "Number of lines: " << items << std::endl;
     std::cout << "Attributes: " << std::endl;
     for (auto attribute : attributes) {
-        std::cout << "Name: " << get<0>(attribute) << " Type: " << get<1>(attribute) << std::endl;
+        std::cout << "Name: " << std::get<0>(attribute) << " Type: " << std::get<1>(attribute) << std::endl;
     }
     std::cout << "Class name: " << file.getClassName() << std::endl;
     std::cout << "Class type: " << file.getClassType() << std::endl;
@@ -114,7 +114,7 @@ void process_file(const string& path, const string& file_name, bool class_last, 
     mdlp::labels_t& y = file.getY();
     for (int i = 0; i < 5; i++) {
         for (auto feature : X) {
-            std::cout << fixed << setprecision(1) << feature[i] << " ";
+            std::cout << std::fixed << std::setprecision(1) << feature[i] << " ";
         }
         std::cout << y[i] << std::endl;
     }
@@ -122,7 +122,7 @@ void process_file(const string& path, const string& file_name, bool class_last, 
     size_t total = 0;
     for (auto i = 0; i < attributes.size(); i++) {
         auto min_max = minmax_element(X[i].begin(), X[i].end());
-        std::cout << "Cut points for feature " << get<0>(attributes[i]) << ": [" << setprecision(3);
+        std::cout << "Cut points for feature " << std::get<0>(attributes[i]) << ": [" << std::setprecision(3);
         test.fit(X[i], y);
         auto cut_points = test.getCutPoints();
         for (auto item : cut_points) {
@@ -162,7 +162,7 @@ void process_file(const string& path, const string& file_name, bool class_last, 
     }
 }
 
-void process_all_files(const map<string, bool>& datasets, const string& path, int max_depth, int min_length,
+void process_all_files(const std::map<std::string, bool>& datasets, const std::string& path, int max_depth, int min_length,
     float max_cutpoints)
 {
     std::cout << "Results: " << "Max_depth: " << max_depth << "  Min_length: " << min_length << "  Max_cutpoints: "
