@@ -21,25 +21,40 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get -y install python3 python3-pip
-          pip3 install conan
+          pip3 install --only-binary :all: 'conan==2.31.2'
       - name: Install lcov & gcovr
         run: |
           sudo apt-get -y install lcov
           sudo apt-get -y install gcovr
-      - name: Setup Conan profileson
+      - name: Setup Conan profiles
         run: |
           conan profile detect --force
-          conan remote add Cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
+          conan remote add --force Cimmeria https://conan.rmontanana.es/artifactory/api/conan/Cimmeria
       - name: Install dependencies with Conan
         run: |
           conan install . --build=missing -of build_debug -s build_type=Debug -o enable_testing=True
       - name: Configure with CMake
         run: |
           cmake -S . -B build_debug -DCMAKE_TOOLCHAIN_FILE=build_debug/build/Debug/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTING=ON
-      - name: Tests & build-wrapper
+      - name: Install Build Wrapper
+        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v8.2.1
+      - name: Build with Build Wrapper
         run: |
           build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build_debug --config Debug -j 4
+      - name: Run tests
+        run: |
           cp -r tests/datasets build_debug/tests/datasets
           cd build_debug/tests
           ctest --output-on-failure -j 4
-          
+      - name: Generate coverage report
+        run: |
+          gcovr --root . build_debug --sonarqube coverage.xml --filter 'src/' \
+            --exclude-throw-branches --exclude-unreachable-branches
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v8.2.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            --define sonar.cfamily.compile-commands=${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json
+            --define sonar.coverageReportPaths=coverage.xml
