@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [3.0.1] - 2026-09-18
 
 ### Fixed
 
@@ -49,8 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   not cut points, and `transform` ignores them. `BinDisc` documents that the
   QUANTILE strategy (and therefore `PKIDisc`) collapses coincident percentiles
   and can return fewer bins than requested, and what it guarantees for mass
-  points; `PKIDisc` documents that its bin
-  count is truncated, not rounded up, which is what the code always did.
+  points; `PKIDisc` documents that its bin count is truncated, not rounded up,
+  which is what the code always did.
+- `BinDisc::percentile()` (protected) returns one value per requested
+  percentile, repeats included; collapsing coincident edges is now done by
+  `fit_quantile`, which needs the repeats to detect mass points.
 
 - Updated ArffFiles library to version 2.0.0. It only affects the tests and the
   sample: the header moved to `<ArffFiles/ArffFiles.hpp>` and the reader is now

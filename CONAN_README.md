@@ -73,7 +73,7 @@ and the target reports the remote as unconfigured.
 
 ```ini
 [requires]
-fimdlp/3.0.0
+fimdlp/3.0.1
 
 [generators]
 CMakeDeps
@@ -84,7 +84,7 @@ CMakeToolchain
 
 ```python
 def requirements(self):
-    self.requires("fimdlp/3.0.0")
+    self.requires("fimdlp/3.0.1")
 ```
 
 `CMakeLists.txt`:
