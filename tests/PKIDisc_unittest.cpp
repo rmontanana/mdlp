@@ -83,20 +83,73 @@ TEST(PKIDisc, min_bins_when_few_samples)
 TEST(PKIDisc, log_strategy)
 {
     mdlp::labels_t y = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4 }; // 22 samples
-    mdlp::samples_t X = { { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 } };
+    mdlp::samples_t X = { { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 } };
     mdlp::PKIDisc discretizer(mdlp::compute_strategy_t::LOG);
     discretizer.fit(X, y);
     auto cut_points = discretizer.getCutPoints();
-    // n_bins = log(22) = 3.091... -> 3
+    // n_bins = trunc(log(22)) = trunc(3.091...) = 3
     // strategy = QUANTILE
-    // min = 1, max = 16
-    // cut points should be at 1 + 1*(16-1)/3
-    // 1 + 15/3 = 1 + 5 = 6
+    // min = 1, max = 22
+    // cut points should be at 1 + 1*(22-1)/3 = 8 and 1 + 2*(22-1)/3 = 15
     ASSERT_EQ(cut_points.size(), 4); // 3 bins = 4 cut points
     EXPECT_NEAR(cut_points[0], 1.0, 0.001);
-    EXPECT_NEAR(cut_points[1], 6.0, 0.001);
-    EXPECT_NEAR(cut_points[2], 11.0, 0.001);
-    EXPECT_NEAR(cut_points[3], 16.0, 0.001);
+    EXPECT_NEAR(cut_points[1], 8.0, 0.001);
+    EXPECT_NEAR(cut_points[2], 15.0, 0.001);
+    EXPECT_NEAR(cut_points[3], 22.0, 0.001);
+}
+
+// The bin count comes from X, the only input an unsupervised method reads. It
+// used to come from y.size(), so a label vector of a different length silently
+// changed the discretization.
+TEST(PKIDisc, bin_count_comes_from_X_not_y)
+{
+    mdlp::samples_t X(100);
+    for (size_t i = 0; i < X.size(); ++i) {
+        X[i] = static_cast<mdlp::precision_t>(i + 1);
+    }
+    mdlp::labels_t y_short(9, 0);
+    mdlp::labels_t y_matching(100, 0);
+
+    mdlp::PKIDisc with_short_y;
+    with_short_y.fit(X, y_short);
+    mdlp::PKIDisc with_matching_y;
+    with_matching_y.fit(X, y_matching);
+
+    // sqrt(100) = 10 bins = 11 edges, whatever y looks like.
+    EXPECT_EQ(11u, with_short_y.getCutPoints().size());
+    EXPECT_EQ(with_matching_y.getCutPoints(), with_short_y.getCutPoints());
+}
+
+// The samples-only overloads must run PKID too. They were inherited from
+// BinDisc through a using-declaration and skipped the bin selection, so
+// PKIDisc::fit(X) produced three UNIFORM bins.
+TEST(PKIDisc, samples_only_fit_matches_fit_with_labels)
+{
+    mdlp::samples_t X(100);
+    for (size_t i = 0; i < X.size(); ++i) {
+        // Skewed so that UNIFORM and QUANTILE edges differ.
+        X[i] = static_cast<mdlp::precision_t>(i * i);
+    }
+    mdlp::labels_t y(100, 0);
+
+    mdlp::PKIDisc with_labels;
+    with_labels.fit(X, y);
+    const auto expected = with_labels.getCutPoints();
+    ASSERT_EQ(11u, expected.size()) << "sqrt(100) = 10 bins";
+
+    mdlp::PKIDisc samples_only;
+    samples_only.fit(X);
+    EXPECT_EQ(expected, samples_only.getCutPoints());
+
+    mdlp::samples_t X_moved = X;
+    mdlp::PKIDisc samples_only_moved;
+    samples_only_moved.fit(std::move(X_moved));
+    EXPECT_EQ(expected, samples_only_moved.getCutPoints());
+
+    mdlp::PKIDisc samples_only_log(mdlp::compute_strategy_t::LOG);
+    samples_only_log.fit(X);
+    // trunc(log(100)) = 4 bins = 5 edges
+    EXPECT_EQ(5u, samples_only_log.getCutPoints().size());
 }
 
 
