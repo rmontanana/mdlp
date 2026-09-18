@@ -7,7 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`PKIDisc::fit(X)` was not PKID.** The samples-only `fit` overloads were
+  inherited from `BinDisc` through a using-declaration, which bypassed the bin
+  selection: `PKIDisc().fit(X)` ran three UNIFORM bins instead of `sqrt(n)`
+  QUANTILE bins. `PKIDisc` now declares all four `fit` overloads itself.
+- **`PKIDisc` derived its bin count from `y.size()`**, so a label vector of a
+  different length than `X` silently changed the discretization of a method that
+  is documented to ignore `y`. The count now comes from `X.size()`.
+- **`CPPFImdlp` read out of bounds on negative labels.** Labels index per-class
+  count arrays; a negative one wrapped to a huge `size_t` (a heap-buffer-overflow
+  under AddressSanitizer), and an absurdly large one allocated gigabytes. `fit`
+  now rejects labels outside `[0, CPPFImdlp::MAX_LABEL]` with a `ValidationError`
+  naming the offender. See SECURITY.md.
+- **MDLP cut point between two adjacent floats collapsed onto the lower value**,
+  so `transform` sent both sides — the lower value included — to the same bin. When
+  the midpoint rounds down onto the lower value the cut is now the upper value,
+  which keeps the split. The sum in the midpoint could also overflow to infinity
+  near `FLT_MAX`; that case now uses an overflow-free form. Every other cut point
+  is bit-identical to before.
+- The sample counted the min/max sentinels that `getCutPoints()` returns as cut
+  points, overstating "Total cut points" and "Total feature states" by two per
+  feature.
+
 ### Changed
+
+- `getCutPoints()` now documents its contract: `[min(X), c1..ck, max(X)]` for
+  every discretizer, where the first and last values are the training bounds,
+  not cut points, and `transform` ignores them. `BinDisc` documents that the
+  QUANTILE strategy (and therefore `PKIDisc`) collapses coincident percentiles
+  and can return fewer bins than requested; `PKIDisc` documents that its bin
+  count is truncated, not rounded up, which is what the code always did.
 
 - Updated ArffFiles library to version 2.0.0. It only affects the tests and the
   sample: the header moved to `<ArffFiles/ArffFiles.hpp>` and the reader is now

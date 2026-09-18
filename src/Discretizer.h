@@ -73,8 +73,27 @@ namespace mdlp {
         virtual ~Discretizer() = default;
 
         /**
-         * @brief Get the cut points computed during fitting
-         * @return Vector of cut point values
+         * @brief Get the bin edges computed during fitting
+         * @return `[min(X), c1, ..., ck, max(X)]`: the k cut points found, bracketed
+         *         by the smallest and largest sample seen in fit()
+         *
+         * The first and last entries are **not** cut points. They are the
+         * bounds of the training data, kept so that every discretizer returns
+         * the same shape, and transform() ignores them: only `c1..ck` are
+         * compared against. So a fitted discretizer with k cut points returns
+         * k + 2 values and maps data onto k + 1 bins, and one that found no
+         * split at all returns exactly two, `[min, max]`, and maps everything
+         * onto bin 0.
+         *
+         * This holds for all three algorithms:
+         * - CPPFImdlp: `k` is whatever MDLP justified (after `proposed_cuts`
+         *   trimming, if any).
+         * - BinDisc UNIFORM: always `n_bins + 1` values.
+         * - BinDisc QUANTILE and PKIDisc: at most `n_bins + 1`; coincident
+         *   quantiles are collapsed, so data with few distinct values yields
+         *   fewer bins than requested. See BinDisc::fit.
+         *
+         * To count cut points use `size() - 2`; to count bins, `size() - 1`.
          */
         inline cutPoints_t getCutPoints() const { return cutPoints; };
 

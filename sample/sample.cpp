@@ -138,7 +138,9 @@ void process_file(const std::string& path, const std::string& file_name, bool cl
             if (item != cut_points.back())
                 std::cout << ", ";
         }
-        total += test.getCutPoints().size();
+        // getCutPoints() brackets the k cut points with min and max, which
+        // transform() ignores: k + 2 values for k cuts and k + 1 states.
+        total += cut_points.size() - 2;
         std::cout << "]" << std::endl;
         std::cout << "Min: " << *min_max.first << " Max: " << *min_max.second << std::endl;
         std::cout << "--------------------------" << std::endl;

@@ -49,6 +49,15 @@ namespace mdlp {
          * 
          * This method performs k-bins discretization on the input data X_.
          * 
+         * With UNIFORM the edges are `n_bins + 1` equally spaced values between
+         * min(X_) and max(X_). With QUANTILE they are the `n_bins + 1` evenly
+         * spaced percentiles of X_, **with coincident values collapsed**: when
+         * the data has few distinct values several percentiles land on the same
+         * number, the duplicates are dropped, and getCutPoints() returns fewer
+         * than `n_bins + 1` values, i.e. fewer bins than requested. This matches
+         * scikit-learn's KBinsDiscretizer, which removes empty bins the same
+         * way. The effective bin count is `getCutPoints().size() - 1`.
+         * 
          * Note: The y parameter is required for a uniform interface across supervised
          * and unsupervised discretization methods (all discretizers accept fit(X, y)),
          * but is not used in this unsupervised algorithm. This design allows using

@@ -357,6 +357,28 @@ namespace mdlp {
         labels_t expected = { 0, 1, 1, 1, 2, 2, 3, 3, 3, 3 };
         EXPECT_EQ(expected, labels);
     }
+    // Documented contract: QUANTILE collapses coincident percentiles, so heavily
+    // skewed data yields fewer bins than requested. Here 10 of 12 samples share
+    // one value, four bins are asked for, and only one can be formed. UNIFORM,
+    // which places its edges on the range, still returns n_bins + 1.
+    TEST(TestBinDiscGeneric, QuantileCollapsesCoincidentEdges)
+    {
+        samples_t X = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3 };
+        labels_t y(X.size(), 0);
+
+        BinDisc quantile(4, strategy_t::QUANTILE);
+        quantile.fit(X, y);
+        const auto q_cuts = quantile.getCutPoints();
+        ASSERT_EQ(2u, q_cuts.size()) << "min and max only: no interior edge survived";
+        EXPECT_NEAR(1.0f, q_cuts.front(), margin);
+        EXPECT_NEAR(3.0f, q_cuts.back(), margin);
+        EXPECT_EQ(labels_t(X.size(), 0), quantile.transform(X));
+
+        BinDisc uniform(4, strategy_t::UNIFORM);
+        uniform.fit(X, y);
+        EXPECT_EQ(5u, uniform.getCutPoints().size());
+    }
+
     TEST(TestBinDiscGeneric, Fileset)
     {
         Experiments exps(data_path + "tests.txt");

@@ -128,7 +128,6 @@ namespace mdlp {
 
         // Implementation taken from https://dpilger26.github.io/NumCpp/doxygen/html/percentile_8hpp_source.html
         std::vector<precision_t> results;
-        bool first = true;
         results.reserve(percentiles.size());
         for (auto percentile : percentiles) {
             const auto i = static_cast<size_t>(std::floor(static_cast<precision_t>(data.size() - 1) * percentile / 100.));
@@ -137,9 +136,12 @@ namespace mdlp {
             const precision_t fraction =
                 (percentile / 100.0 - percentI) /
                 (static_cast<precision_t>(indexLower + 1) / static_cast<precision_t>(data.size() - 1) - percentI);
-            if (const auto value = data[indexLower] + (data[indexLower + 1] - data[indexLower]) * fraction; first || results.empty() || value != results.back()) // Check empty before calling back()
+            // Percentiles are monotonic, so a repeated value can only be the
+            // previous one: comparing against back() is enough to collapse
+            // coincident quantiles into a single edge.
+            const auto value = data[indexLower] + (data[indexLower + 1] - data[indexLower]) * fraction;
+            if (results.empty() || value != results.back())
                 results.push_back(value);
-            first = false;
         }
         return results;
     }
@@ -147,7 +149,7 @@ namespace mdlp {
     {
         auto quantiles = linspace(0.0, 100.0, n_bins + 1);
         std::sort(data.begin(), data.end());
-        if (data.front() == data.back() || data.size() == 1) {
+        if (data.front() == data.back()) {
             // if X is constant, pass any two given points that shall be ignored in transform
             cutPoints.push_back(data.front());
             cutPoints.push_back(data.front());
