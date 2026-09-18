@@ -41,8 +41,11 @@ This library provides three discretization algorithms:
 2. **Binning Discretization (BinDisc)**: This is a simple unsupervised discretization algorithm that divides the range of a continuous attribute into a fixed number of bins. Two strategies are available:
    - `uniform`: creates bins of equal width.
    - `quantile`: creates bins with an equal number of samples. Coincident
-     quantiles are collapsed, so data with few distinct values yields fewer bins
-     than requested (as scikit-learn's `KBinsDiscretizer` does).
+     quantiles are collapsed, so data with few distinct values can yield fewer
+     bins than requested. Unlike scikit-learn's `KBinsDiscretizer`, a value that
+     swallowed edges that way (a mass point) is still guaranteed a bin of its
+     own: a binary feature always maps onto two bins, and a sparse feature keeps
+     its zeros apart from its non-zeros.
 
 3. **Proportional k-Interval Discretization (PKIDisc)**: This is an unsupervised discretization algorithm that uses the square root (or, with `compute_strategy_t::LOG`, the natural logarithm) of the number of samples, truncated and never below 3, as the number of bins for a `quantile` binning, that is equal-frequency binning. It is based on the paper by Yang & Webb, "Proportional k-Interval Discretization for Naive-Bayes Classifiers".
 

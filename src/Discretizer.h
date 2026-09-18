@@ -89,9 +89,12 @@ namespace mdlp {
          * - CPPFImdlp: `k` is whatever MDLP justified (after `proposed_cuts`
          *   trimming, if any).
          * - BinDisc UNIFORM: always `n_bins + 1` values.
-         * - BinDisc QUANTILE and PKIDisc: at most `n_bins + 1`; coincident
-         *   quantiles are collapsed, so data with few distinct values yields
-         *   fewer bins than requested. See BinDisc::fit.
+         * - BinDisc QUANTILE and PKIDisc: usually at most `n_bins + 1`;
+         *   coincident quantiles are collapsed, so data with few distinct
+         *   values yields fewer bins than requested, but a value that
+         *   swallowed edges (a mass point) always gets a bin of its own, which
+         *   can add up to two cut points per mass point. One of them may equal
+         *   `max(X)`, so `[.., max, max]` is a valid result. See BinDisc::fit.
          *
          * To count cut points use `size() - 2`; to count bins, `size() - 1`.
          */

@@ -196,3 +196,27 @@ TEST(PKIDisc, fit_move_log_strategy_matches_fit_copy)
 
     EXPECT_EQ(by_copy.getCutPoints(), by_move.getCutPoints());
 }
+
+// The experiment case: a binary pixel discretized with PKID (LOG) on a
+// training fold. Plain percentile collapsing left it with a single bin
+// whatever its proportion of ones; it must keep both values apart.
+TEST(PKIDisc, log_strategy_keeps_binary_feature)
+{
+    const size_t n = 1274;  // 4/5 of semeion
+    for (double ones : { 0.05, 0.43, 0.50 }) {
+        const size_t n_ones = static_cast<size_t>(n * ones);
+        mdlp::samples_t X;
+        mdlp::labels_t y;
+        for (size_t i = 0; i < n; ++i) {
+            X.push_back(i < n_ones ? 1.0f : 0.0f);
+            y.push_back(i % 2);
+        }
+        mdlp::PKIDisc discretizer(mdlp::compute_strategy_t::LOG);
+        discretizer.fit(X, y);
+        EXPECT_EQ(3u, discretizer.getCutPoints().size()) << "ones=" << ones;
+        auto labels = discretizer.transform(X);
+        for (size_t i = 0; i < n; ++i) {
+            ASSERT_EQ(i < n_ones ? 1 : 0, labels[i]) << "ones=" << ones << " i=" << i;
+        }
+    }
+}

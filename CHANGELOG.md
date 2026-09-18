@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **QUANTILE binning (and so `PKIDisc`) erased binary and sparse features.** The
+  requested percentiles of a column with a dominant value all land on that value,
+  the duplicates were collapsed, and with the min/max sentinels ignored by
+  `transform` the column ended up in a single bin: a {0, 1} feature mapped onto
+  bin 0 whatever its proportion of ones, and a feature with 90 % zeros lost the
+  zero/non-zero distinction. Such a value (a *mass point*, one that filled at
+  least one full quantile width) now gets a bin of its own: the value itself and
+  the next distinct value in the data are added as cut points when no surviving
+  edge already separates them. Columns without mass points get exactly the edges
+  they always did, and no empty bins are created. `getCutPoints()` may now return
+  a cut equal to `max(X)` right before the max sentinel.
 - **`PKIDisc::fit(X)` was not PKID.** The samples-only `fit` overloads were
   inherited from `BinDisc` through a using-declaration, which bypassed the bin
   selection: `PKIDisc().fit(X)` ran three UNIFORM bins instead of `sqrt(n)`
@@ -37,7 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every discretizer, where the first and last values are the training bounds,
   not cut points, and `transform` ignores them. `BinDisc` documents that the
   QUANTILE strategy (and therefore `PKIDisc`) collapses coincident percentiles
-  and can return fewer bins than requested; `PKIDisc` documents that its bin
+  and can return fewer bins than requested, and what it guarantees for mass
+  points; `PKIDisc` documents that its bin
   count is truncated, not rounded up, which is what the code always did.
 
 - Updated ArffFiles library to version 2.0.0. It only affects the tests and the
