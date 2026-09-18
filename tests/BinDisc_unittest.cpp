@@ -598,6 +598,21 @@ namespace mdlp {
         std::vector<precision_t> empty_percentiles = {};
         EXPECT_THROW_WITH_MESSAGE(percentile(data, empty_percentiles), std::invalid_argument, "Percentiles cannot be empty");
     }
+
+    // percentile() answers every request, repeats included: it is fit_quantile
+    // that collapses them, and it needs the repeats to spot mass points.
+    TEST_F(TestBinDisc3U, PercentileKeepsRepeatedValues)
+    {
+        samples_t data = { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
+        std::vector<precision_t> percentiles = { 0.0f, 25.0f, 50.0f, 75.0f, 100.0f };
+        const auto values = percentile(data, percentiles);
+        ASSERT_EQ(5u, values.size());
+        EXPECT_NEAR(0.0f, values[0], margin);
+        EXPECT_NEAR(0.0f, values[1], margin);
+        EXPECT_NEAR(0.0f, values[2], margin);
+        EXPECT_NEAR(0.0f, values[3], margin);
+        EXPECT_NEAR(1.0f, values[4], margin);
+    }
 }
 
 namespace mdlp {

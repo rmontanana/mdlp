@@ -116,17 +116,6 @@ namespace mdlp {
     {
         return std::max(lower, std::min(n, upper));
     }
-    precision_t BinDisc::percentile_at(const samples_t& data, precision_t percentile)
-    {
-        // Implementation taken from https://dpilger26.github.io/NumCpp/doxygen/html/percentile_8hpp_source.html
-        const auto i = static_cast<size_t>(std::floor(static_cast<precision_t>(data.size() - 1) * percentile / 100.));
-        const auto indexLower = clip(i, 0, data.size() - 2);
-        const precision_t percentI = static_cast<precision_t>(indexLower) / static_cast<precision_t>(data.size() - 1);
-        const precision_t fraction =
-            (percentile / 100.0 - percentI) /
-            (static_cast<precision_t>(indexLower + 1) / static_cast<precision_t>(data.size() - 1) - percentI);
-        return data[indexLower] + (data[indexLower + 1] - data[indexLower]) * fraction;
-    }
     std::vector<precision_t> BinDisc::percentile(samples_t& data, const std::vector<precision_t>& percentiles)
     {
         // Input validation
@@ -136,15 +125,19 @@ namespace mdlp {
         if (percentiles.empty()) {
             throw ValidationError("Percentiles cannot be empty");
         }
+        // Implementation taken from https://dpilger26.github.io/NumCpp/doxygen/html/percentile_8hpp_source.html
+        // One value per requested percentile, repeats included: fit_quantile
+        // needs to see which percentiles landed on the same value.
         std::vector<precision_t> results;
         results.reserve(percentiles.size());
         for (auto percentile : percentiles) {
-            // Percentiles are monotonic, so a repeated value can only be the
-            // previous one: comparing against back() is enough to collapse
-            // coincident quantiles into a single edge.
-            const auto value = percentile_at(data, percentile);
-            if (results.empty() || value != results.back())
-                results.push_back(value);
+            const auto i = static_cast<size_t>(std::floor(static_cast<precision_t>(data.size() - 1) * percentile / 100.));
+            const auto indexLower = clip(i, 0, data.size() - 2);
+            const precision_t percentI = static_cast<precision_t>(indexLower) / static_cast<precision_t>(data.size() - 1);
+            const precision_t fraction =
+                (percentile / 100.0 - percentI) /
+                (static_cast<precision_t>(indexLower + 1) / static_cast<precision_t>(data.size() - 1) - percentI);
+            results.push_back(data[indexLower] + (data[indexLower + 1] - data[indexLower]) * fraction);
         }
         return results;
     }
@@ -194,11 +187,10 @@ namespace mdlp {
         }
         // The requested edges, before collapsing: a value repeated here is a
         // mass point (see separate_mass_point).
-        std::vector<precision_t> requested;
-        requested.reserve(quantiles.size());
-        for (auto q : quantiles) {
-            requested.push_back(percentile_at(data, q));
-        }
+        const auto requested = percentile(data, quantiles);
+        // Percentiles are monotonic, so a repeated value can only be the
+        // previous one: comparing against back() is enough to collapse
+        // coincident quantiles into a single edge.
         cutPoints.clear();
         for (auto edge : requested) {
             if (cutPoints.empty() || edge != cutPoints.back()) {

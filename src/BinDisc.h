@@ -111,10 +111,9 @@ namespace mdlp {
         void fit(samples_t&& X);
     protected:
         std::vector<precision_t> linspace(precision_t start, precision_t end, int num);
-        // The requested percentiles of sorted data with coincident values collapsed.
+        // The requested percentiles of sorted data, linearly interpolated
+        // (NumCpp's formula), one per request: repeats are not collapsed.
         std::vector<precision_t> percentile(samples_t& data, const std::vector<precision_t>& percentiles);
-        // One linearly interpolated percentile of sorted data (NumCpp's formula).
-        static precision_t percentile_at(const samples_t& data, precision_t percentile);
         int n_bins;
         strategy_t strategy;
         // static constexpr, not a const member: a const non-static member would
