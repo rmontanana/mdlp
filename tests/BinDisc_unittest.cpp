@@ -357,6 +357,132 @@ namespace mdlp {
         labels_t expected = { 0, 1, 1, 1, 2, 2, 3, 3, 3, 3 };
         EXPECT_EQ(expected, labels);
     }
+    // QUANTILE collapses coincident percentiles, but a value that swallowed
+    // edges (a mass point) still gets a bin of its own. Here 10 of 12 samples
+    // share one value and four bins are asked for: every requested edge but
+    // the last lands on 1, so without the guarantee the result would be
+    // [min, max] and a single bin. The value is the minimum, so only the
+    // next distinct value (2) is needed to set it apart; 3 is not a mass
+    // point and is not separated from 2. UNIFORM, which places its edges on
+    // the range, still returns n_bins + 1.
+    TEST(TestBinDiscGeneric, QuantileKeepsMassPointApart)
+    {
+        samples_t X = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3 };
+        labels_t y(X.size(), 0);
+
+        BinDisc quantile(4, strategy_t::QUANTILE);
+        quantile.fit(X, y);
+        const auto q_cuts = quantile.getCutPoints();
+        ASSERT_EQ(3u, q_cuts.size());
+        EXPECT_NEAR(1.0f, q_cuts[0], margin);
+        EXPECT_NEAR(2.0f, q_cuts[1], margin);
+        EXPECT_NEAR(3.0f, q_cuts[2], margin);
+        labels_t expected = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 };
+        EXPECT_EQ(expected, quantile.transform(X));
+
+        BinDisc uniform(4, strategy_t::UNIFORM);
+        uniform.fit(X, y);
+        EXPECT_EQ(5u, uniform.getCutPoints().size());
+    }
+    // A binary feature is the mass-point case that matters most: with plain
+    // percentile collapsing it always ends up as [0, 1] and one bin, whatever
+    // the proportion of ones. It must map onto two bins at any proportion.
+    TEST(TestBinDiscGeneric, QuantileBinaryFeatureKeepsTwoBins)
+    {
+        for (double ones : { 0.05, 0.43, 0.50, 0.80, 0.95 }) {
+            const size_t n = 1000;
+            const size_t n_ones = static_cast<size_t>(n * ones);
+            samples_t X;
+            for (size_t i = 0; i < n; ++i) {
+                X.push_back(i < n_ones ? 1.0f : 0.0f);
+            }
+            labels_t y(X.size(), 0);
+            BinDisc disc(7, strategy_t::QUANTILE);
+            disc.fit(X, y);
+            const auto labels = disc.transform(X);
+            for (size_t i = 0; i < n; ++i) {
+                ASSERT_EQ(i < n_ones ? 1 : 0, labels[i]) << "ones=" << ones << " i=" << i;
+            }
+            // Exactly two bins: no empty one was created either side.
+            EXPECT_EQ(3u, disc.getCutPoints().size()) << "ones=" << ones;
+        }
+    }
+    // Sparse continuous feature: 90 % zeros, the rest spread over (0, 1].
+    // Every requested edge but the last lands on 0, so the zeros are a mass
+    // point; they must not share a bin with the non-zeros, and the cut that
+    // sets them apart is the smallest non-zero value.
+    TEST(TestBinDiscGeneric, QuantileSparseFeatureSeparatesZeros)
+    {
+        samples_t X(900, 0.0f);
+        for (int i = 1; i <= 100; ++i) {
+            X.push_back(static_cast<precision_t>(i) / 100.0f);
+        }
+        labels_t y(X.size(), 0);
+        BinDisc disc(8, strategy_t::QUANTILE);
+        disc.fit(X, y);
+        const auto labels = disc.transform(X);
+        for (size_t i = 0; i < 900; ++i) {
+            ASSERT_EQ(0, labels[i]);
+        }
+        for (size_t i = 900; i < X.size(); ++i) {
+            ASSERT_GE(labels[i], 1) << "non-zero " << X[i] << " fell into the zeros' bin";
+        }
+        const auto cuts = disc.getCutPoints();
+        EXPECT_NEAR(0.01f, cuts[1], margin) << "the first cut is the smallest non-zero value";
+    }
+    // Several mass points: three values at 30 / 40 / 30 %. Each must get its
+    // own bin, including the one at the maximum, which needs a cut equal to
+    // the max sentinel.
+    TEST(TestBinDiscGeneric, QuantileThreeValuedFeatureKeepsThreeBins)
+    {
+        samples_t X;
+        for (int i = 0; i < 30; ++i) X.push_back(0.0f);
+        for (int i = 0; i < 40; ++i) X.push_back(1.0f);
+        for (int i = 0; i < 30; ++i) X.push_back(2.0f);
+        labels_t y(X.size(), 0);
+        BinDisc disc(7, strategy_t::QUANTILE);
+        disc.fit(X, y);
+        const auto labels = disc.transform(X);
+        for (size_t i = 0; i < X.size(); ++i) {
+            ASSERT_EQ(static_cast<label_t>(X[i]), labels[i]) << "i=" << i;
+        }
+        EXPECT_EQ(4u, disc.getCutPoints().size());
+    }
+    // When an interpolated edge already falls between the mass point and its
+    // neighbour, nothing is added: adding the neighbour too would create an
+    // empty bin. 7 zeros and 3 ones with 4 bins: the 75th percentile is
+    // interpolated between the last 0 and the first 1.
+    TEST(TestBinDiscGeneric, QuantileDoesNotDuplicateAnExistingSeparation)
+    {
+        samples_t X = { 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 };
+        labels_t y(X.size(), 0);
+        BinDisc disc(4, strategy_t::QUANTILE);
+        disc.fit(X, y);
+        const auto cuts = disc.getCutPoints();
+        ASSERT_EQ(3u, cuts.size());
+        EXPECT_GT(cuts[1], 0.0f);
+        EXPECT_LE(cuts[1], 1.0f);
+        labels_t expected = { 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 };
+        EXPECT_EQ(expected, disc.transform(X));
+    }
+    // Data without mass points is not touched: the edges are the plain
+    // percentiles, exactly as before.
+    TEST(TestBinDiscGeneric, QuantileWithoutMassPointsIsUnchanged)
+    {
+        samples_t X;
+        for (int i = 0; i < 100; ++i) X.push_back(static_cast<precision_t>(i));
+        labels_t y(X.size(), 0);
+        BinDisc disc(4, strategy_t::QUANTILE);
+        disc.fit(X, y);
+        const auto cuts = disc.getCutPoints();
+        ASSERT_EQ(5u, cuts.size());
+        EXPECT_NEAR(0.0f, cuts[0], margin);
+        EXPECT_NEAR(24.75f, cuts[1], margin);
+        EXPECT_NEAR(49.5f, cuts[2], margin);
+        EXPECT_NEAR(74.25f, cuts[3], margin);
+        EXPECT_NEAR(99.0f, cuts[4], margin);
+    }
+
     TEST(TestBinDiscGeneric, Fileset)
     {
         Experiments exps(data_path + "tests.txt");
@@ -471,6 +597,21 @@ namespace mdlp {
         samples_t data = { 1.0f, 2.0f, 3.0f };
         std::vector<precision_t> empty_percentiles = {};
         EXPECT_THROW_WITH_MESSAGE(percentile(data, empty_percentiles), std::invalid_argument, "Percentiles cannot be empty");
+    }
+
+    // percentile() answers every request, repeats included: it is fit_quantile
+    // that collapses them, and it needs the repeats to spot mass points.
+    TEST_F(TestBinDisc3U, PercentileKeepsRepeatedValues)
+    {
+        samples_t data = { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
+        std::vector<precision_t> percentiles = { 0.0f, 25.0f, 50.0f, 75.0f, 100.0f };
+        const auto values = percentile(data, percentiles);
+        ASSERT_EQ(5u, values.size());
+        EXPECT_NEAR(0.0f, values[0], margin);
+        EXPECT_NEAR(0.0f, values[1], margin);
+        EXPECT_NEAR(0.0f, values[2], margin);
+        EXPECT_NEAR(0.0f, values[3], margin);
+        EXPECT_NEAR(1.0f, values[4], margin);
     }
 }
 

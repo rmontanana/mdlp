@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(fimdlp
-    VERSION 3.0.0
+    VERSION 3.0.1
     LANGUAGES CXX
     DESCRIPTION "Discretization algorithm based on the paper by Fayyad & Irani Multi-Interval Discretization of Continuous-Valued Attributes for Classification Learning."
     HOMEPAGE_URL "https://github.com/rmontanana/mdlp"

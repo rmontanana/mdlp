@@ -74,6 +74,16 @@ namespace mdlp {
     class CPPFImdlp : public Discretizer {
     public:
         /**
+         * @brief Largest label value fit() accepts
+         *
+         * Labels are used directly as indices into per-class count arrays, which
+         * are sized to the largest label seen. This bound keeps a stray label
+         * from turning a few classes into a multi-gigabyte allocation. It is far
+         * above any realistic class count, so it is a guard, not a limit.
+         */
+        static constexpr label_t MAX_LABEL = 1 << 20;
+
+        /**
          * @brief Default constructor (creates uninitialized instance)
          */
         CPPFImdlp() = default;
@@ -171,6 +181,16 @@ namespace mdlp {
         [[noreturn]] static void throw_indices_empty();
         [[noreturn]] static void throw_index_out_of_range(const char* array, size_t idx, size_t size);
         [[noreturn]] static void throw_underflow(size_t a, size_t b);
+        /**
+         * @brief Reject labels that cannot index a class-count array
+         * @param labels Labels to check
+         * @throws ValidationError naming the index and value of the first offender
+         *
+         * Labels must lie in [0, MAX_LABEL]. Negative ones would wrap to a huge
+         * size_t and read outside the count arrays; ones above MAX_LABEL would
+         * make those arrays absurdly large for the classes actually present.
+         */
+        static void validate_labels(const labels_t& labels);
         // Shared body of both fit() overloads; assumes X and y are already set.
         void fit_impl();
         void computeCutPoints(size_t, size_t, int);

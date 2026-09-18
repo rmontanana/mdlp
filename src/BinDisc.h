@@ -49,6 +49,24 @@ namespace mdlp {
          * 
          * This method performs k-bins discretization on the input data X_.
          * 
+         * With UNIFORM the edges are `n_bins + 1` equally spaced values between
+         * min(X_) and max(X_). With QUANTILE they are the `n_bins + 1` evenly
+         * spaced percentiles of X_, **with coincident values collapsed**: when
+         * the data has few distinct values several percentiles land on the same
+         * number and the duplicates are dropped, so getCutPoints() can return
+         * fewer than `n_bins + 1` values, i.e. fewer bins than requested. The
+         * effective bin count is `getCutPoints().size() - 1`.
+         *
+         * A value that swallowed edges that way (a **mass point**: it fills at
+         * least one full quantile width) is nevertheless guaranteed a bin of
+         * its own. scikit-learn's KBinsDiscretizer just drops the collapsed
+         * edges, which leaves a binary feature with a single bin and makes it
+         * useless; here the value itself and the next distinct value in X_ are
+         * added as cut points when no surviving edge already separates them,
+         * so {0, 1} always maps onto two bins, and a sparse feature keeps its
+         * zeros apart from its non-zeros. Data without mass points gets exactly
+         * the edges it always did.
+         * 
          * Note: The y parameter is required for a uniform interface across supervised
          * and unsupervised discretization methods (all discretizers accept fit(X, y)),
          * but is not used in this unsupervised algorithm. This design allows using
@@ -93,6 +111,8 @@ namespace mdlp {
         void fit(samples_t&& X);
     protected:
         std::vector<precision_t> linspace(precision_t start, precision_t end, int num);
+        // The requested percentiles of sorted data, linearly interpolated
+        // (NumCpp's formula), one per request: repeats are not collapsed.
         std::vector<precision_t> percentile(samples_t& data, const std::vector<precision_t>& percentiles);
         int n_bins;
         strategy_t strategy;
@@ -104,6 +124,9 @@ namespace mdlp {
         void fit_uniform(const samples_t&);
         // By value: the caller decides whether that costs a copy or a move.
         void fit_quantile(samples_t data);
+        size_t bin_of(precision_t x) const;
+        void insert_cut(precision_t cut);
+        void separate_mass_point(const samples_t& sorted, precision_t value);
     };
 }
 #endif

@@ -18,7 +18,11 @@ Other features:
 
 - Intervals with the same value of the variable are not taken into account for cutpoints.
 - Intervals have to have more than two examples to be evaluated (mdlp).
-- The algorithm returns the cut points for the variable.
+- The algorithm returns the cut points for the variable. `getCutPoints()` gives
+  them as `[min(X), c1, ..., ck, max(X)]` for every discretizer: the first and last
+  values are the bounds of the training data, not cut points, and `transform`
+  ignores them. So k cut points come back as k + 2 values and map data onto
+  k + 1 bins, and a fit that found no split returns just `[min, max]`.
 - The transform method uses the cut points returning its index in the following way:
 
         cut[i - 1] <= x < cut[i]
@@ -36,9 +40,14 @@ This library provides three discretization algorithms:
 
 2. **Binning Discretization (BinDisc)**: This is a simple unsupervised discretization algorithm that divides the range of a continuous attribute into a fixed number of bins. Two strategies are available:
    - `uniform`: creates bins of equal width.
-   - `quantile`: creates bins with an equal number of samples.
+   - `quantile`: creates bins with an equal number of samples. Coincident
+     quantiles are collapsed, so data with few distinct values can yield fewer
+     bins than requested. Unlike scikit-learn's `KBinsDiscretizer`, a value that
+     swallowed edges that way (a mass point) is still guaranteed a bin of its
+     own: a binary feature always maps onto two bins, and a sparse feature keeps
+     its zeros apart from its non-zeros.
 
-3. **Proportional k-Interval Discretization (PKIDisc)**: This is an unsupervised discretization algorithm that uses the square root of the number of samples as the number of bins for a `quantile` binning, that is equal-frequency binning. It is based on the paper by Yang & Webb, "Proportional k-Interval Discretization for Naive-Bayes Classifiers".
+3. **Proportional k-Interval Discretization (PKIDisc)**: This is an unsupervised discretization algorithm that uses the square root (or, with `compute_strategy_t::LOG`, the natural logarithm) of the number of samples, truncated and never below 3, as the number of bins for a `quantile` binning, that is equal-frequency binning. It is based on the paper by Yang & Webb, "Proportional k-Interval Discretization for Naive-Bayes Classifiers".
 
 ## Unified Interface
 

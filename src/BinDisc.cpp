@@ -125,10 +125,10 @@ namespace mdlp {
         if (percentiles.empty()) {
             throw ValidationError("Percentiles cannot be empty");
         }
-
         // Implementation taken from https://dpilger26.github.io/NumCpp/doxygen/html/percentile_8hpp_source.html
+        // One value per requested percentile, repeats included: fit_quantile
+        // needs to see which percentiles landed on the same value.
         std::vector<precision_t> results;
-        bool first = true;
         results.reserve(percentiles.size());
         for (auto percentile : percentiles) {
             const auto i = static_cast<size_t>(std::floor(static_cast<precision_t>(data.size() - 1) * percentile / 100.));
@@ -137,23 +137,73 @@ namespace mdlp {
             const precision_t fraction =
                 (percentile / 100.0 - percentI) /
                 (static_cast<precision_t>(indexLower + 1) / static_cast<precision_t>(data.size() - 1) - percentI);
-            if (const auto value = data[indexLower] + (data[indexLower + 1] - data[indexLower]) * fraction; first || results.empty() || value != results.back()) // Check empty before calling back()
-                results.push_back(value);
-            first = false;
+            results.push_back(data[indexLower] + (data[indexLower + 1] - data[indexLower]) * fraction);
         }
         return results;
+    }
+    // transform() semantics for a fitted QUANTILE discretizer: the bin of x is
+    // the number of interior cut points <= x (bound_dir_t::RIGHT, upper_bound).
+    size_t BinDisc::bin_of(precision_t x) const
+    {
+        return static_cast<size_t>(std::upper_bound(cutPoints.begin() + 1, cutPoints.end() - 1, x) - (cutPoints.begin() + 1));
+    }
+    // Adds cut to the interior of cutPoints, keeping it sorted. cut may equal
+    // the max sentinel (the last element): it then sits right before it, and
+    // transform() treats it as a real cut point, unlike the sentinel.
+    void BinDisc::insert_cut(precision_t cut)
+    {
+        cutPoints.insert(std::upper_bound(cutPoints.begin() + 1, cutPoints.end() - 1, cut), cut);
+    }
+    // A mass point is a value that occupies at least one full quantile width,
+    // so that two or more requested edges landed on it and were collapsed into
+    // one. Left alone, that value is indistinguishable from its neighbours: a
+    // binary feature yields [min, max] and every sample maps onto bin 0. This
+    // guarantees that the mass point gets a bin of its own, on both sides, by
+    // adding at most two cut points: the value itself, which separates it from
+    // everything below (x >= cut goes right), and the next distinct value in
+    // the data, which separates it from everything above. Neither is added when
+    // an existing edge already does the job, so no empty bins appear and the
+    // edges of data without mass points are untouched.
+    void BinDisc::separate_mass_point(const samples_t& sorted, precision_t value)
+    {
+        const auto lower = std::lower_bound(sorted.begin(), sorted.end(), value);
+        const auto upper = std::upper_bound(sorted.begin(), sorted.end(), value);
+        if (lower != sorted.begin() && bin_of(*(lower - 1)) == bin_of(value)) {
+            insert_cut(value);
+        }
+        if (upper != sorted.end() && bin_of(value) == bin_of(*upper)) {
+            insert_cut(*upper);
+        }
     }
     void BinDisc::fit_quantile(samples_t data)
     {
         auto quantiles = linspace(0.0, 100.0, n_bins + 1);
         std::sort(data.begin(), data.end());
-        if (data.front() == data.back() || data.size() == 1) {
+        if (data.front() == data.back()) {
             // if X is constant, pass any two given points that shall be ignored in transform
             cutPoints.push_back(data.front());
             cutPoints.push_back(data.front());
             return;
         }
-        cutPoints = percentile(data, quantiles);
+        // The requested edges, before collapsing: a value repeated here is a
+        // mass point (see separate_mass_point).
+        const auto requested = percentile(data, quantiles);
+        // Percentiles are monotonic, so a repeated value can only be the
+        // previous one: comparing against back() is enough to collapse
+        // coincident quantiles into a single edge.
+        cutPoints.clear();
+        for (auto edge : requested) {
+            if (cutPoints.empty() || edge != cutPoints.back()) {
+                cutPoints.push_back(edge);
+            }
+        }
+        for (size_t i = 1; i < requested.size(); ++i) {
+            const bool repeated = requested[i] == requested[i - 1];
+            const bool first_repeat = i < 2 || requested[i - 1] != requested[i - 2];
+            if (repeated && first_repeat) {
+                separate_mass_point(data, requested[i]);
+            }
+        }
     }
     void BinDisc::fit_uniform(const samples_t& X)
     {
