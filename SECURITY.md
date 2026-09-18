@@ -38,6 +38,13 @@ These are enforced, with tests:
   message naming the index and the value of the first offender. NaN has no strict
   weak ordering, so sorting it would be undefined behaviour rather than merely a
   wrong answer; infinities poison the interval arithmetic that derives cut points.
+- **Every label must lie in `[0, CPPFImdlp::MAX_LABEL]`** (`MAX_LABEL` is 2²⁰).
+  `CPPFImdlp` uses labels directly as indices into per-class count arrays sized to
+  the largest label seen. Before this check a negative label wrapped to a huge
+  `size_t` and read outside the array — a heap-buffer-overflow under
+  AddressSanitizer — and one stray huge label allocated gigabytes for a handful of
+  classes. Both are rejected with the index and value of the first offender.
+  `BinDisc` and `PKIDisc` never read the labels.
 - `BinDisc` requires at least as many samples as bins.
 - Every access into the sample and label arrays goes through bounds-checked
   helpers that throw `IndexError` rather than reading out of range.

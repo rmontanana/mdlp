@@ -23,6 +23,15 @@
 #include "BinDisc.h"
 #include "PKIDisc.h"
 
+#define EXPECT_THROW_WITH_MESSAGE(stmt, etype, whatstring) EXPECT_THROW( \
+try { \
+stmt; \
+} catch (const etype& ex) { \
+EXPECT_EQ(whatstring, std::string(ex.what())); \
+throw; \
+} \
+, etype)
+
 namespace mdlp {
 
     namespace {
@@ -38,6 +47,45 @@ namespace mdlp {
                 y[i] = static_cast<label_t>((i / block) % static_cast<size_t>(classes));
             }
         }
+    }
+
+    // ---- label range ------------------------------------------------------- //
+
+    // Labels index the per-class count arrays directly. A negative label wrapped
+    // to a huge size_t and read outside the array (a heap-buffer-overflow under
+    // ASan) before this validation existed.
+    TEST(Security, FitRejectsNegativeLabels)
+    {
+        samples_t X = { 1, 2, 3, 4, 5, 6, 7, 8 };
+        labels_t y = { 0, 0, -1, 0, 1, 1, 1, 1 };
+
+        CPPFImdlp disc;
+        EXPECT_THROW_WITH_MESSAGE(disc.fit(X, y), ValidationError, "Label at index 2 is negative: -1");
+        EXPECT_THROW(disc.fit(std::move(X), std::move(y)), ValidationError);
+    }
+
+    // The count arrays are sized to the largest label seen, so one stray huge
+    // label would allocate gigabytes for a two-class problem.
+    TEST(Security, FitRejectsLabelsAboveTheMaximum)
+    {
+        samples_t X = { 1, 2, 3, 4, 5, 6, 7, 8 };
+        labels_t y = { 0, 0, 0, 0, 1, 1, CPPFImdlp::MAX_LABEL + 1, 1 };
+
+        CPPFImdlp disc;
+        EXPECT_THROW_WITH_MESSAGE(disc.fit(X, y), ValidationError,
+            "Label at index 6 (" + std::to_string(CPPFImdlp::MAX_LABEL + 1)
+            + ") exceeds the maximum supported label " + std::to_string(CPPFImdlp::MAX_LABEL));
+    }
+
+    // The bound is inclusive, and the validation must not reject ordinary data.
+    TEST(Security, FitAcceptsLabelsUpToTheMaximum)
+    {
+        samples_t X = { 1, 2, 3, 4, 5, 6, 7, 8 };
+        labels_t y = { 0, 0, 0, 0, CPPFImdlp::MAX_LABEL, CPPFImdlp::MAX_LABEL, CPPFImdlp::MAX_LABEL, CPPFImdlp::MAX_LABEL };
+
+        CPPFImdlp disc;
+        ASSERT_NO_THROW(disc.fit(X, y));
+        EXPECT_EQ(3u, disc.getCutPoints().size()) << "min, one cut, max";
     }
 
     // ---- recursion depth --------------------------------------------------- //

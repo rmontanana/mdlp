@@ -60,6 +60,30 @@ namespace mdlp {
         throw UnderflowError("Subtraction would underflow: " + std::to_string(a) + " - " + std::to_string(b));
     }
 
+    void CPPFImdlp::validate_labels(const labels_t& labels)
+    {
+        // Same shape as validate_finite: a branch-free scan first, and the
+        // offender is only located when there is one.
+        label_t min_label = 0;
+        label_t max_label = 0;
+        for (const label_t label : labels) {
+            min_label = std::min(min_label, label);
+            max_label = std::max(max_label, label);
+        }
+        if (min_label >= 0 && max_label <= MAX_LABEL) {
+            return;
+        }
+        for (size_t i = 0; i < labels.size(); ++i) {
+            if (labels[i] < 0) {
+                throw ValidationError("Label at index " + std::to_string(i) + " is negative: " + std::to_string(labels[i]));
+            }
+            if (labels[i] > MAX_LABEL) {
+                throw ValidationError("Label at index " + std::to_string(i) + " (" + std::to_string(labels[i])
+                    + ") exceeds the maximum supported label " + std::to_string(MAX_LABEL));
+            }
+        }
+    }
+
     size_t CPPFImdlp::compute_max_num_cut_points() const
     {
         // Set the actual maximum number of cut points as a number or as a percentage of the number of samples
@@ -107,6 +131,12 @@ namespace mdlp {
         // stable_sort requires, which is undefined behaviour rather than a wrong
         // answer.
         validate_finite(X);
+        // Labels index the class-count arrays in getCandidate and
+        // Metrics::entropy, both sized to the largest label seen. A negative one
+        // wraps to a huge size_t and reads outside the array (a heap overflow
+        // under ASan); an absurdly large one allocates gigabytes for a handful
+        // of classes. Both are rejected here, once, before anything indexes.
+        validate_labels(y);
         // Sorts the members, not the caller's vectors: after a move the latter no
         // longer hold the data.
         indices = sortIndices(X, y);
