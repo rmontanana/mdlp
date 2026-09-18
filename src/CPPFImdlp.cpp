@@ -192,7 +192,27 @@ namespace mdlp {
             cut = safe_subtract(cut, n);
         }
         actual = safe_X_access(cut);
-        return { (actual + previous) / 2, cut };
+        // The midpoint is the value transform() will compare against with
+        // upper_bound, so it must satisfy previous < midpoint <= actual for the
+        // two sides to land in different bins. The plain average is kept as the
+        // primary form because every published cut point was computed with it,
+        // and the offset form previous + (actual - previous) / 2 differs from it
+        // by an ulp on about one input in seven. Only the two cases where the
+        // average fails are patched:
+        //  - overflow: near FLT_MAX the sum is infinite; the offset form is not.
+        //  - collapse: when previous and actual are adjacent floats the average
+        //    rounds back onto previous, and every sample — those equal to
+        //    previous included — would then fall on the right. Using actual
+        //    itself keeps the split: x == actual goes right, x == previous stays
+        //    left.
+        precision_t midpoint = (actual + previous) / 2;
+        if (!std::isfinite(midpoint)) {
+            midpoint = previous + (actual - previous) / 2;
+        }
+        if (midpoint <= previous) {
+            midpoint = actual;
+        }
+        return { midpoint, cut };
     }
 
     void CPPFImdlp::computeCutPoints(size_t start, size_t end, int depth_)

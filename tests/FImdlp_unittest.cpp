@@ -4,7 +4,9 @@
 // SPDX - License - Identifier: MIT
 // ****************************************************************
 
+#include <cmath>
 #include <fstream>
+#include <limits>
 #include <iostream>
 #include <type_traits>
 #include <utility>
@@ -336,6 +338,52 @@ namespace mdlp {
         unlimited.fit(X, y);
 
         EXPECT_EQ(rounds_to_zero.getCutPoints(), unlimited.getCutPoints());
+    }
+
+    // The cut point between two values is their midpoint, and transform() sends
+    // x >= cut to the right. When the two values are adjacent floats the
+    // midpoint is not representable and rounded back onto the lower value, so
+    // the lower value itself landed on the right and both classes shared a bin.
+    // The cut must then be the upper value, which keeps the two apart.
+    TEST(FImdlpCuts, AdjacentFloatsStillSplit)
+    {
+        const precision_t lower = 1.0f;
+        const precision_t upper = std::nextafter(lower, 2.0f);
+        ASSERT_GT(upper, lower);
+        ASSERT_EQ(lower, lower + (upper - lower) / 2) << "the midpoint must round onto lower for this test to mean anything";
+
+        samples_t X = { lower, lower, lower, lower, upper, upper, upper, upper };
+        labels_t y = { 0, 0, 0, 0, 1, 1, 1, 1 };
+        CPPFImdlp disc;
+        disc.fit(X, y);
+
+        const auto cuts = disc.getCutPoints();
+        ASSERT_EQ(3u, cuts.size());
+        EXPECT_EQ(upper, cuts[1]);
+
+        const labels_t expected = { 0, 0, 0, 0, 1, 1, 1, 1 };
+        EXPECT_EQ(expected, disc.transform(X));
+    }
+
+    // Values at the far end of the float range: the old (a + b) / 2 overflowed
+    // to infinity, which is not a usable cut point.
+    TEST(FImdlpCuts, MidpointNearFloatMaxDoesNotOverflow)
+    {
+        const precision_t big = std::numeric_limits<precision_t>::max();
+        const precision_t bigger_half = big / 2;
+        samples_t X = { bigger_half, bigger_half, bigger_half, big, big, big };
+        labels_t y = { 0, 0, 0, 1, 1, 1 };
+        CPPFImdlp disc;
+        disc.fit(X, y);
+
+        const auto cuts = disc.getCutPoints();
+        ASSERT_EQ(3u, cuts.size());
+        EXPECT_TRUE(std::isfinite(cuts[1]));
+        EXPECT_GT(cuts[1], bigger_half);
+        EXPECT_LE(cuts[1], big);
+
+        const labels_t expected = { 0, 0, 0, 1, 1, 1 };
+        EXPECT_EQ(expected, disc.transform(X));
     }
 
     TEST_F(TestFImdlp, MaxCutPointsFloat)
